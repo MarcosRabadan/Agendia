@@ -1,4 +1,13 @@
+using Serilog;
+
 var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = new LoggerConfiguration()
+.WriteTo.Console()
+.WriteTo.Seq("http://localhost:5341")
+.Enrich.FromLogContext()
+.CreateLogger();
+
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -29,11 +38,25 @@ app.MapGet("/weatherforecast", () =>
             summaries[Random.Shared.Next(summaries.Length)]
         ))
         .ToArray();
-    return forecast;
+    return forecast;  
 })
 .WithName("GetWeatherForecast");
 
-app.Run();
+try
+{
+    Log.Information("Agendia Starting web application");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+
+
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
