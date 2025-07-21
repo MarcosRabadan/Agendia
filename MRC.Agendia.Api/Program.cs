@@ -13,13 +13,18 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 Log.Logger = new LoggerConfiguration()
-.WriteTo.Console()
-.WriteTo.Seq("http://localhost:5341")
 .Enrich.FromLogContext()
-.CreateLogger();
+    .Enrich.WithEnvironmentName()
+    .Enrich.WithThreadId()
+    .Enrich.WithProcessId()
+    .WriteTo.Console()
+    .WriteTo.Seq("http://localhost:5341")
+    .CreateLogger();
 
+builder.Host.UseSerilog();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 
@@ -38,7 +43,7 @@ if (app.Environment.IsDevelopment())
 try
 {
     Log.Information("Agendia Starting web application");
-    app.Run();
+    
 }
 catch (Exception ex)
 {
@@ -48,11 +53,10 @@ finally
 {
     Log.CloseAndFlush();
 }
+
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
+app.MapHealthChecks("/health");
 app.Run();
 
