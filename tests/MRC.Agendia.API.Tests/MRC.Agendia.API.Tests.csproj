@@ -19,7 +19,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\MRC.Agendia.API\MRC.Agendia.API.csproj" />
     <ProjectReference Include="..\..\src\MRC.Agendia.Application\MRC.Agendia.Application.csproj" />
   </ItemGroup>
 
