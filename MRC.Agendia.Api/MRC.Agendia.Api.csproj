@@ -14,8 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MRC.Agendia.Application\MRC.Agendia.Application.csproj" />
-    <ProjectReference Include="..\MRC.Agendia.Infrastructure\MRC.Agendia.Infrastructure.csproj" />
+    <Folder Include="Controllers\" />
   </ItemGroup>
 
 </Project>
