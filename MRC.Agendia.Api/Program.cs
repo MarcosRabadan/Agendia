@@ -1,4 +1,6 @@
-using Microsoft.OpenApi.Models;
+using MRC.Agendia.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.SqlServer;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +27,8 @@ builder.Host.UseSerilog();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
+builder.Services.AddDbContext<AgendiaDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 var app = builder.Build();
 
 
@@ -40,6 +44,8 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty;
     });
 }
+
+
 try
 {
     Log.Information("Agendia Starting web application");
