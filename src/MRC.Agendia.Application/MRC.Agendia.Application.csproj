@@ -4,6 +4,27 @@
     <ProjectReference Include="..\MRC.Agendia.Domain\MRC.Agendia.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Appointments\Commands\" />
+    <Folder Include="Appointments\DTO\" />
+    <Folder Include="Appointments\Queries\" />
+    <Folder Include="BusinessSchedule\Commands\" />
+    <Folder Include="BusinessSchedule\DTO\" />
+    <Folder Include="BusinessSchedule\Queries\" />
+    <Folder Include="Business\Commands\" />
+    <Folder Include="Business\DTO\" />
+    <Folder Include="Business\Queries\" />
+    <Folder Include="Clients\Commands\" />
+    <Folder Include="Clients\DTO\" />
+    <Folder Include="Clients\Queries\" />
+    <Folder Include="Employees\Commands\" />
+    <Folder Include="Employees\DTO\" />
+    <Folder Include="Employees\Queries\" />
+    <Folder Include="Services\Commands\" />
+    <Folder Include="Services\DTO\" />
+    <Folder Include="Services\Queries\" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
