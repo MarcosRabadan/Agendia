@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using MRC.Agendia.Domain.Entities;
 
 namespace MRC.Agendia.Domain.Interfaces
 {
     public interface IBusinessScheduleRepository
     {
+        Task<BusinessSchedule?> GetByIdAsync(int id);
+        Task<IEnumerable<BusinessSchedule>> GetAllAsync();
+        Task AddAsync(BusinessSchedule businessSchedule);
+        void Update(BusinessSchedule businessSchedule);
+        void Delete(BusinessSchedule businessSchedule);
     }
 }

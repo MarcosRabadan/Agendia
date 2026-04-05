@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using MRC.Agendia.Domain.Entities;
 
 namespace MRC.Agendia.Domain.Interfaces
 {
     public interface IEmployeeRepository
     {
+        Task<Employee?> GetByIdAsync(int id);
+        Task<IEnumerable<Employee>> GetAllAsync();
+        Task AddAsync(Employee employee);
+        void Update(Employee employee);
+        void Delete(Employee employee);
     }
 }

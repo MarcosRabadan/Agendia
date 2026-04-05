@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using MRC.Agendia.Domain.Entities;
 
 namespace MRC.Agendia.Domain.Interfaces
 {
     public interface IAppointmentRepository
     {
+        Task<Appointment?> GetByIdAsync(int id);
+        Task<IEnumerable<Appointment>> GetAllAsync();
+        Task AddAsync(Appointment appointment);
+        void Update(Appointment appointment);
+        void Delete(Appointment appointment);
     }
 }

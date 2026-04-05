@@ -1,9 +1,9 @@
-using MRC.Agendia.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.SqlServer;
-using Serilog;
+using MRC.Agendia.Application.Appointments.Commands;
 using MRC.Agendia.Domain.Interfaces;
+using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Infrastructure.Repositories;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,9 +12,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// MediatR
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(CreateAppointmentCommand).Assembly));
 
 Log.Logger = new LoggerConfiguration()
 .Enrich.FromLogContext()
@@ -26,8 +29,6 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Host.UseSerilog();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
 builder.Services.AddDbContext<AgendiaDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -62,7 +63,7 @@ if (app.Environment.IsDevelopment())
 try
 {
     Log.Information("Agendia Starting web application");
-    
+
 }
 catch (Exception ex)
 {

@@ -1,9 +1,4 @@
 ﻿using MRC.Agendia.Domain.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MRC.Agendia.Infrastructure
 {
@@ -18,11 +13,11 @@ namespace MRC.Agendia.Infrastructure
 
         public async Task<int> Save()
         => await _context.SaveChangesAsync();
-        
+
         public void Dispose()
         {
             _context.Dispose();
         }
-                
+
     }
 }
