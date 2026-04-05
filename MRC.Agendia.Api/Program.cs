@@ -1,9 +1,8 @@
-using MRC.Agendia.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.SqlServer;
-using Serilog;
 using MRC.Agendia.Domain.Interfaces;
+using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Infrastructure.Repositories;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,7 +61,7 @@ if (app.Environment.IsDevelopment())
 try
 {
     Log.Information("Agendia Starting web application");
-    
+
 }
 catch (Exception ex)
 {

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MRC.Agendia.Application.Business
+﻿namespace MRC.Agendia.Application.Business
 {
     public class BusinessService
     {
