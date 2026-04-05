@@ -1,4 +1,6 @@
-﻿using MRC.Agendia.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Infrastructure.Repositories
 {
@@ -10,5 +12,20 @@ namespace MRC.Agendia.Infrastructure.Repositories
         {
             _context = context;
         }
+
+        public async Task<Service?> GetByIdAsync(int id)
+            => await _context.Services.FindAsync(id);
+
+        public async Task<IEnumerable<Service>> GetAllAsync()
+            => await _context.Services.ToListAsync();
+
+        public async Task AddAsync(Service service)
+            => await _context.Services.AddAsync(service);
+
+        public void Update(Service service)
+            => _context.Services.Update(service);
+
+        public void Delete(Service service)
+            => _context.Services.Remove(service);
     }
 }

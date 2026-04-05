@@ -1,4 +1,4 @@
-﻿namespace MRC.Agendia.Application.Employes
+﻿namespace MRC.Agendia.Application.Employees
 {
     public interface IEmployeeService
     {
