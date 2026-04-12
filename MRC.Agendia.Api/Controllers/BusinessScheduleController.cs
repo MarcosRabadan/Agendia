@@ -8,6 +8,7 @@ namespace MRC.Agendia.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Produces("application/json")]
     public class BusinessScheduleController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -18,6 +19,7 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<BusinessScheduleDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<BusinessScheduleDto>>> GetAll()
         {
             var result = await _mediator.Send(new GetAllBusinessSchedulesQuery());
@@ -25,6 +27,8 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(BusinessScheduleDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<BusinessScheduleDto>> GetById(int id)
         {
             var result = await _mediator.Send(new GetBusinessScheduleByIdQuery(id));
@@ -33,6 +37,8 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(typeof(BusinessScheduleDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<BusinessScheduleDto>> Create([FromBody] CreateBusinessScheduleDto dto)
         {
             var result = await _mediator.Send(new CreateBusinessScheduleCommand(dto));
@@ -40,6 +46,9 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [ProducesResponseType(typeof(BusinessScheduleDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<BusinessScheduleDto>> Update(int id, [FromBody] UpdateBusinessScheduleDto dto)
         {
             if (id != dto.Id) return BadRequest("Id mismatch.");
@@ -48,6 +57,8 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(int id)
         {
             await _mediator.Send(new DeleteBusinessScheduleCommand(id));

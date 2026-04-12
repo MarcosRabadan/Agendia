@@ -8,6 +8,7 @@ namespace MRC.Agendia.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Produces("application/json")]
     public class ClientController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -18,6 +19,7 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<ClientDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<ClientDto>>> GetAll()
         {
             var result = await _mediator.Send(new GetAllClientsQuery());
@@ -25,6 +27,8 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ClientDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ClientDto>> GetById(int id)
         {
             var result = await _mediator.Send(new GetClientByIdQuery(id));
@@ -33,6 +37,8 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(typeof(ClientDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ClientDto>> Create([FromBody] CreateClientDto dto)
         {
             var result = await _mediator.Send(new CreateClientCommand(dto));
@@ -40,6 +46,9 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [ProducesResponseType(typeof(ClientDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ClientDto>> Update(int id, [FromBody] UpdateClientDto dto)
         {
             if (id != dto.Id) return BadRequest("Id mismatch.");
@@ -48,6 +57,8 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(int id)
         {
             await _mediator.Send(new DeleteClientCommand(id));
