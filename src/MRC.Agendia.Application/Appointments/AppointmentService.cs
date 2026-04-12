@@ -67,7 +67,7 @@ namespace MRC.Agendia.Application.Appointments
             return entities is null ? Enumerable.Empty<AppointmentDto>() : _mapper.Map<IEnumerable<AppointmentDto>>(entities);
         }
 
-        private static void ValidateDateRange(DateTime startDate, DateTime endDate)
+        private void ValidateDateRange(DateTime startDate, DateTime endDate)
         {
             if (startDate == DateTime.MinValue || endDate == DateTime.MinValue 
                 || startDate == DateTime.MaxValue || endDate == DateTime.MaxValue)
