@@ -1,35 +1,20 @@
 using MediatR;
 using MRC.Agendia.Application.Employees.DTO;
-using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Application.Employees.Commands
 {
     public class UpdateEmployeeCommandHandler : IRequestHandler<UpdateEmployeeCommand, EmployeeDto>
     {
-        private readonly IEmployeeRepository _repository;
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IEmployeeService _service;
 
-        public UpdateEmployeeCommandHandler(IEmployeeRepository repository, IUnitOfWork unitOfWork)
+        public UpdateEmployeeCommandHandler(IEmployeeService service)
         {
-            _repository = repository;
-            _unitOfWork = unitOfWork;
+            _service = service;
         }
 
         public async Task<EmployeeDto> Handle(UpdateEmployeeCommand request, CancellationToken cancellationToken)
         {
-            var entity = await _repository.GetByIdAsync(request.Dto.Id)
-                ?? throw new KeyNotFoundException($"Employee with Id {request.Dto.Id} not found.");
-
-            entity.BusinessId = request.Dto.BusinessId;
-            entity.FullName = request.Dto.FullName;
-            entity.Email = request.Dto.Email;
-            entity.Phone = request.Dto.Phone;
-            entity.IsActive = request.Dto.IsActive;
-
-            _repository.Update(entity);
-            await _unitOfWork.Save();
-
-            return new EmployeeDto(entity.Id, entity.BusinessId, entity.FullName, entity.Email, entity.Phone, entity.IsActive);
+            return await _service.UpdateAsync(request.Dto);
         }
     }
 }

@@ -1,36 +1,20 @@
 using MediatR;
 using MRC.Agendia.Application.Employees.DTO;
-using MRC.Agendia.Domain.Entities;
-using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Application.Employees.Commands
 {
     public class CreateEmployeeCommandHandler : IRequestHandler<CreateEmployeeCommand, EmployeeDto>
     {
-        private readonly IEmployeeRepository _repository;
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IEmployeeService _service;
 
-        public CreateEmployeeCommandHandler(IEmployeeRepository repository, IUnitOfWork unitOfWork)
+        public CreateEmployeeCommandHandler(IEmployeeService service)
         {
-            _repository = repository;
-            _unitOfWork = unitOfWork;
+            _service = service;
         }
 
         public async Task<EmployeeDto> Handle(CreateEmployeeCommand request, CancellationToken cancellationToken)
         {
-            var entity = new Employee
-            {
-                BusinessId = request.Dto.BusinessId,
-                FullName = request.Dto.FullName,
-                Email = request.Dto.Email,
-                Phone = request.Dto.Phone,
-                IsActive = true
-            };
-
-            await _repository.AddAsync(entity);
-            await _unitOfWork.Save();
-
-            return new EmployeeDto(entity.Id, entity.BusinessId, entity.FullName, entity.Email, entity.Phone, entity.IsActive);
+            return await _service.CreateAsync(request.Dto);
         }
     }
 }

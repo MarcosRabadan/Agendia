@@ -1,27 +1,19 @@
 using MediatR;
-using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Application.Appointments.Commands
 {
     public class DeleteAppointmentCommandHandler : IRequestHandler<DeleteAppointmentCommand, bool>
     {
-        private readonly IAppointmentRepository _repository;
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IAppointmentService _service;
 
-        public DeleteAppointmentCommandHandler(IAppointmentRepository repository, IUnitOfWork unitOfWork)
+        public DeleteAppointmentCommandHandler(IAppointmentService service)
         {
-            _repository = repository;
-            _unitOfWork = unitOfWork;
+            _service = service;
         }
 
         public async Task<bool> Handle(DeleteAppointmentCommand request, CancellationToken cancellationToken)
         {
-            var entity = await _repository.GetByIdAsync(request.Id)
-                ?? throw new KeyNotFoundException($"Appointment with Id {request.Id} not found.");
-
-            _repository.Delete(entity);
-            await _unitOfWork.Save();
-            return true;
+            return await _service.DeleteAsync(request.Id);
         }
     }
 }

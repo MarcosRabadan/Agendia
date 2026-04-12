@@ -1,27 +1,19 @@
 using MediatR;
-using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Application.Employees.Commands
 {
     public class DeleteEmployeeCommandHandler : IRequestHandler<DeleteEmployeeCommand, bool>
     {
-        private readonly IEmployeeRepository _repository;
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IEmployeeService _service;
 
-        public DeleteEmployeeCommandHandler(IEmployeeRepository repository, IUnitOfWork unitOfWork)
+        public DeleteEmployeeCommandHandler(IEmployeeService service)
         {
-            _repository = repository;
-            _unitOfWork = unitOfWork;
+            _service = service;
         }
 
         public async Task<bool> Handle(DeleteEmployeeCommand request, CancellationToken cancellationToken)
         {
-            var entity = await _repository.GetByIdAsync(request.Id)
-                ?? throw new KeyNotFoundException($"Employee with Id {request.Id} not found.");
-
-            _repository.Delete(entity);
-            await _unitOfWork.Save();
-            return true;
+            return await _service.DeleteAsync(request.Id);
         }
     }
 }
