@@ -18,6 +18,7 @@ namespace MRC.Agendia.Application.Clients
             _mapper = mapper;
         }
 
+        #region CRUD
         public async Task<IEnumerable<ClientDto>> GetAllAsync()
         {
             var entities = await _repository.GetAllAsync();
@@ -58,5 +59,8 @@ namespace MRC.Agendia.Application.Clients
             await _unitOfWork.Save();
             return true;
         }
+
+        #endregion CRUD
+    
     }
 }

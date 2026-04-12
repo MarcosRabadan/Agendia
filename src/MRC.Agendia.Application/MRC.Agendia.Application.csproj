@@ -7,7 +7,6 @@
   <ItemGroup>
     <Folder Include="Appointments\Commands\" />
     <Folder Include="Appointments\DTO\" />
-    <Folder Include="Appointments\Queries\" />
     <Folder Include="BusinessSchedule\Commands\" />
     <Folder Include="BusinessSchedule\DTO\" />
     <Folder Include="BusinessSchedule\Queries\" />

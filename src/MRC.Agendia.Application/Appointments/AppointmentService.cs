@@ -17,7 +17,7 @@ namespace MRC.Agendia.Application.Appointments
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
-
+        #region CRUD
         public async Task<IEnumerable<AppointmentDto>> GetAllAsync()
         {
             var entities = await _repository.GetAllAsync();
@@ -57,6 +57,33 @@ namespace MRC.Agendia.Application.Appointments
             _repository.Delete(entity);
             await _unitOfWork.Save();
             return true;
+        }
+        #endregion CRUD
+
+        public async Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate)
+        {
+            ValidateDateRange(startDate, endDate);
+            var entities = await _repository.GetByBusinessIdAndDateRangeAsync(businessId, startDate, endDate);
+            return entities is null ? Enumerable.Empty<AppointmentDto>() : _mapper.Map<IEnumerable<AppointmentDto>>(entities);
+        }
+
+        private void ValidateDateRange(DateTime startDate, DateTime endDate)
+        {
+            if (startDate == DateTime.MinValue || endDate == DateTime.MinValue 
+                || startDate == DateTime.MaxValue || endDate == DateTime.MaxValue)
+            {
+                throw new ArgumentException("StartDate and EndDate must be valid dates");
+            }
+
+            if (startDate < DateTime.UtcNow || endDate < DateTime.UtcNow)
+            {
+                throw new ArgumentException("StartDate and EndDate cannot be in the past.");
+            }
+
+            if (startDate > endDate)
+            {
+                throw new ArgumentException("StartDate must be earlier than or equal to EndDate.");
+            }
         }
     }
 }

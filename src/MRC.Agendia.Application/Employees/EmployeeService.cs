@@ -18,6 +18,7 @@ namespace MRC.Agendia.Application.Employees
             _mapper = mapper;
         }
 
+        #region CRUD
         public async Task<IEnumerable<EmployeeDto>> GetAllAsync()
         {
             var entities = await _repository.GetAllAsync();
@@ -58,5 +59,6 @@ namespace MRC.Agendia.Application.Employees
             await _unitOfWork.Save();
             return true;
         }
+        #endregion CRUD
     }
 }

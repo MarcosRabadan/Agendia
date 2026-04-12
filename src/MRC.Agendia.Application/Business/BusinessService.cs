@@ -17,6 +17,7 @@ namespace MRC.Agendia.Application.Business
             _mapper = mapper;
         }
 
+        #region CRUD
         public async Task<IEnumerable<BusinessDto>> GetAllAsync()
         {
             var entities = await _repository.GetAllAsync();
@@ -57,5 +58,6 @@ namespace MRC.Agendia.Application.Business
             await _unitOfWork.Save();
             return true;
         }
+        #endregion CRUD
     }
 }

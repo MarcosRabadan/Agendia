@@ -9,5 +9,6 @@ namespace MRC.Agendia.Application.Appointments
         Task<AppointmentDto> CreateAsync(CreateAppointmentDto dto);
         Task<AppointmentDto> UpdateAsync(UpdateAppointmentDto dto);
         Task<bool> DeleteAsync(int id);
+        Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate);
     }
 }
