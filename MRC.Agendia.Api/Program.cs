@@ -1,5 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Appointments.Commands;
+using MRC.Agendia.Application.Business;
+using MRC.Agendia.Application.BusinessSchedule;
+using MRC.Agendia.Application.Clients;
+using MRC.Agendia.Application.Employees;
+using MRC.Agendia.Application.Mappings;
+using MRC.Agendia.Application.Services;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Infrastructure.Repositories;
@@ -18,6 +25,9 @@ builder.Services.AddSwaggerGen();
 // MediatR
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateAppointmentCommand).Assembly));
+
+// AutoMapper
+builder.Services.AddAutoMapper(typeof(BusinessProfile).Assembly);
 
 Log.Logger = new LoggerConfiguration()
 .Enrich.FromLogContext()
@@ -42,6 +52,14 @@ builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Application Services
+builder.Services.AddScoped<IAppointmentService, AppointmentService>();
+builder.Services.AddScoped<IBusinessService, BusinessService>();
+builder.Services.AddScoped<IBusinessScheduleService, BusinessScheduleService>();
+builder.Services.AddScoped<IClientService, ClientService>();
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IServicesService, ServicesService>();
 
 var app = builder.Build();
 
