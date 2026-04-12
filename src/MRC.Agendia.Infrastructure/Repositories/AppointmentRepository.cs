@@ -27,5 +27,16 @@ namespace MRC.Agendia.Infrastructure.Repositories
 
         public void Delete(Appointment appointment)
             => _context.Appointments.Remove(appointment);
+
+        public async Task<IEnumerable<Appointment>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate)
+        {
+           var appointments = await _context.Appointments
+                .Include(a => a.Employee)
+                .Where(a => a.Employee.BusinessId == businessId &&
+                            a.StartDate >= startDate &&
+                            a.EndDate <= endDate)
+                .ToListAsync();
+            return appointments;
+        }
     }
 }

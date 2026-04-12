@@ -9,5 +9,9 @@ namespace MRC.Agendia.Domain.Interfaces
         Task AddAsync(Appointment appointment);
         void Update(Appointment appointment);
         void Delete(Appointment appointment);
+        Task<IEnumerable<Appointment>> GetByBusinessIdAndDateRangeAsync(
+            int businessId, 
+            DateTime startDate, 
+            DateTime endDate);
     }
 }

@@ -17,7 +17,7 @@ namespace MRC.Agendia.Application.Appointments
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
-
+        #region CRUD
         public async Task<IEnumerable<AppointmentDto>> GetAllAsync()
         {
             var entities = await _repository.GetAllAsync();
@@ -57,6 +57,13 @@ namespace MRC.Agendia.Application.Appointments
             _repository.Delete(entity);
             await _unitOfWork.Save();
             return true;
+        }
+        #endregion CRUD
+
+        public async Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate)
+        {
+            var entities = await _repository.GetByBusinessIdAndDateRangeAsync(businessId, startDate, endDate);
+            return entities is null ? Enumerable.Empty<AppointmentDto>() : _mapper.Map<IEnumerable<AppointmentDto>>(entities);
         }
     }
 }
