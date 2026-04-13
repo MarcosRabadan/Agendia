@@ -14,8 +14,6 @@ public class AgendiaDbContext : DbContext
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Service> Services => Set<Service>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
-    public DbSet<BusinessSchedule> BusinessSchedules => Set<BusinessSchedule>();
-
     // Schedule system
     public DbSet<ScheduleTemplate> ScheduleTemplates => Set<ScheduleTemplate>();
     public DbSet<WeeklyTimeSlot> WeeklyTimeSlots => Set<WeeklyTimeSlot>();

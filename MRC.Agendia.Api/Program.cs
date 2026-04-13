@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Appointments.Commands;
 using MRC.Agendia.Application.Business;
-using MRC.Agendia.Application.BusinessSchedule;
 using MRC.Agendia.Application.Clients;
 using MRC.Agendia.Application.Employees;
 using MRC.Agendia.Application.Holidays;
@@ -50,7 +49,6 @@ builder.Services.AddDbContext<AgendiaDbContext>(options =>
 
 builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
 builder.Services.AddScoped<IBusinessRepository, BusinessRepository>();
-builder.Services.AddScoped<IBusinessScheduleRepository, BusinessScheduleRepository>();
 builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
@@ -66,7 +64,6 @@ builder.Services.AddScoped<IScheduleResolver, ScheduleResolver>();
 // Application Services
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<IBusinessService, BusinessService>();
-builder.Services.AddScoped<IBusinessScheduleService, BusinessScheduleService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IServicesService, ServicesService>();
