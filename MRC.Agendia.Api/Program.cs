@@ -5,11 +5,15 @@ using MRC.Agendia.Application.Business;
 using MRC.Agendia.Application.BusinessSchedule;
 using MRC.Agendia.Application.Clients;
 using MRC.Agendia.Application.Employees;
+using MRC.Agendia.Application.Holidays;
 using MRC.Agendia.Application.Mappings;
+using MRC.Agendia.Application.Schedules;
 using MRC.Agendia.Application.Services;
 using MRC.Agendia.Domain.Interfaces;
+using MRC.Agendia.Domain.Services;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Infrastructure.Repositories;
+using MRC.Agendia.Infrastructure.Services;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,8 +54,14 @@ builder.Services.AddScoped<IBusinessScheduleRepository, BusinessScheduleReposito
 builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
+builder.Services.AddScoped<IScheduleTemplateRepository, ScheduleTemplateRepository>();
+builder.Services.AddScoped<IScheduleOverrideRepository, ScheduleOverrideRepository>();
+builder.Services.AddScoped<IHolidayCalendarRepository, HolidayCalendarRepository>();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Domain Services
+builder.Services.AddScoped<IScheduleResolver, ScheduleResolver>();
 
 // Application Services
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
@@ -60,6 +70,8 @@ builder.Services.AddScoped<IBusinessScheduleService, BusinessScheduleService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IServicesService, ServicesService>();
+builder.Services.AddScoped<IScheduleService, ScheduleService>();
+builder.Services.AddScoped<IHolidayService, HolidayService>();
 
 var app = builder.Build();
 
