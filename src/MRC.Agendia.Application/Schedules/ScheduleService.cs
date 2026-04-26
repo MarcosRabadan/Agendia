@@ -325,7 +325,20 @@ namespace MRC.Agendia.Application.Schedules
         public async Task<EffectiveScheduleDto> GetEffectiveScheduleAsync(int businessId, DateOnly date)
         {
             var effective = await _scheduleResolver.GetEffectiveScheduleAsync(businessId, date);
-            return _mapper.Map<EffectiveScheduleDto>(effective);
+            var templateEntities = await _templateRepository.GetByBusinessIdAsync(businessId);
+            var templates = _mapper.Map<List<ScheduleTemplateDto>>(templateEntities);
+            var activeTemplate = templates.FirstOrDefault(t => t.EffectiveFrom <= date && t.EffectiveTo >= date);
+
+            return new EffectiveScheduleDto(
+                Date: effective.Date,
+                IsOpen: effective.IsOpen,
+                ClosedReason: effective.ClosedReason,
+                OverrideType: effective.OverrideType,
+                TimeSlots: effective.TimeSlots
+                    .Select(ts => new EffectiveTimeSlotDto(ts.StartTime, ts.EndTime))
+                    .ToList(),
+                ActiveTemplate: activeTemplate,
+                Templates: templates);
         }
 
         public async Task<IEnumerable<CalendarDayDto>> GetCalendarAsync(int businessId, DateOnly from, DateOnly to)
