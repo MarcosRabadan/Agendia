@@ -1,15 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <Compile Remove="BusinessSchedule\**" />
+    <EmbeddedResource Remove="BusinessSchedule\**" />
+    <None Remove="BusinessSchedule\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\MRC.Agendia.Domain\MRC.Agendia.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Appointments\Commands\" />
     <Folder Include="Appointments\DTO\" />
-    <Folder Include="BusinessSchedule\Commands\" />
-    <Folder Include="BusinessSchedule\DTO\" />
-    <Folder Include="BusinessSchedule\Queries\" />
     <Folder Include="Business\Commands\" />
     <Folder Include="Business\DTO\" />
     <Folder Include="Business\Queries\" />
