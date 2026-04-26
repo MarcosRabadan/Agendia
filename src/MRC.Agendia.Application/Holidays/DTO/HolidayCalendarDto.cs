@@ -7,6 +7,5 @@ namespace MRC.Agendia.Application.Holidays.DTO
         DateOnly Date,
         string Name,
         HolidayScope Scope,
-        string? Region,
         int Year);
 }

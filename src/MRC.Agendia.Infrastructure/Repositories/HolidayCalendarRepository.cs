@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Domain.Entities;
-using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Infrastructure.Repositories
@@ -26,29 +25,11 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderBy(h => h.Date)
                 .ToListAsync();
 
-        public async Task<IEnumerable<HolidayCalendar>> GetByYearAndRegionAsync(int year, string? region)
-        {
-            var query = _context.HolidayCalendars
-                .Where(h => h.Year == year);
-
-            if (!string.IsNullOrEmpty(region))
-                query = query.Where(h => h.Scope == HolidayScope.National || h.Region == region);
-            else
-                query = query.Where(h => h.Scope == HolidayScope.National);
-
-            return await query.OrderBy(h => h.Date).ToListAsync();
-        }
-
-        public async Task<IEnumerable<HolidayCalendar>> GetByDateRangeAsync(DateOnly from, DateOnly to, string? region = null)
-        {
-            var query = _context.HolidayCalendars
-                .Where(h => h.Date >= from && h.Date <= to);
-
-            if (!string.IsNullOrEmpty(region))
-                query = query.Where(h => h.Scope == HolidayScope.National || h.Region == region);
-
-            return await query.OrderBy(h => h.Date).ToListAsync();
-        }
+        public async Task<IEnumerable<HolidayCalendar>> GetByDateRangeAsync(DateOnly from, DateOnly to)
+            => await _context.HolidayCalendars
+                .Where(h => h.Date >= from && h.Date <= to)
+                .OrderBy(h => h.Date)
+                .ToListAsync();
 
         public async Task AddAsync(HolidayCalendar holiday)
             => await _context.HolidayCalendars.AddAsync(holiday);

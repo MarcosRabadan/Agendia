@@ -79,7 +79,7 @@ namespace MRC.Agendia.Api.Controllers
         {
             if (dto.BusinessId != businessId) return BadRequest("BusinessId in URL and body must match.");
             var result = await _mediator.Send(new GenerateScheduleCommand(dto));
-            return CreatedAtAction(nameof(GetTemplateById), new { businessId, templateId = result.TemplateId }, result);
+            return Created($"api/businesses/{businessId}/schedules/templates", result);
         }
 
         #endregion

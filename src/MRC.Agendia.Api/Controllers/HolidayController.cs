@@ -28,9 +28,9 @@ namespace MRC.Agendia.Api.Controllers
 
         [HttpGet("year/{year}")]
         [ProducesResponseType(typeof(IEnumerable<HolidayCalendarDto>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<HolidayCalendarDto>>> GetByYear(int year, [FromQuery] string? region)
+        public async Task<ActionResult<IEnumerable<HolidayCalendarDto>>> GetByYear(int year)
         {
-            var result = await _mediator.Send(new GetHolidaysByYearQuery(year, region));
+            var result = await _mediator.Send(new GetHolidaysByYearQuery(year));
             return Ok(result);
         }
 

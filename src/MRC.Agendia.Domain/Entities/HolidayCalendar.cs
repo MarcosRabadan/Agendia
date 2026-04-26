@@ -8,7 +8,6 @@ namespace MRC.Agendia.Domain.Entities
         public DateOnly Date { get; set; }
         public string Name { get; set; } = null!;
         public HolidayScope Scope { get; set; }
-        public string? Region { get; set; }
         public int Year { get; set; }
     }
 }

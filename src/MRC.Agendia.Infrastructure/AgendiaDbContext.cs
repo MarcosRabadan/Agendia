@@ -87,8 +87,8 @@ public class AgendiaDbContext : DbContext
             .HasConversion<int>();
 
         modelBuilder.Entity<HolidayCalendar>()
-            .HasIndex(h => new { h.Date, h.Scope, h.Region })
-            .HasDatabaseName("IX_HolidayCalendar_Date_Scope_Region");
+            .HasIndex(h => new { h.Date, h.Scope })
+            .HasDatabaseName("IX_HolidayCalendar_Date_Scope");
 
         modelBuilder.Entity<ScheduleOverride>()
             .HasIndex(so => new { so.BusinessId, so.Date })
