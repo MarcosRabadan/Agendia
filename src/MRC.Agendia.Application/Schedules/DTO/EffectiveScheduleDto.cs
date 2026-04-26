@@ -7,5 +7,7 @@ namespace MRC.Agendia.Application.Schedules.DTO
         bool IsOpen,
         string? ClosedReason,
         ScheduleOverrideType? OverrideType,
-        List<EffectiveTimeSlotDto> TimeSlots);
+        List<EffectiveTimeSlotDto> TimeSlots,
+        ScheduleTemplateDto? ActiveTemplate,
+        List<ScheduleTemplateDto> Templates);
 }

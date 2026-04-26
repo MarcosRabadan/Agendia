@@ -1,7 +1,7 @@
 namespace MRC.Agendia.Application.Schedules.DTO
 {
     public record GenerateScheduleResponseDto(
-        int TemplateId,
+        List<int> TemplateIds,
         int TotalWorkingDays,
         int TotalHolidays,
         int TotalVacationDays,

@@ -159,29 +159,52 @@ namespace MRC.Agendia.Application.Schedules
         #region Generate
         public async Task<GenerateScheduleResponseDto> GenerateScheduleAsync(GenerateScheduleRequestDto dto)
         {
-            if (await _templateRepository.HasOverlappingTemplateAsync(dto.BusinessId, dto.EffectiveFrom, dto.EffectiveTo))
-                throw new InvalidOperationException("Ya existe una plantilla de horario que se solapa con las fechas indicadas.");
+            if (dto.Templates is null || dto.Templates.Count == 0)
+                throw new InvalidOperationException("Debe proporcionar al menos una plantilla de horario.");
+
+            // 1. Validar que las plantillas no se solapen entre si
+            ValidateTemplatesDoNotOverlap(dto.Templates);
+
+            // 2. Validar contra plantillas existentes en la BD
+            foreach (var templateInput in dto.Templates)
+            {
+                if (await _templateRepository.HasOverlappingTemplateAsync(dto.BusinessId, templateInput.EffectiveFrom, templateInput.EffectiveTo))
+                    throw new InvalidOperationException($"La plantilla '{templateInput.Name}' se solapa con una plantilla existente del negocio.");
+            }
 
             var warnings = new List<string>();
 
-            // 1. Create template
-            var template = _mapper.Map<ScheduleTemplate>(dto);
-            template.CreatedAt = DateTime.UtcNow;
-            await _templateRepository.AddAsync(template);
+            // 3. Crear todas las plantillas con sus slots
+            var templates = new List<ScheduleTemplate>();
+            foreach (var templateInput in dto.Templates)
+            {
+                var template = _mapper.Map<ScheduleTemplate>(templateInput);
+                template.BusinessId = dto.BusinessId;
+                template.CreatedAt = DateTime.UtcNow;
 
-            // 2. Collect overrides
+                await _templateRepository.AddAsync(template);
+                templates.Add(template);
+            }
+
+            // 4. Calcular el rango total que cubre el año (para festivos/vacaciones)
+            var yearFrom = new DateOnly(dto.Year, 1, 1);
+            var yearTo = new DateOnly(dto.Year, 12, 31);
+
+            // 5. Recolectar overrides
             var overrides = new List<ScheduleOverride>();
             var holidayDates = new HashSet<DateOnly>();
 
-            // 2a. National/Local holidays
+            // 5a. Festivos nacionales/locales
             if (dto.IncludeNationalHolidays || dto.IncludeLocalHolidays)
             {
-                var holidays = await _holidayRepository.GetByDateRangeAsync(dto.EffectiveFrom, dto.EffectiveTo, dto.Region);
+                var holidays = await _holidayRepository.GetByDateRangeAsync(yearFrom, yearTo);
 
                 foreach (var holiday in holidays)
                 {
                     if (holiday.Scope == HolidayScope.National && !dto.IncludeNationalHolidays) continue;
-                    if ((holiday.Scope == HolidayScope.Regional || holiday.Scope == HolidayScope.Local) && !dto.IncludeLocalHolidays) continue;
+                    if (holiday.Scope != HolidayScope.National && !dto.IncludeLocalHolidays) continue;
+
+                    if (holidayDates.Contains(holiday.Date)) continue; // evitar duplicados
 
                     holidayDates.Add(holiday.Date);
                     overrides.Add(new ScheduleOverride
@@ -197,7 +220,7 @@ namespace MRC.Agendia.Application.Schedules
                 }
             }
 
-            // 2b. Vacation periods
+            // 5b. Vacaciones
             int vacationDays = 0;
             if (dto.VacationPeriods != null)
             {
@@ -224,7 +247,7 @@ namespace MRC.Agendia.Application.Schedules
                 }
             }
 
-            // 2c. Custom closed dates
+            // 5c. Cierres puntuales
             int customClosedDays = 0;
             if (dto.CustomClosedDates != null)
             {
@@ -253,26 +276,48 @@ namespace MRC.Agendia.Application.Schedules
 
             await _unitOfWork.Save();
 
-            // Calculate working days
-            var workingDaysOfWeek = dto.WeeklySlots
-                .Select(s => s.DayOfWeek)
-                .Distinct()
-                .ToHashSet();
-
+            // 6. Calcular dias laborables totales sumando los rangos de todas las plantillas
             int totalWorkingDays = 0;
-            for (var date = dto.EffectiveFrom; date <= dto.EffectiveTo; date = date.AddDays(1))
+            foreach (var templateInput in dto.Templates)
             {
-                if (workingDaysOfWeek.Contains(date.DayOfWeek))
-                    totalWorkingDays++;
+                var workingDaysOfWeek = templateInput.WeeklySlots
+                    .Select(s => s.DayOfWeek)
+                    .Distinct()
+                    .ToHashSet();
+
+                for (var date = templateInput.EffectiveFrom; date <= templateInput.EffectiveTo; date = date.AddDays(1))
+                {
+                    if (workingDaysOfWeek.Contains(date.DayOfWeek))
+                        totalWorkingDays++;
+                }
             }
 
             return new GenerateScheduleResponseDto(
-                TemplateId: template.Id,
+                TemplateIds: templates.Select(t => t.Id).ToList(),
                 TotalWorkingDays: totalWorkingDays,
                 TotalHolidays: holidayDates.Count,
                 TotalVacationDays: vacationDays,
                 TotalClosedDays: customClosedDays,
                 Warnings: warnings.Count > 0 ? warnings : null);
+        }
+
+        private static void ValidateTemplatesDoNotOverlap(List<GenerateScheduleTemplateInputDto> templates)
+        {
+            for (int i = 0; i < templates.Count; i++)
+            {
+                if (templates[i].EffectiveFrom > templates[i].EffectiveTo)
+                    throw new InvalidOperationException($"La plantilla '{templates[i].Name}' tiene una fecha de inicio posterior a la de fin.");
+
+                for (int j = i + 1; j < templates.Count; j++)
+                {
+                    if (templates[i].EffectiveFrom <= templates[j].EffectiveTo
+                        && templates[i].EffectiveTo >= templates[j].EffectiveFrom)
+                    {
+                        throw new InvalidOperationException(
+                            $"Las plantillas '{templates[i].Name}' y '{templates[j].Name}' tienen fechas que se solapan.");
+                    }
+                }
+            }
         }
         #endregion
 
@@ -280,7 +325,20 @@ namespace MRC.Agendia.Application.Schedules
         public async Task<EffectiveScheduleDto> GetEffectiveScheduleAsync(int businessId, DateOnly date)
         {
             var effective = await _scheduleResolver.GetEffectiveScheduleAsync(businessId, date);
-            return _mapper.Map<EffectiveScheduleDto>(effective);
+            var templateEntities = await _templateRepository.GetByBusinessIdAsync(businessId);
+            var templates = _mapper.Map<List<ScheduleTemplateDto>>(templateEntities);
+            var activeTemplate = templates.FirstOrDefault(t => t.EffectiveFrom <= date && t.EffectiveTo >= date);
+
+            return new EffectiveScheduleDto(
+                Date: effective.Date,
+                IsOpen: effective.IsOpen,
+                ClosedReason: effective.ClosedReason,
+                OverrideType: effective.OverrideType,
+                TimeSlots: effective.TimeSlots
+                    .Select(ts => new EffectiveTimeSlotDto(ts.StartTime, ts.EndTime))
+                    .ToList(),
+                ActiveTemplate: activeTemplate,
+                Templates: templates);
         }
 
         public async Task<IEnumerable<CalendarDayDto>> GetCalendarAsync(int businessId, DateOnly from, DateOnly to)

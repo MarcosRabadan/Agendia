@@ -14,7 +14,7 @@ namespace MRC.Agendia.Application.Holidays.Queries
 
         public async Task<IEnumerable<HolidayCalendarDto>> Handle(GetHolidaysByYearQuery request, CancellationToken cancellationToken)
         {
-            return await _service.GetByYearAsync(request.Year, request.Region);
+            return await _service.GetByYearAsync(request.Year);
         }
     }
 }

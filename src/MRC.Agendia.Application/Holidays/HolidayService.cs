@@ -24,9 +24,9 @@ namespace MRC.Agendia.Application.Holidays
             return _mapper.Map<IEnumerable<HolidayCalendarDto>>(entities);
         }
 
-        public async Task<IEnumerable<HolidayCalendarDto>> GetByYearAsync(int year, string? region)
+        public async Task<IEnumerable<HolidayCalendarDto>> GetByYearAsync(int year)
         {
-            var entities = await _repository.GetByYearAndRegionAsync(year, region);
+            var entities = await _repository.GetByYearAsync(year);
             return _mapper.Map<IEnumerable<HolidayCalendarDto>>(entities);
         }
 
