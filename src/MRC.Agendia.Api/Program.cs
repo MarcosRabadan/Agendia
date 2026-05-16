@@ -37,6 +37,7 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHealthChecks();
@@ -166,6 +167,10 @@ builder.Services.AddScoped<IHolidayService, HolidayService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IRefreshTokenStore, RefreshTokenStore>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Resource-based authorization
+builder.Services.AddScoped<MRC.Agendia.Application.Authorization.ICurrentUserContext, MRC.Agendia.Api.Services.CurrentUserContext>();
+builder.Services.AddScoped<MRC.Agendia.Application.Authorization.IResourceAuthorizationService, MRC.Agendia.Infrastructure.Authorization.ResourceAuthorizationService>();
 
 var app = builder.Build();
 
