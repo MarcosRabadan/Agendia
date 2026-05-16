@@ -37,19 +37,19 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
 
         modelBuilder.Entity<Appointment>()
             .HasOne(a => a.Client)
-            .WithMany()
+            .WithMany(c => c.Appointments)
             .HasForeignKey(a => a.ClientId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Appointment>()
             .HasOne(a => a.Employee)
-            .WithMany()
+            .WithMany(e => e.Appointments)
             .HasForeignKey(a => a.EmployeeId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Appointment>()
             .HasOne(a => a.Service)
-            .WithMany()
+            .WithMany(s => s.Appointments)
             .HasForeignKey(a => a.ServiceId)
             .OnDelete(DeleteBehavior.Restrict);
 

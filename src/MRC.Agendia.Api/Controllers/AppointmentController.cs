@@ -40,6 +40,20 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner + "," + Roles.Employee)]
+        [HttpGet("business/{businessId}")]
+        [ProducesResponseType(typeof(IEnumerable<AppointmentDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<IEnumerable<AppointmentDto>>> GetByBusinessAndDateRange(
+            int businessId,
+            [FromQuery] DateTime startDate,
+            [FromQuery] DateTime endDate)
+        {
+            var result = await _mediator.Send(new GetAppointmentsByDateRangeQuery(businessId, startDate, endDate));
+            return Ok(result);
+        }
+
         [Authorize]
         [HttpPost]
         [ProducesResponseType(typeof(AppointmentDto), StatusCodes.Status201Created)]
