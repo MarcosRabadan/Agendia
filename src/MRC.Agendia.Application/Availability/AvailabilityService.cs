@@ -128,7 +128,11 @@ namespace MRC.Agendia.Application.Availability
 
                     if (availableEmployeeIds.Count > 0)
                     {
-                        slots.Add(new AvailableSlotDto(current, slotEnd, availableEmployeeIds));
+                        slots.Add(new AvailableSlotDto(
+                            StartTime: current,
+                            EndTime: slotEnd,
+                            Capacity: availableEmployeeIds.Count,
+                            AvailableEmployeeIds: availableEmployeeIds));
                     }
 
                     current = current.Add(step);

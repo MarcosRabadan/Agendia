@@ -3,11 +3,14 @@ namespace MRC.Agendia.Application.Availability.DTO
     /// <summary>
     /// A single bookable window. <see cref="StartTime"/> is the proposed
     /// appointment start; <see cref="EndTime"/> equals start + service duration.
+    /// <see cref="Capacity"/> is the number of simultaneous bookings the
+    /// business can accept at this time (= number of free employees).
     /// <see cref="AvailableEmployeeIds"/> contains every employee that is free
     /// to take this booking (the caller can pick one or let the system choose).
     /// </summary>
     public record AvailableSlotDto(
         TimeOnly StartTime,
         TimeOnly EndTime,
+        int Capacity,
         IReadOnlyList<int> AvailableEmployeeIds);
 }
