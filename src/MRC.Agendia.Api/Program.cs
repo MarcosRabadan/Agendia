@@ -81,7 +81,20 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 
 // JWT Authentication
 var jwtSection = builder.Configuration.GetSection("Jwt");
-var jwtKey = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key not configured.");
+var jwtKey = jwtSection["Key"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+{
+    throw new InvalidOperationException(
+        "Jwt:Key no esta configurado. En desarrollo configuralo con:\n" +
+        "  dotnet user-secrets --project src/MRC.Agendia.Api set \"Jwt:Key\" \"<clave aleatoria>\"\n" +
+        "En produccion usa una variable de entorno Jwt__Key.\n" +
+        "Genera una clave fuerte (>=64 chars) con: openssl rand -base64 64");
+}
+if (jwtKey.Length < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key es demasiado corta (minimo 32 caracteres recomendado para HS256).");
+}
 var jwtIssuer = jwtSection["Issuer"];
 var jwtAudience = jwtSection["Audience"];
 
