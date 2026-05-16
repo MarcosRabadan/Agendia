@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Appointments.Commands;
+using MRC.Agendia.Application.Availability;
 using MRC.Agendia.Application.Behaviors;
 using MRC.Agendia.Application.Business;
 using MRC.Agendia.Application.Clients;
@@ -46,6 +47,7 @@ namespace MRC.Agendia.Application
             services.AddScoped<IServicesService, ServicesService>();
             services.AddScoped<IScheduleService, ScheduleService>();
             services.AddScoped<IHolidayService, HolidayService>();
+            services.AddScoped<IAvailabilityService, AvailabilityService>();
 
             return services;
         }
