@@ -1,0 +1,19 @@
+using FluentValidation;
+
+namespace MRC.Agendia.Application.Holidays.Commands
+{
+    public class UpdateHolidayCommandValidator : AbstractValidator<UpdateHolidayCommand>
+    {
+        public UpdateHolidayCommandValidator()
+        {
+            RuleFor(x => x.Dto).NotNull();
+            RuleFor(x => x.Dto.Id).GreaterThan(0);
+            RuleFor(x => x.Dto.Date).NotEqual(default(DateOnly));
+            RuleFor(x => x.Dto.Name).NotEmpty().MaximumLength(200);
+            RuleFor(x => x.Dto.Scope).IsInEnum();
+            RuleFor(x => x.Dto.Year)
+                .GreaterThanOrEqualTo(2000)
+                .LessThanOrEqualTo(2100);
+        }
+    }
+}

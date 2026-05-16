@@ -11,8 +11,9 @@ horarios potente (plantillas anuales, festivos, vacaciones, overrides por día,
 turnos partidos).
 
 - **Idioma del producto:** Español
-- **Idioma del código y los commits:** Español neutro sin tildes en commits (`git` no muestra bien tildes en algunos terminales). Comentarios en código pueden ir en español o inglés indistintamente.
-- **Idioma de la documentación visible al usuario** (Swagger summaries, mensajes de error): Español.
+- **Idioma de los commits:** Español neutro sin tildes (algunos terminales no las muestran bien).
+- **Idioma de los comentarios en código:** **Inglés**. Es la convención del equipo.
+- **Idioma de la documentación visible al usuario** (Swagger summaries, mensajes de error de validación): Español.
 
 ## Stack
 

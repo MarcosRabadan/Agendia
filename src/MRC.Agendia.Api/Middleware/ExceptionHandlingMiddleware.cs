@@ -1,12 +1,23 @@
 using System.Net;
 using System.Text.Json;
+using FluentValidation;
 
 namespace MRC.Agendia.Api.Middleware
 {
+    /// <summary>
+    /// Global exception handler. Maps known exceptions to clean HTTP responses
+    /// with a uniform JSON shape:
+    ///   { "code": "...", "message": "...", "traceId": "...", ["errors": {...}] }
+    /// </summary>
     public class ExceptionHandlingMiddleware
     {
         private readonly RequestDelegate _next;
         private readonly ILogger<ExceptionHandlingMiddleware> _logger;
+
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
 
         public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
         {
@@ -28,6 +39,13 @@ namespace MRC.Agendia.Api.Middleware
 
         private async Task HandleExceptionAsync(HttpContext context, Exception ex)
         {
+            // FluentValidation: return structured field-level errors.
+            if (ex is ValidationException validationEx)
+            {
+                await WriteValidationErrorAsync(context, validationEx);
+                return;
+            }
+
             var (statusCode, code, message) = ex switch
             {
                 KeyNotFoundException => (HttpStatusCode.NotFound, "NOT_FOUND", ex.Message),
@@ -50,10 +68,33 @@ namespace MRC.Agendia.Api.Middleware
                 code,
                 message,
                 traceId = context.TraceIdentifier
-            }, new JsonSerializerOptions
+            }, JsonOptions);
+
+            await context.Response.WriteAsync(payload);
+        }
+
+        private async Task WriteValidationErrorAsync(HttpContext context, ValidationException ex)
+        {
+            // Group failures by property name -> list of error messages.
+            var errors = ex.Errors
+                .GroupBy(e => e.PropertyName)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(e => e.ErrorMessage).ToArray());
+
+            _logger.LogWarning("Validation failed: {Errors}", string.Join("; ",
+                ex.Errors.Select(e => $"{e.PropertyName}={e.ErrorMessage}")));
+
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            context.Response.ContentType = "application/json";
+
+            var payload = JsonSerializer.Serialize(new
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
+                code = "VALIDATION_ERROR",
+                message = "Una o varias validaciones han fallado.",
+                traceId = context.TraceIdentifier,
+                errors
+            }, JsonOptions);
 
             await context.Response.WriteAsync(payload);
         }

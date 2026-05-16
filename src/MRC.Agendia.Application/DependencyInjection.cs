@@ -1,6 +1,9 @@
+using FluentValidation;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Appointments.Commands;
+using MRC.Agendia.Application.Behaviors;
 using MRC.Agendia.Application.Business;
 using MRC.Agendia.Application.Clients;
 using MRC.Agendia.Application.Employees;
@@ -19,12 +22,21 @@ namespace MRC.Agendia.Application
     {
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
-            // MediatR: descubre Commands/Queries/Handlers en el assembly
-            services.AddMediatR(cfg =>
-                cfg.RegisterServicesFromAssembly(typeof(CreateAppointmentCommand).Assembly));
+            var assembly = typeof(CreateAppointmentCommand).Assembly;
 
-            // AutoMapper: descubre profiles en el assembly
+            // MediatR: auto-discovers Commands/Queries/Handlers + the
+            // ValidationBehavior that runs FluentValidation before any handler.
+            services.AddMediatR(cfg =>
+            {
+                cfg.RegisterServicesFromAssembly(assembly);
+                cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+            });
+
+            // AutoMapper: auto-discovers profiles in the assembly.
             services.AddAutoMapper(typeof(BusinessProfile).Assembly);
+
+            // FluentValidation: auto-discovers all AbstractValidator<T> in the assembly.
+            services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
 
             // Servicios de aplicacion (uno por agregado)
             services.AddScoped<IAppointmentService, AppointmentService>();
