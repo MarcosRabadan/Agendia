@@ -4,7 +4,8 @@ namespace MRC.Agendia.Application.Employees.DTO
         int Id,
         int BusinessId,
         string FullName,
-        string? Email, 
-        string? Phone, 
-        bool IsActive);
+        string? Email,
+        string? Phone,
+        bool IsActive,
+        int MaxConcurrentAppointments);
 }

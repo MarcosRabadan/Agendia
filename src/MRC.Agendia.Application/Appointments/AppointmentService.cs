@@ -8,15 +8,22 @@ namespace MRC.Agendia.Application.Appointments
     public class AppointmentService : IAppointmentService
     {
         private readonly IAppointmentRepository _repository;
+        private readonly IAppointmentSchedulingValidator _schedulingValidator;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public AppointmentService(IAppointmentRepository repository, IUnitOfWork unitOfWork, IMapper mapper)
+        public AppointmentService(
+            IAppointmentRepository repository,
+            IAppointmentSchedulingValidator schedulingValidator,
+            IUnitOfWork unitOfWork,
+            IMapper mapper)
         {
             _repository = repository;
+            _schedulingValidator = schedulingValidator;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
+
         #region CRUD
         public async Task<IEnumerable<AppointmentDto>> GetAllAsync()
         {
@@ -32,6 +39,16 @@ namespace MRC.Agendia.Application.Appointments
 
         public async Task<AppointmentDto> CreateAsync(CreateAppointmentDto dto)
         {
+            // Validate the appointment against the business schedule and
+            // existing appointments BEFORE persisting it.
+            await _schedulingValidator.EnsureValidAsync(
+                appointmentId: null,
+                clientId: dto.ClientId,
+                employeeId: dto.EmployeeId,
+                serviceId: dto.ServiceId,
+                startDate: dto.StartDate,
+                endDate: dto.EndDate);
+
             var entity = _mapper.Map<Appointment>(dto);
             await _repository.AddAsync(entity);
             await _unitOfWork.Save();
@@ -42,6 +59,16 @@ namespace MRC.Agendia.Application.Appointments
         {
             var entity = await _repository.GetByIdAsync(dto.Id)
                 ?? throw new KeyNotFoundException($"Appointment with Id {dto.Id} not found.");
+
+            // Validate the new state against the schedule and other
+            // appointments, excluding the current one from the conflict check.
+            await _schedulingValidator.EnsureValidAsync(
+                appointmentId: dto.Id,
+                clientId: dto.ClientId,
+                employeeId: dto.EmployeeId,
+                serviceId: dto.ServiceId,
+                startDate: dto.StartDate,
+                endDate: dto.EndDate);
 
             _mapper.Map(dto, entity);
             _repository.Update(entity);
@@ -62,22 +89,22 @@ namespace MRC.Agendia.Application.Appointments
 
         public async Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate)
         {
-            ValidateDateRange(startDate, endDate);
+            ValidateRangeQuery(startDate, endDate);
             var entities = await _repository.GetByBusinessIdAndDateRangeAsync(businessId, startDate, endDate);
             return entities is null ? Enumerable.Empty<AppointmentDto>() : _mapper.Map<IEnumerable<AppointmentDto>>(entities);
         }
 
-        private void ValidateDateRange(DateTime startDate, DateTime endDate)
+        /// <summary>
+        /// Validates the parameters of a read query (date range lookup). This is
+        /// independent of <see cref="IAppointmentSchedulingValidator"/>, which
+        /// only validates appointment creation/update.
+        /// </summary>
+        private static void ValidateRangeQuery(DateTime startDate, DateTime endDate)
         {
-            if (startDate == DateTime.MinValue || endDate == DateTime.MinValue 
+            if (startDate == DateTime.MinValue || endDate == DateTime.MinValue
                 || startDate == DateTime.MaxValue || endDate == DateTime.MaxValue)
             {
                 throw new ArgumentException("StartDate and EndDate must be valid dates");
-            }
-
-            if (startDate < DateTime.UtcNow || endDate < DateTime.UtcNow)
-            {
-                throw new ArgumentException("StartDate and EndDate cannot be in the past.");
             }
 
             if (startDate > endDate)

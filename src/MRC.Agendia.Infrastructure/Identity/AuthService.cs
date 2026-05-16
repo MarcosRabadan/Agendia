@@ -96,7 +96,7 @@ namespace MRC.Agendia.Infrastructure.Identity
 
             await _userManager.AddToRoleAsync(user, Roles.BusinessOwner);
 
-            // Crear el Business asociado
+            // Create the associated Business.
             var business = new Business
             {
                 Name = dto.BusinessName,
@@ -108,6 +108,23 @@ namespace MRC.Agendia.Infrastructure.Identity
                 OwnerUserId = user.Id
             };
             await _businessRepository.AddAsync(business);
+            await _unitOfWork.Save();
+
+            // Also auto-create an Employee record for the owner so a solo
+            // professional can start taking bookings immediately without an
+            // extra setup step. MaxConcurrentAppointments defaults to 1; the
+            // owner can change it from /api/employee.
+            var ownerEmployee = new Employee
+            {
+                BusinessId = business.Id,
+                FullName = dto.FullName,
+                Email = dto.Email,
+                Phone = dto.Phone,
+                IsActive = true,
+                UserId = user.Id,
+                MaxConcurrentAppointments = 1
+            };
+            await _employeeRepository.AddAsync(ownerEmployee);
             await _unitOfWork.Save();
 
             return await BuildAuthResponseAsync(user);
