@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MRC.Agendia.Api.Services;
 using MRC.Agendia.Application.Auth.Commands;
 using MRC.Agendia.Application.Auth.DTO;
@@ -24,8 +25,10 @@ namespace MRC.Agendia.Api.Controllers
         /// <summary>Registro publico de un cliente.</summary>
         [HttpPost("register/client")]
         [AllowAnonymous]
+        [EnableRateLimiting("auth-register")]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
         public async Task<ActionResult<AuthResponseDto>> RegisterClient([FromBody] RegisterClientDto dto)
         {
             var result = await _mediator.Send(new RegisterClientCommand(dto));
@@ -61,8 +64,10 @@ namespace MRC.Agendia.Api.Controllers
 
         [HttpPost("login")]
         [AllowAnonymous]
+        [EnableRateLimiting("auth-login")]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
         public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto dto)
         {
             var result = await _mediator.Send(new LoginCommand(dto));
@@ -71,8 +76,10 @@ namespace MRC.Agendia.Api.Controllers
 
         [HttpPost("refresh")]
         [AllowAnonymous]
+        [EnableRateLimiting("auth-refresh")]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
         public async Task<ActionResult<AuthResponseDto>> Refresh([FromBody] RefreshTokenRequestDto dto)
         {
             var result = await _mediator.Send(new RefreshTokenCommand(dto.RefreshToken));
