@@ -9,6 +9,7 @@
         public string Phone { get; set; } = null!;
         public string Email { get; set; } = null!;
         public bool IsActive { get; set; }
+        public string? OwnerUserId { get; set; }
 
         public ICollection<Employee> Employees { get; set; } = new List<Employee>();
         public ICollection<Service> Services { get; set; } = new List<Service>();

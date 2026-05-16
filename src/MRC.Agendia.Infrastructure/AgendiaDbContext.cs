@@ -1,11 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Infrastructure.Identity;
 
 namespace MRC.Agendia.Infrastructure;
 
-public class AgendiaDbContext : DbContext
+public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
 {
-    public AgendiaDbContext(DbContextOptions options) : base(options)
+    public AgendiaDbContext(DbContextOptions<AgendiaDbContext> options) : base(options)
     {
     }
 
@@ -14,12 +16,16 @@ public class AgendiaDbContext : DbContext
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Service> Services => Set<Service>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
+
     // Schedule system
     public DbSet<ScheduleTemplate> ScheduleTemplates => Set<ScheduleTemplate>();
     public DbSet<WeeklyTimeSlot> WeeklyTimeSlots => Set<WeeklyTimeSlot>();
     public DbSet<ScheduleOverride> ScheduleOverrides => Set<ScheduleOverride>();
     public DbSet<CustomTimeSlot> CustomTimeSlots => Set<CustomTimeSlot>();
     public DbSet<HolidayCalendar> HolidayCalendars => Set<HolidayCalendar>();
+
+    // Auth
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -94,5 +100,30 @@ public class AgendiaDbContext : DbContext
             .HasIndex(so => new { so.BusinessId, so.Date })
             .IsUnique()
             .HasDatabaseName("IX_ScheduleOverride_BusinessId_Date");
+
+        // RefreshToken
+        modelBuilder.Entity<RefreshToken>()
+            .HasOne(rt => rt.User)
+            .WithMany()
+            .HasForeignKey(rt => rt.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(rt => rt.Token)
+            .IsUnique()
+            .HasDatabaseName("IX_RefreshToken_Token");
+
+        // Indexes for fast user lookup
+        modelBuilder.Entity<Business>()
+            .HasIndex(b => b.OwnerUserId)
+            .HasDatabaseName("IX_Business_OwnerUserId");
+
+        modelBuilder.Entity<Employee>()
+            .HasIndex(e => e.UserId)
+            .HasDatabaseName("IX_Employee_UserId");
+
+        modelBuilder.Entity<Client>()
+            .HasIndex(c => c.UserId)
+            .HasDatabaseName("IX_Client_UserId");
     }
 }

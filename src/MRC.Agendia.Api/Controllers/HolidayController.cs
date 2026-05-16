@@ -1,8 +1,10 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MRC.Agendia.Application.Holidays.Commands;
 using MRC.Agendia.Application.Holidays.DTO;
 using MRC.Agendia.Application.Holidays.Queries;
+using MRC.Agendia.Domain.Constants;
 
 namespace MRC.Agendia.Api.Controllers
 {
@@ -18,6 +20,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
+        [AllowAnonymous]
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<HolidayCalendarDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<HolidayCalendarDto>>> GetAll()
@@ -26,6 +29,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        [AllowAnonymous]
         [HttpGet("year/{year}")]
         [ProducesResponseType(typeof(IEnumerable<HolidayCalendarDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<HolidayCalendarDto>>> GetByYear(int year)
@@ -34,6 +38,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        [AllowAnonymous]
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(HolidayCalendarDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -44,6 +49,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        [Authorize(Roles = Roles.Admin)]
         [HttpPost]
         [ProducesResponseType(typeof(HolidayCalendarDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -53,6 +59,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
+        [Authorize(Roles = Roles.Admin)]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(HolidayCalendarDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -64,6 +71,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        [Authorize(Roles = Roles.Admin)]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
