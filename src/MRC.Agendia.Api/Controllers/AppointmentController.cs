@@ -1,8 +1,10 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MRC.Agendia.Application.Appointments.Commands;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Appointments.Queries;
+using MRC.Agendia.Domain.Constants;
 
 namespace MRC.Agendia.Api.Controllers
 {
@@ -18,6 +20,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
+        [Authorize(Roles = Roles.Admin)]
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<AppointmentDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<AppointmentDto>>> GetAll()
@@ -26,6 +29,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        [Authorize]
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(AppointmentDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -36,6 +40,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        [Authorize]
         [HttpPost]
         [ProducesResponseType(typeof(AppointmentDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -45,6 +50,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
+        [Authorize]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(AppointmentDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -56,6 +62,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        [Authorize]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

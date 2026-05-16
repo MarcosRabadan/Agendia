@@ -1,8 +1,10 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MRC.Agendia.Application.Services.Commands;
 using MRC.Agendia.Application.Services.DTO;
 using MRC.Agendia.Application.Services.Queries;
+using MRC.Agendia.Domain.Constants;
 
 namespace MRC.Agendia.Api.Controllers
 {
@@ -18,6 +20,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
+        [AllowAnonymous]
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<ServiceDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<ServiceDto>>> GetAll()
@@ -26,6 +29,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        [AllowAnonymous]
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -36,6 +40,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner)]
         [HttpPost]
         [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -45,6 +50,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
+        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner)]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -56,6 +62,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner)]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -8,6 +8,7 @@
         public string? Email { get; set; }
         public string? Phone { get; set; }
         public bool IsActive { get; set; }
+        public string? UserId { get; set; }
 
         public Business Business { get; set; } = null!;
         public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();

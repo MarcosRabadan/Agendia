@@ -1,0 +1,113 @@
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using MRC.Agendia.Api.Services;
+using MRC.Agendia.Application.Auth.Commands;
+using MRC.Agendia.Application.Auth.DTO;
+using MRC.Agendia.Application.Auth.Queries;
+using MRC.Agendia.Domain.Constants;
+
+namespace MRC.Agendia.Api.Controllers
+{
+    [ApiController]
+    [Route("api/auth")]
+    [Produces("application/json")]
+    public class AuthController : ControllerBase
+    {
+        private readonly IMediator _mediator;
+
+        public AuthController(IMediator mediator)
+        {
+            _mediator = mediator;
+        }
+
+        /// <summary>Registro publico de un cliente.</summary>
+        [HttpPost("register/client")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<AuthResponseDto>> RegisterClient([FromBody] RegisterClientDto dto)
+        {
+            var result = await _mediator.Send(new RegisterClientCommand(dto));
+            return Ok(result);
+        }
+
+        /// <summary>Solo Admin: crea un BusinessOwner + su Business.</summary>
+        [HttpPost("register/owner")]
+        [Authorize(Roles = Roles.Admin)]
+        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<AuthResponseDto>> RegisterOwner([FromBody] RegisterOwnerDto dto)
+        {
+            var result = await _mediator.Send(new RegisterOwnerCommand(dto));
+            return Ok(result);
+        }
+
+        /// <summary>Solo Owner: crea un Employee + su user asociado a SU negocio.</summary>
+        [HttpPost("register/employee")]
+        [Authorize(Roles = Roles.BusinessOwner)]
+        [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<UserDto>> RegisterEmployee([FromBody] RegisterEmployeeDto dto)
+        {
+            var ownerUserId = User.GetUserId();
+            var result = await _mediator.Send(new RegisterEmployeeCommand(dto, ownerUserId));
+            return Ok(result);
+        }
+
+        [HttpPost("login")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto dto)
+        {
+            var result = await _mediator.Send(new LoginCommand(dto));
+            return Ok(result);
+        }
+
+        [HttpPost("refresh")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<AuthResponseDto>> Refresh([FromBody] RefreshTokenRequestDto dto)
+        {
+            var result = await _mediator.Send(new RefreshTokenCommand(dto.RefreshToken));
+            return Ok(result);
+        }
+
+        [HttpPost("logout")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<IActionResult> Logout([FromBody] LogoutRequestDto dto)
+        {
+            await _mediator.Send(new LogoutCommand(dto.RefreshToken));
+            return NoContent();
+        }
+
+        [HttpGet("me")]
+        [Authorize]
+        [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<UserDto>> Me()
+        {
+            var userId = User.GetUserId();
+            var result = await _mediator.Send(new GetCurrentUserQuery(userId));
+            return Ok(result);
+        }
+
+        [HttpPost("change-password")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            var userId = User.GetUserId();
+            await _mediator.Send(new ChangePasswordCommand(userId, dto));
+            return NoContent();
+        }
+    }
+}

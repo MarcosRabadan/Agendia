@@ -1,0 +1,257 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using MRC.Agendia.Application.Auth;
+using MRC.Agendia.Application.Auth.DTO;
+using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Domain.Interfaces;
+
+namespace MRC.Agendia.Infrastructure.Identity
+{
+    public class AuthService : IAuthService
+    {
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IJwtTokenService _jwtTokenService;
+        private readonly IRefreshTokenStore _refreshTokenStore;
+        private readonly IClientRepository _clientRepository;
+        private readonly IBusinessRepository _businessRepository;
+        private readonly IEmployeeRepository _employeeRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IConfiguration _configuration;
+
+        public AuthService(
+            UserManager<ApplicationUser> userManager,
+            IJwtTokenService jwtTokenService,
+            IRefreshTokenStore refreshTokenStore,
+            IClientRepository clientRepository,
+            IBusinessRepository businessRepository,
+            IEmployeeRepository employeeRepository,
+            IUnitOfWork unitOfWork,
+            IConfiguration configuration)
+        {
+            _userManager = userManager;
+            _jwtTokenService = jwtTokenService;
+            _refreshTokenStore = refreshTokenStore;
+            _clientRepository = clientRepository;
+            _businessRepository = businessRepository;
+            _employeeRepository = employeeRepository;
+            _unitOfWork = unitOfWork;
+            _configuration = configuration;
+        }
+
+        public async Task<AuthResponseDto> RegisterClientAsync(RegisterClientDto dto)
+        {
+            var existing = await _userManager.FindByEmailAsync(dto.Email);
+            if (existing != null)
+                throw new InvalidOperationException("Ya existe un usuario con ese email.");
+
+            var user = new ApplicationUser
+            {
+                UserName = dto.Email,
+                Email = dto.Email,
+                FullName = dto.FullName,
+                PhoneNumber = dto.Phone,
+                IsActive = true
+            };
+
+            var result = await _userManager.CreateAsync(user, dto.Password);
+            if (!result.Succeeded)
+                throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+
+            await _userManager.AddToRoleAsync(user, Roles.Client);
+
+            // Crear la entidad Client asociada
+            var client = new Client
+            {
+                Name = dto.FullName,
+                Phone = dto.Phone,
+                Email = dto.Email,
+                UserId = user.Id
+            };
+            await _clientRepository.AddAsync(client);
+            await _unitOfWork.Save();
+
+            return await BuildAuthResponseAsync(user);
+        }
+
+        public async Task<AuthResponseDto> RegisterOwnerAsync(RegisterOwnerDto dto)
+        {
+            var existing = await _userManager.FindByEmailAsync(dto.Email);
+            if (existing != null)
+                throw new InvalidOperationException("Ya existe un usuario con ese email.");
+
+            var user = new ApplicationUser
+            {
+                UserName = dto.Email,
+                Email = dto.Email,
+                FullName = dto.FullName,
+                PhoneNumber = dto.Phone,
+                IsActive = true
+            };
+
+            var result = await _userManager.CreateAsync(user, dto.Password);
+            if (!result.Succeeded)
+                throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+
+            await _userManager.AddToRoleAsync(user, Roles.BusinessOwner);
+
+            // Crear el Business asociado
+            var business = new Business
+            {
+                Name = dto.BusinessName,
+                Description = dto.BusinessDescription,
+                Address = dto.BusinessAddress,
+                Phone = dto.BusinessPhone,
+                Email = dto.BusinessEmail,
+                IsActive = true,
+                OwnerUserId = user.Id
+            };
+            await _businessRepository.AddAsync(business);
+            await _unitOfWork.Save();
+
+            return await BuildAuthResponseAsync(user);
+        }
+
+        public async Task<UserDto> RegisterEmployeeAsync(RegisterEmployeeDto dto, string currentOwnerUserId)
+        {
+            // Validar que el negocio existe y que el usuario actual es el dueño
+            var business = await _businessRepository.GetByIdAsync(dto.BusinessId)
+                ?? throw new KeyNotFoundException($"Business with Id {dto.BusinessId} not found.");
+
+            if (business.OwnerUserId != currentOwnerUserId)
+                throw new UnauthorizedAccessException("Solo el dueno del negocio puede crear empleados.");
+
+            var existing = await _userManager.FindByEmailAsync(dto.Email);
+            if (existing != null)
+                throw new InvalidOperationException("Ya existe un usuario con ese email.");
+
+            var user = new ApplicationUser
+            {
+                UserName = dto.Email,
+                Email = dto.Email,
+                FullName = dto.FullName,
+                PhoneNumber = dto.Phone,
+                IsActive = true
+            };
+
+            var result = await _userManager.CreateAsync(user, dto.Password);
+            if (!result.Succeeded)
+                throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+
+            await _userManager.AddToRoleAsync(user, Roles.Employee);
+
+            var employee = new Employee
+            {
+                BusinessId = dto.BusinessId,
+                FullName = dto.FullName,
+                Email = dto.Email,
+                Phone = dto.Phone,
+                IsActive = true,
+                UserId = user.Id
+            };
+            await _employeeRepository.AddAsync(employee);
+            await _unitOfWork.Save();
+
+            var roles = await _userManager.GetRolesAsync(user);
+            return new UserDto(user.Id, user.Email!, user.FullName, user.PhoneNumber, user.IsActive, roles);
+        }
+
+        public async Task<AuthResponseDto> LoginAsync(LoginDto dto)
+        {
+            var user = await _userManager.FindByEmailAsync(dto.Email)
+                ?? throw new UnauthorizedAccessException("Credenciales invalidas.");
+
+            if (!user.IsActive)
+                throw new UnauthorizedAccessException("La cuenta esta desactivada.");
+
+            if (await _userManager.IsLockedOutAsync(user))
+                throw new UnauthorizedAccessException("Cuenta bloqueada temporalmente por demasiados intentos fallidos.");
+
+            var valid = await _userManager.CheckPasswordAsync(user, dto.Password);
+            if (!valid)
+            {
+                await _userManager.AccessFailedAsync(user);
+                throw new UnauthorizedAccessException("Credenciales invalidas.");
+            }
+
+            await _userManager.ResetAccessFailedCountAsync(user);
+            return await BuildAuthResponseAsync(user);
+        }
+
+        public async Task<AuthResponseDto> RefreshAsync(string refreshToken)
+        {
+            var stored = await _refreshTokenStore.GetByTokenAsync(refreshToken)
+                ?? throw new UnauthorizedAccessException("Refresh token invalido.");
+
+            if (!stored.IsActive)
+                throw new UnauthorizedAccessException("Refresh token expirado o revocado.");
+
+            var user = await _userManager.FindByIdAsync(stored.UserId)
+                ?? throw new UnauthorizedAccessException("Usuario no encontrado.");
+
+            if (!user.IsActive)
+                throw new UnauthorizedAccessException("La cuenta esta desactivada.");
+
+            // Rotacion: revocar el actual y emitir uno nuevo
+            var newRefreshToken = _jwtTokenService.GenerateRefreshToken();
+            stored.RevokedAt = DateTime.UtcNow;
+            stored.ReplacedByToken = newRefreshToken;
+            _refreshTokenStore.Update(stored);
+
+            return await BuildAuthResponseAsync(user, newRefreshToken);
+        }
+
+        public async Task LogoutAsync(string refreshToken)
+        {
+            var stored = await _refreshTokenStore.GetByTokenAsync(refreshToken);
+            if (stored is null || !stored.IsActive) return; // idempotente
+
+            stored.RevokedAt = DateTime.UtcNow;
+            _refreshTokenStore.Update(stored);
+            await _refreshTokenStore.SaveChangesAsync();
+        }
+
+        public async Task ChangePasswordAsync(string userId, ChangePasswordDto dto)
+        {
+            var user = await _userManager.FindByIdAsync(userId)
+                ?? throw new KeyNotFoundException("Usuario no encontrado.");
+
+            var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+            if (!result.Succeeded)
+                throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+        }
+
+        public async Task<UserDto> GetCurrentUserAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId)
+                ?? throw new KeyNotFoundException("Usuario no encontrado.");
+
+            var roles = await _userManager.GetRolesAsync(user);
+            return new UserDto(user.Id, user.Email!, user.FullName, user.PhoneNumber, user.IsActive, roles);
+        }
+
+        private async Task<AuthResponseDto> BuildAuthResponseAsync(ApplicationUser user, string? existingRefreshToken = null)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            var (accessToken, accessExpires) = _jwtTokenService.GenerateAccessToken(
+                user.Id, user.Email!, user.FullName, roles);
+
+            string refreshTokenValue = existingRefreshToken ?? _jwtTokenService.GenerateRefreshToken();
+            var refreshDays = int.Parse(_configuration["Jwt:RefreshTokenDays"] ?? "7");
+            var refreshExpires = DateTime.UtcNow.AddDays(refreshDays);
+
+            var refreshToken = new RefreshToken
+            {
+                Token = refreshTokenValue,
+                UserId = user.Id,
+                ExpiresAt = refreshExpires
+            };
+            await _refreshTokenStore.AddAsync(refreshToken);
+            await _refreshTokenStore.SaveChangesAsync();
+
+            var userDto = new UserDto(user.Id, user.Email!, user.FullName, user.PhoneNumber, user.IsActive, roles);
+            return new AuthResponseDto(accessToken, accessExpires, refreshTokenValue, refreshExpires, userDto);
+        }
+    }
+}
