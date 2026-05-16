@@ -19,6 +19,17 @@ namespace MRC.Agendia.Infrastructure.Repositories
         public async Task<IEnumerable<Employee>> GetAllAsync()
             => await _context.Employees.ToListAsync();
 
+        public async Task<IEnumerable<Employee>> GetByBusinessIdAsync(int businessId, bool onlyActive = true)
+        {
+            var query = _context.Employees.AsNoTracking()
+                .Where(e => e.BusinessId == businessId);
+
+            if (onlyActive)
+                query = query.Where(e => e.IsActive);
+
+            return await query.OrderBy(e => e.Id).ToListAsync();
+        }
+
         public async Task AddAsync(Employee employee)
             => await _context.Employees.AddAsync(employee);
 
