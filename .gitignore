@@ -361,3 +361,19 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# ===========================================================
+# Claude Code
+# ===========================================================
+# Worktrees creadas por sesiones de Claude (locales, no compartir)
+.claude/worktrees/
+.claude/sessions/
+.claude/cache/
+
+# Settings locales por desarrollador (sobrescriben settings.json del proyecto)
+.claude/settings.local.json
+
+# NO ignorar lo que SI se versiona:
+#   .claude/settings.json      <- config compartida del proyecto
+#   .claude/commands/*.md      <- slash commands compartidos
+#   .claude/agents/*.md        <- agentes compartidos

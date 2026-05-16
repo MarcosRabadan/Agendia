@@ -1,6 +1,14 @@
 # MRC.Agendia
 
+[![CI](https://github.com/MarcosRabadan/Agendia/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/MarcosRabadan/Agendia/actions/workflows/ci.yml)
+[![.NET 9](https://img.shields.io/badge/.NET-9.0-blueviolet)](https://dotnet.microsoft.com/)
+[![License](https://img.shields.io/badge/license-private-lightgrey)](#)
+
 API de gestión de citas para negocios. .NET 9.0 con Clean Architecture + DDD + CQRS.
+
+> 📖 Si vas a trabajar en el proyecto (humano o agente), lee también:
+> - **[CLAUDE.md](./CLAUDE.md)** — contexto técnico que se carga automáticamente al abrir Claude Code
+> - **[CONTRIBUTING.md](./CONTRIBUTING.md)** — workflow de ramas, commits y PRs
 
 ## Stack
 
