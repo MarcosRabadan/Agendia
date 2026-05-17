@@ -35,13 +35,13 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>Solo Admin: crea un BusinessOwner + su Business.</summary>
+        /// <summary>Autoregistro publico de un BusinessOwner + su Business + Employee asociado.</summary>
         [HttpPost("register/owner")]
-        [Authorize(Roles = Roles.Admin)]
+        [AllowAnonymous]
+        [EnableRateLimiting("auth-register")]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
         public async Task<ActionResult<AuthResponseDto>> RegisterOwner([FromBody] RegisterOwnerDto dto)
         {
             var result = await _mediator.Send(new RegisterOwnerCommand(dto));
