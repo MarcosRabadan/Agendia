@@ -6,7 +6,9 @@ namespace MRC.Agendia.Application.Business
     public interface IBusinessService
     {
         Task<PagedResult<BusinessDto>> GetPagedAsync(int page, int pageSize);
+        Task<PagedResult<BusinessPublicDto>> GetPagedPublicAsync(int page, int pageSize);
         Task<BusinessDto?> GetByIdAsync(int id);
+        Task<BusinessPublicDto?> GetPublicByIdAsync(int id);
         Task<BusinessDto> CreateAsync(CreateBusinessDto dto);
         Task<BusinessDto> UpdateAsync(UpdateBusinessDto dto);
         Task<bool> DeleteAsync(int id);

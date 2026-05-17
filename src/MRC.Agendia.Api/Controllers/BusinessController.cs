@@ -23,9 +23,9 @@ namespace MRC.Agendia.Api.Controllers
 
         [AllowAnonymous]
         [HttpGet]
-        [ProducesResponseType(typeof(PagedResult<BusinessDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PagedResult<BusinessPublicDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<PagedResult<BusinessDto>>> GetAll(
+        public async Task<ActionResult<PagedResult<BusinessPublicDto>>> GetAll(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 50)
         {
@@ -35,9 +35,9 @@ namespace MRC.Agendia.Api.Controllers
 
         [AllowAnonymous]
         [HttpGet("{id}")]
-        [ProducesResponseType(typeof(BusinessDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(BusinessPublicDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<BusinessDto>> GetById(int id)
+        public async Task<ActionResult<BusinessPublicDto>> GetById(int id)
         {
             var result = await _mediator.Send(new GetBusinessByIdQuery(id));
             if (result is null) return NotFound();

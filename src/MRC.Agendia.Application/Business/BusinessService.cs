@@ -26,10 +26,23 @@ namespace MRC.Agendia.Application.Business
             return PagedResult<BusinessDto>.Create(dtos, totalCount, page, pageSize);
         }
 
+        public async Task<PagedResult<BusinessPublicDto>> GetPagedPublicAsync(int page, int pageSize)
+        {
+            var (items, totalCount) = await _repository.GetPagedActiveAsync(page, pageSize);
+            var dtos = _mapper.Map<List<BusinessPublicDto>>(items);
+            return PagedResult<BusinessPublicDto>.Create(dtos, totalCount, page, pageSize);
+        }
+
         public async Task<BusinessDto?> GetByIdAsync(int id)
         {
             var entity = await _repository.GetByIdAsync(id);
             return entity is null ? null : _mapper.Map<BusinessDto>(entity);
+        }
+
+        public async Task<BusinessPublicDto?> GetPublicByIdAsync(int id)
+        {
+            var entity = await _repository.GetActiveByIdAsync(id);
+            return entity is null ? null : _mapper.Map<BusinessPublicDto>(entity);
         }
 
         public async Task<BusinessDto> CreateAsync(CreateBusinessDto dto)

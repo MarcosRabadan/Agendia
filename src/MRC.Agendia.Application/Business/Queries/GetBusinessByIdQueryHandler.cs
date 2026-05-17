@@ -3,7 +3,7 @@ using MRC.Agendia.Application.Business.DTO;
 
 namespace MRC.Agendia.Application.Business.Queries
 {
-    public class GetBusinessByIdQueryHandler : IRequestHandler<GetBusinessByIdQuery, BusinessDto?>
+    public class GetBusinessByIdQueryHandler : IRequestHandler<GetBusinessByIdQuery, BusinessPublicDto?>
     {
         private readonly IBusinessService _service;
 
@@ -12,9 +12,7 @@ namespace MRC.Agendia.Application.Business.Queries
             _service = service;
         }
 
-        public async Task<BusinessDto?> Handle(GetBusinessByIdQuery request, CancellationToken cancellationToken)
-        {
-            return await _service.GetByIdAsync(request.Id);
-        }
+        public Task<BusinessPublicDto?> Handle(GetBusinessByIdQuery request, CancellationToken cancellationToken)
+            => _service.GetPublicByIdAsync(request.Id);
     }
 }
