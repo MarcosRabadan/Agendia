@@ -75,7 +75,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.Client)]
+        [Authorize(Roles = RolePolicies.AdminOrSelfClient)]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(ClientDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -87,7 +87,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.Client)]
+        [Authorize(Roles = RolePolicies.AdminOrSelfClient)]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
