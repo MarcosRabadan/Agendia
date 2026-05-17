@@ -4,7 +4,7 @@ using MRC.Agendia.Application.Common;
 
 namespace MRC.Agendia.Application.Business.Queries
 {
-    public class GetAllBusinessesQueryHandler : IRequestHandler<GetAllBusinessesQuery, PagedResult<BusinessDto>>
+    public class GetAllBusinessesQueryHandler : IRequestHandler<GetAllBusinessesQuery, PagedResult<BusinessPublicDto>>
     {
         private readonly IBusinessService _service;
 
@@ -13,7 +13,7 @@ namespace MRC.Agendia.Application.Business.Queries
             _service = service;
         }
 
-        public Task<PagedResult<BusinessDto>> Handle(GetAllBusinessesQuery request, CancellationToken cancellationToken)
-            => _service.GetPagedAsync(request.Page, request.PageSize);
+        public Task<PagedResult<BusinessPublicDto>> Handle(GetAllBusinessesQuery request, CancellationToken cancellationToken)
+            => _service.GetPagedPublicAsync(request.Page, request.PageSize);
     }
 }
