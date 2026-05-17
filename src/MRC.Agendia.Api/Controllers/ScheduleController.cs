@@ -42,7 +42,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner + "," + Roles.Employee)]
+        [Authorize(Roles = RolePolicies.Staff)]
         [HttpPost("templates")]
         [ProducesResponseType(typeof(ScheduleTemplateDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -53,7 +53,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetTemplateById), new { businessId, templateId = result.Id }, result);
         }
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner + "," + Roles.Employee)]
+        [Authorize(Roles = RolePolicies.Staff)]
         [HttpPut("templates/{templateId}")]
         [ProducesResponseType(typeof(ScheduleTemplateDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -65,7 +65,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner + "," + Roles.Employee)]
+        [Authorize(Roles = RolePolicies.Staff)]
         [HttpDelete("templates/{templateId}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -79,7 +79,7 @@ namespace MRC.Agendia.Api.Controllers
 
         #region Generate
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner + "," + Roles.Employee)]
+        [Authorize(Roles = RolePolicies.Staff)]
         [HttpPost("generate")]
         [ProducesResponseType(typeof(GenerateScheduleResponseDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -114,7 +114,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner + "," + Roles.Employee)]
+        [Authorize(Roles = RolePolicies.Staff)]
         [HttpPost("overrides")]
         [ProducesResponseType(typeof(ScheduleOverrideDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -125,7 +125,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetOverrideById), new { businessId, overrideId = result.Id }, result);
         }
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner + "," + Roles.Employee)]
+        [Authorize(Roles = RolePolicies.Staff)]
         [HttpPut("overrides/{overrideId}")]
         [ProducesResponseType(typeof(ScheduleOverrideDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -137,7 +137,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner + "," + Roles.Employee)]
+        [Authorize(Roles = RolePolicies.Staff)]
         [HttpDelete("overrides/{overrideId}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

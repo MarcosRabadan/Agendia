@@ -54,7 +54,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner)]
+        [Authorize(Roles = RolePolicies.AdminOrOwner)]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(BusinessDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

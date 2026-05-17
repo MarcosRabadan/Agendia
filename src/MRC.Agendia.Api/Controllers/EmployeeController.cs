@@ -21,7 +21,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner)]
+        [Authorize(Roles = RolePolicies.AdminOrOwner)]
         [HttpGet]
         [ProducesResponseType(typeof(PagedResult<EmployeeDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -44,7 +44,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner)]
+        [Authorize(Roles = RolePolicies.AdminOrOwner)]
         [HttpPost]
         [ProducesResponseType(typeof(EmployeeDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -54,7 +54,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner + "," + Roles.Employee)]
+        [Authorize(Roles = RolePolicies.Staff)]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(EmployeeDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -66,7 +66,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner)]
+        [Authorize(Roles = RolePolicies.AdminOrOwner)]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
