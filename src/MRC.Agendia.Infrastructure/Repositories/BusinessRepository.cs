@@ -19,6 +19,12 @@ namespace MRC.Agendia.Infrastructure.Repositories
         public async Task<IEnumerable<Business>> GetAllAsync()
             => await _context.Businesses.ToListAsync();
 
+        public Task<(IReadOnlyList<Business> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+            => _context.Businesses
+                .AsNoTracking()
+                .OrderBy(b => b.Id)
+                .ToPagedListAsync(page, pageSize, cancellationToken);
+
         public async Task AddAsync(Business business)
             => await _context.Businesses.AddAsync(business);
 

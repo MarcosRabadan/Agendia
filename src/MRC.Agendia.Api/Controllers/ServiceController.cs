@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Services.Commands;
 using MRC.Agendia.Application.Services.DTO;
 using MRC.Agendia.Application.Services.Queries;
@@ -22,10 +23,13 @@ namespace MRC.Agendia.Api.Controllers
 
         [AllowAnonymous]
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<ServiceDto>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<ServiceDto>>> GetAll()
+        [ProducesResponseType(typeof(PagedResult<ServiceDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<PagedResult<ServiceDto>>> GetAll(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50)
         {
-            var result = await _mediator.Send(new GetAllServicesQuery());
+            var result = await _mediator.Send(new GetAllServicesQuery(page, pageSize));
             return Ok(result);
         }
 

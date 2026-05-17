@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using MRC.Agendia.Application.Business.Commands;
 using MRC.Agendia.Application.Business.DTO;
 using MRC.Agendia.Application.Business.Queries;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Constants;
 
 namespace MRC.Agendia.Api.Controllers
@@ -22,10 +23,13 @@ namespace MRC.Agendia.Api.Controllers
 
         [AllowAnonymous]
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<BusinessDto>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<BusinessDto>>> GetAll()
+        [ProducesResponseType(typeof(PagedResult<BusinessDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<PagedResult<BusinessDto>>> GetAll(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50)
         {
-            var result = await _mediator.Send(new GetAllBusinessesQuery());
+            var result = await _mediator.Send(new GetAllBusinessesQuery(page, pageSize));
             return Ok(result);
         }
 

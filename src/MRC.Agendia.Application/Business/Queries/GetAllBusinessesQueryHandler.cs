@@ -1,9 +1,10 @@
 using MediatR;
 using MRC.Agendia.Application.Business.DTO;
+using MRC.Agendia.Application.Common;
 
 namespace MRC.Agendia.Application.Business.Queries
 {
-    public class GetAllBusinessesQueryHandler : IRequestHandler<GetAllBusinessesQuery, IEnumerable<BusinessDto>>
+    public class GetAllBusinessesQueryHandler : IRequestHandler<GetAllBusinessesQuery, PagedResult<BusinessDto>>
     {
         private readonly IBusinessService _service;
 
@@ -12,9 +13,7 @@ namespace MRC.Agendia.Application.Business.Queries
             _service = service;
         }
 
-        public async Task<IEnumerable<BusinessDto>> Handle(GetAllBusinessesQuery request, CancellationToken cancellationToken)
-        {
-            return await _service.GetAllAsync();
-        }
+        public Task<PagedResult<BusinessDto>> Handle(GetAllBusinessesQuery request, CancellationToken cancellationToken)
+            => _service.GetPagedAsync(request.Page, request.PageSize);
     }
 }

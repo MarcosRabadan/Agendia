@@ -1,7 +1,11 @@
 using MediatR;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Employees.DTO;
 
 namespace MRC.Agendia.Application.Employees.Queries
 {
-    public record GetAllEmployeesQuery() : IRequest<IEnumerable<EmployeeDto>>;
+    public record GetAllEmployeesQuery(
+        int Page = PaginationConstants.DefaultPage,
+        int PageSize = PaginationConstants.DefaultPageSize)
+        : IRequest<PagedResult<EmployeeDto>>;
 }

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Employees.Commands;
 using MRC.Agendia.Application.Employees.DTO;
 using MRC.Agendia.Application.Employees.Queries;
@@ -22,10 +23,13 @@ namespace MRC.Agendia.Api.Controllers
 
         [Authorize(Roles = Roles.Admin + "," + Roles.BusinessOwner)]
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<EmployeeDto>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<EmployeeDto>>> GetAll()
+        [ProducesResponseType(typeof(PagedResult<EmployeeDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<PagedResult<EmployeeDto>>> GetAll(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50)
         {
-            var result = await _mediator.Send(new GetAllEmployeesQuery());
+            var result = await _mediator.Send(new GetAllEmployeesQuery(page, pageSize));
             return Ok(result);
         }
 

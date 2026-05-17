@@ -1,9 +1,10 @@
 using MediatR;
 using MRC.Agendia.Application.Clients.DTO;
+using MRC.Agendia.Application.Common;
 
 namespace MRC.Agendia.Application.Clients.Queries
 {
-    public class GetAllClientsQueryHandler : IRequestHandler<GetAllClientsQuery, IEnumerable<ClientDto>>
+    public class GetAllClientsQueryHandler : IRequestHandler<GetAllClientsQuery, PagedResult<ClientDto>>
     {
         private readonly IClientService _service;
 
@@ -12,9 +13,7 @@ namespace MRC.Agendia.Application.Clients.Queries
             _service = service;
         }
 
-        public async Task<IEnumerable<ClientDto>> Handle(GetAllClientsQuery request, CancellationToken cancellationToken)
-        {
-            return await _service.GetAllAsync();
-        }
+        public Task<PagedResult<ClientDto>> Handle(GetAllClientsQuery request, CancellationToken cancellationToken)
+            => _service.GetPagedAsync(request.Page, request.PageSize);
     }
 }
