@@ -17,11 +17,13 @@ dotnet user-secrets set "AdminSeed:FullName" "Administrador"
 
 cd ../..
 
-# Aplicar migraciones
-dotnet ef database update --project src/MRC.Agendia.Infrastructure --startup-project src/MRC.Agendia.Api
-
 # Build
 dotnet build
+
+# Lanzar la API (en Development las migraciones EF se aplican solas al arrancar).
+# Si quieres aplicarlas sin arrancar la API:
+#   dotnet ef database update --project src/MRC.Agendia.Infrastructure --startup-project src/MRC.Agendia.Api
+dotnet run --project src/MRC.Agendia.Api
 ```
 
 ## Flujo de trabajo

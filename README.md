@@ -112,12 +112,18 @@ Si no añades ningún proxy y el tuyo no es loopback, ASP.NET **ignora** los hea
 ## Arrancar la aplicación
 
 ```bash
-# 1. Aplicar migraciones
-dotnet ef database update --project src/MRC.Agendia.Infrastructure --startup-project src/MRC.Agendia.Api
-
-# 2. Lanzar la API
 dotnet run --project src/MRC.Agendia.Api
 ```
+
+En **Development** las migraciones EF Core pendientes se aplican **automáticamente al arrancar** (puedes verlo en los logs: `aplicando N migracion(es) pendiente(s)...`). No hace falta ejecutar `dotnet ef database update` a mano.
+
+Si quieres aplicar migraciones sin arrancar la API (p.ej. desde un script):
+
+```bash
+dotnet ef database update --project src/MRC.Agendia.Infrastructure --startup-project src/MRC.Agendia.Api
+```
+
+En **Producción** la auto-migración está desactivada por seguridad: las migraciones se aplican vía el pipeline de despliegue, no en el arranque de la app.
 
 Swagger UI: `https://localhost:<puerto>/`
 
