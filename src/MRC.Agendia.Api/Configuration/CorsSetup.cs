@@ -10,8 +10,8 @@ namespace MRC.Agendia.Api.Configuration
     /// Comportamiento segun entorno:
     /// <list type="bullet">
     ///   <item><description>Origenes definidos: politica restringida con esos hosts.</description></item>
-    ///   <item><description>Lista vacia en Development: fallback permisivo (AllowAnyOrigin) con warning.</description></item>
-    ///   <item><description>Lista vacia fuera de Development: fail-fast (no arranca).</description></item>
+    ///   <item><description>Lista vacia en Development o Testing: fallback permisivo (AllowAnyOrigin) con warning.</description></item>
+    ///   <item><description>Lista vacia en otros entornos (Production, Staging, ...): fail-fast (no arranca).</description></item>
     /// </list>
     /// </summary>
     public static class CorsSetup
@@ -39,19 +39,23 @@ namespace MRC.Agendia.Api.Configuration
                         return;
                     }
 
-                    if (!environment.IsDevelopment())
+                    var isNonProdEnv = environment.IsDevelopment()
+                        || environment.IsEnvironment("Testing");
+
+                    if (!isNonProdEnv)
                     {
                         throw new InvalidOperationException(
-                            "Cors:AllowedOrigins esta vacio en un entorno distinto de Development. " +
+                            "Cors:AllowedOrigins esta vacio en un entorno distinto de Development/Testing. " +
                             "Configura la lista de origenes permitidos via variable de entorno " +
                             "Cors__AllowedOrigins__0, Cors__AllowedOrigins__1, ... o en appsettings.<Env>.json.");
                     }
 
-                    // Development fallback: permissive policy with a clear warning so
+                    // Development / Testing fallback: permissive policy with a clear warning so
                     // the dev notices the missing config but the app keeps running.
                     Log.Warning(
-                        "CORS: Cors:AllowedOrigins esta vacio en Development. " +
-                        "Aplicando AllowAnyOrigin como fallback. Define los origenes en appsettings.Development.json.");
+                        "CORS: Cors:AllowedOrigins esta vacio en {Environment}. " +
+                        "Aplicando AllowAnyOrigin como fallback.",
+                        environment.EnvironmentName);
 
                     policy.AllowAnyOrigin()
                           .AllowAnyHeader()
