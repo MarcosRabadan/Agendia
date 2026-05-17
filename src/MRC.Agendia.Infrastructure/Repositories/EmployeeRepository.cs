@@ -25,6 +25,13 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderBy(e => e.Id)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
+        public Task<(IReadOnlyList<Employee> Items, int TotalCount)> GetPagedByOwnerUserIdAsync(string ownerUserId, int page, int pageSize, CancellationToken cancellationToken = default)
+            => _context.Employees
+                .AsNoTracking()
+                .Where(e => e.Business.OwnerUserId == ownerUserId)
+                .OrderBy(e => e.Id)
+                .ToPagedListAsync(page, pageSize, cancellationToken);
+
         public async Task<IEnumerable<Employee>> GetByBusinessIdAsync(int businessId, bool onlyActive = true)
         {
             var query = _context.Employees.AsNoTracking()

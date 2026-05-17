@@ -27,6 +27,13 @@ namespace MRC.Agendia.Application.Employees
             return PagedResult<EmployeeDto>.Create(dtos, totalCount, page, pageSize);
         }
 
+        public async Task<PagedResult<EmployeeDto>> GetPagedByOwnerUserIdAsync(string ownerUserId, int page, int pageSize)
+        {
+            var (items, totalCount) = await _repository.GetPagedByOwnerUserIdAsync(ownerUserId, page, pageSize);
+            var dtos = _mapper.Map<List<EmployeeDto>>(items);
+            return PagedResult<EmployeeDto>.Create(dtos, totalCount, page, pageSize);
+        }
+
         public async Task<EmployeeDto?> GetByIdAsync(int id)
         {
             var entity = await _repository.GetByIdAsync(id);
