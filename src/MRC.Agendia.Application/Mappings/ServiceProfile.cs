@@ -10,7 +10,12 @@ namespace MRC.Agendia.Application.Mappings
         {
             CreateMap<Service, ServiceDto>();
             CreateMap<CreateServiceDto, Service>();
-            CreateMap<UpdateServiceDto, Service>();
+
+            // Update does NOT allow changing the BusinessId. Mapping it would let
+            // an Owner move a Service from another tenant to his own by sending a
+            // crafted DTO (see issue #91). The id stays as whatever the entity had.
+            CreateMap<UpdateServiceDto, Service>()
+                .ForMember(dest => dest.BusinessId, opt => opt.Ignore());
         }
     }
 }
