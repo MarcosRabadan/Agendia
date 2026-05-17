@@ -4,14 +4,14 @@ using Serilog;
 namespace MRC.Agendia.Api.Configuration
 {
     /// <summary>
-    /// Politica CORS configurable por entorno. Lee los origenes permitidos
-    /// desde la seccion <c>Cors:AllowedOrigins</c> de configuracion.
+    /// Per-environment CORS policy. Reads the allowed origins from the
+    /// <c>Cors:AllowedOrigins</c> configuration section.
     ///
-    /// Comportamiento segun entorno:
+    /// Behavior per environment:
     /// <list type="bullet">
-    ///   <item><description>Origenes definidos: politica restringida con esos hosts.</description></item>
-    ///   <item><description>Lista vacia en Development o Testing: fallback permisivo (AllowAnyOrigin) con warning.</description></item>
-    ///   <item><description>Lista vacia en otros entornos (Production, Staging, ...): fail-fast (no arranca).</description></item>
+    ///   <item><description>Origins defined: restricted policy bound to those hosts.</description></item>
+    ///   <item><description>Empty list in Development or Testing: permissive fallback (AllowAnyOrigin) with warning.</description></item>
+    ///   <item><description>Empty list in any other environment (Production, Staging, ...): fail-fast (app does not start).</description></item>
     /// </list>
     /// </summary>
     public static class CorsSetup
