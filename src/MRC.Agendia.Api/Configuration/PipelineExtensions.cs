@@ -1,3 +1,5 @@
+using System.Net;
+using Microsoft.AspNetCore.HttpOverrides;
 using MRC.Agendia.Api.Middleware;
 
 namespace MRC.Agendia.Api.Configuration
@@ -6,18 +8,28 @@ namespace MRC.Agendia.Api.Configuration
     /// Configura el HTTP request pipeline en el orden correcto.
     ///
     /// Orden critico:
-    ///   1. HttpsRedirection
-    ///   2. CORS
-    ///   3. RateLimiter
-    ///   4. ExceptionHandlingMiddleware
-    ///   5. Authentication
-    ///   6. Authorization
-    ///   7. Controllers
+    ///   1. ForwardedHeaders (solo fuera de Development/Testing)
+    ///   2. HttpsRedirection
+    ///   3. CORS
+    ///   4. RateLimiter
+    ///   5. ExceptionHandlingMiddleware
+    ///   6. Authentication
+    ///   7. Authorization
+    ///   8. Controllers
     /// </summary>
     public static class PipelineExtensions
     {
         public static WebApplication UseConfiguredPipeline(this WebApplication app)
         {
+            // ForwardedHeaders has to run BEFORE every other middleware so the
+            // IP / scheme that the rate limiter, auth and logging see is the
+            // real client one, not the proxy's. Disabled in Development (you
+            // hit kestrel directly) and Testing (TestServer is not a proxy).
+            if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"))
+            {
+                app.UseForwardedHeaders(BuildForwardedHeadersOptions(app.Configuration));
+            }
+
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
@@ -53,6 +65,51 @@ namespace MRC.Agendia.Api.Configuration
             app.MapHealthChecks("/health");
 
             return app;
+        }
+
+        /// <summary>
+        /// Builds the <see cref="ForwardedHeadersOptions"/> from configuration.
+        /// By default ASP.NET only trusts loopback addresses; extra proxies and
+        /// CIDR networks can be added via <c>ForwardedHeaders:KnownProxies</c>
+        /// and <c>ForwardedHeaders:KnownNetworks</c>.
+        /// </summary>
+        private static ForwardedHeadersOptions BuildForwardedHeadersOptions(IConfiguration configuration)
+        {
+            var options = new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+                // Two hops cover the common topology: one internal LB + one edge proxy.
+                // Bump if your infra chains more proxies in front of the API.
+                ForwardLimit = 2,
+            };
+
+            var knownProxies = configuration
+                .GetSection("ForwardedHeaders:KnownProxies")
+                .Get<string[]>() ?? Array.Empty<string>();
+            foreach (var raw in knownProxies)
+            {
+                if (IPAddress.TryParse(raw, out var ip))
+                {
+                    options.KnownProxies.Add(ip);
+                }
+            }
+
+            var knownNetworks = configuration
+                .GetSection("ForwardedHeaders:KnownNetworks")
+                .Get<string[]>() ?? Array.Empty<string>();
+            foreach (var raw in knownNetworks)
+            {
+                // Expected format: "ip/prefix" e.g. "10.0.0.0/8".
+                var parts = raw.Split('/');
+                if (parts.Length == 2
+                    && IPAddress.TryParse(parts[0], out var netIp)
+                    && int.TryParse(parts[1], out var prefix))
+                {
+                    options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(netIp, prefix));
+                }
+            }
+
+            return options;
         }
     }
 }
