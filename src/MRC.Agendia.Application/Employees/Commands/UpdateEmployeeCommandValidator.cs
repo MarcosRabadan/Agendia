@@ -14,6 +14,9 @@ namespace MRC.Agendia.Application.Employees.Commands
                 .EmailAddress().When(x => !string.IsNullOrEmpty(x.Dto.Email))
                 .MaximumLength(200);
             RuleFor(x => x.Dto.Phone).MaximumLength(50);
+            RuleFor(x => x.Dto.MaxConcurrentAppointments)
+                .InclusiveBetween(1, 100)
+                .WithMessage("MaxConcurrentAppointments debe estar entre 1 y 100.");
         }
     }
 }

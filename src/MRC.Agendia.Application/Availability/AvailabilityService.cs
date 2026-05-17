@@ -107,6 +107,10 @@ namespace MRC.Agendia.Application.Availability
                 .ToDictionary(g => g.Key, g => g.ToList());
 
             // ---------- Compute slots ----------
+            // For each candidate window, per employee:
+            //   remainingCapacity = MaxConcurrentAppointments - overlappingCount
+            // If at least one employee has remainingCapacity > 0 the slot is
+            // bookable; total Capacity is the sum across all employees.
             var duration = TimeSpan.FromMinutes(service.DurationMinutes);
             var step = TimeSpan.FromMinutes(stepMinutes);
             var slots = new List<AvailableSlotDto>();
@@ -119,19 +123,25 @@ namespace MRC.Agendia.Application.Availability
                 {
                     var slotEnd = current.Add(duration);
                     var availableEmployeeIds = new List<int>();
+                    var totalCapacity = 0;
 
                     foreach (var employee in employees)
                     {
-                        if (!HasConflict(appointments, employee.Id, date, current, slotEnd))
+                        var overlapping = CountOverlapping(appointments, employee.Id, date, current, slotEnd);
+                        var remaining = employee.MaxConcurrentAppointments - overlapping;
+                        if (remaining > 0)
+                        {
                             availableEmployeeIds.Add(employee.Id);
+                            totalCapacity += remaining;
+                        }
                     }
 
-                    if (availableEmployeeIds.Count > 0)
+                    if (totalCapacity > 0)
                     {
                         slots.Add(new AvailableSlotDto(
                             StartTime: current,
                             EndTime: slotEnd,
-                            Capacity: availableEmployeeIds.Count,
+                            Capacity: totalCapacity,
                             AvailableEmployeeIds: availableEmployeeIds));
                     }
 
@@ -152,10 +162,10 @@ namespace MRC.Agendia.Application.Availability
         }
 
         /// <summary>
-        /// True if the candidate window [slotStart, slotEnd] on the given date
-        /// overlaps with any of the employee's existing appointments.
+        /// Counts how many of the employee's existing appointments overlap with
+        /// the candidate window [slotStart, slotEnd] on the given date.
         /// </summary>
-        private static bool HasConflict(
+        private static int CountOverlapping(
             Dictionary<int, List<Appointment>> appointmentsByEmployee,
             int employeeId,
             DateOnly date,
@@ -163,14 +173,14 @@ namespace MRC.Agendia.Application.Availability
             TimeOnly slotEnd)
         {
             if (!appointmentsByEmployee.TryGetValue(employeeId, out var appts) || appts.Count == 0)
-                return false;
+                return 0;
 
             var slotStartDt = date.ToDateTime(slotStart);
             var slotEndDt = date.ToDateTime(slotEnd);
 
             // Two ranges [a.Start, a.End) and [slotStart, slotEnd) overlap iff
             // a.Start < slotEnd && a.End > slotStart.
-            return appts.Any(a => a.StartDate < slotEndDt && a.EndDate > slotStartDt);
+            return appts.Count(a => a.StartDate < slotEndDt && a.EndDate > slotStartDt);
         }
 
         private static AvailabilityDto EmptyAvailability(

@@ -1,9 +1,10 @@
 namespace MRC.Agendia.Application.Appointments
 {
     /// <summary>
-    /// Validates that an appointment is allowed against the business' schedule
+    /// Validates that an appointment is allowed against the business schedule
     /// (open hours, holidays, split shifts) and against other appointments
-    /// (no employee double-booking, duration matches the service).
+    /// (no employee double-booking beyond their capacity, duration matches
+    /// the service).
     ///
     /// Throws <see cref="InvalidOperationException"/> with a descriptive
     /// message on every business-rule failure. The exception is mapped to

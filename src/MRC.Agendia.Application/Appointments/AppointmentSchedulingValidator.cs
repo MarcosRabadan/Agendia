@@ -49,7 +49,7 @@ namespace MRC.Agendia.Application.Appointments
                 throw new InvalidOperationException("No se pueden crear ni mover citas al pasado.");
 
             // ---------- Existence + activity ----------
-            var client = await _clientRepository.GetByIdAsync(clientId)
+            _ = await _clientRepository.GetByIdAsync(clientId)
                 ?? throw new KeyNotFoundException($"Client {clientId} not found.");
 
             var employee = await _employeeRepository.GetByIdAsync(employeeId)
@@ -96,21 +96,26 @@ namespace MRC.Agendia.Application.Appointments
                     "La cita esta fuera del horario laboral o cruza un descanso entre turnos.");
             }
 
-            // ---------- No overlap with other appointments of the same employee ----------
+            // ---------- Employee capacity check ----------
+            // The employee can hold up to MaxConcurrentAppointments overlapping
+            // appointments at the same time. Reject only when adding this one
+            // would exceed that limit.
             var dayStart = date.ToDateTime(TimeOnly.MinValue);
             var dayEnd = date.ToDateTime(new TimeOnly(23, 59, 59));
 
-            var conflicts = (await _appointmentRepository
+            var overlappingCount = (await _appointmentRepository
                     .GetByBusinessIdAndDateRangeAsync(employee.BusinessId, dayStart, dayEnd))
                 .Where(a => a.EmployeeId == employeeId)
                 .Where(a => a.Status != AppointmentStatus.Cancelled && a.Status != AppointmentStatus.NoShow)
                 .Where(a => appointmentId is null || a.Id != appointmentId.Value)
-                .Any(a => a.StartDate < endDate && a.EndDate > startDate);
+                .Count(a => a.StartDate < endDate && a.EndDate > startDate);
 
-            if (conflicts)
+            if (overlappingCount >= employee.MaxConcurrentAppointments)
             {
                 throw new InvalidOperationException(
-                    "El empleado ya tiene otra cita que se solapa con este horario.");
+                    employee.MaxConcurrentAppointments == 1
+                        ? "El empleado ya tiene otra cita que se solapa con este horario."
+                        : $"El empleado ya tiene {overlappingCount} citas en este horario (capacidad maxima: {employee.MaxConcurrentAppointments}).");
             }
         }
     }
