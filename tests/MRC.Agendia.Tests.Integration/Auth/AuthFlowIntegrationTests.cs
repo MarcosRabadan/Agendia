@@ -13,13 +13,12 @@ namespace MRC.Agendia.Tests.Integration.Auth
     /// Notes on status codes:
     ///   - GET /me without token: 401 (rejected by ASP.NET auth pipeline before
     ///     reaching ExceptionHandlingMiddleware).
-    ///   - Login with wrong credentials / locked account: 403 (the AuthService
-    ///     throws UnauthorizedAccessException and the middleware currently maps
-    ///     UnauthorizedAccessException -> 403). Issue #47 was written expecting
-    ///     401 here, but mapping every UnauthorizedAccessException to 401 would
-    ///     wrongly affect resource-based authorization where 403 is correct.
-    ///     A typed AuthenticationException -> 401 is a separate refactor.
-    ///   - Refresh with revoked/invalid token: 403 (same reason as above).
+    ///   - Login with wrong credentials / locked account: 401 (AuthService
+    ///     throws AuthenticationException, which the middleware maps to 401).
+    ///   - Refresh with revoked/invalid token: 401 (same reason).
+    ///   - Resource-based authorization failures (covered in #46) still return
+    ///     403 because they throw UnauthorizedAccessException - that is the
+    ///     correct semantic for "authenticated but not allowed".
     /// </summary>
     public class AuthFlowIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
@@ -74,25 +73,25 @@ namespace MRC.Agendia.Tests.Integration.Auth
         }
 
         [Fact]
-        public async Task Login_CredencialesInvalidas_403()
+        public async Task Login_CredencialesInvalidas_401()
         {
             var (email, _) = await RegisterUserAsync();
 
             var response = await _client.PostAsJsonAsync("/api/auth/login",
                 new LoginDto(email, "WrongPassword1!"));
 
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
             var body = await response.Content.ReadAsStringAsync();
             Assert.Contains("Credenciales invalidas.", body);
         }
 
         [Fact]
-        public async Task Login_EmailInexistente_403()
+        public async Task Login_EmailInexistente_401()
         {
             var response = await _client.PostAsJsonAsync("/api/auth/login",
                 new LoginDto($"missing-{Guid.NewGuid():N}@test.local", ValidPassword));
 
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
 
         // ===================================================================
@@ -110,14 +109,14 @@ namespace MRC.Agendia.Tests.Integration.Auth
             {
                 var fail = await _client.PostAsJsonAsync("/api/auth/login",
                     new LoginDto(email, "WrongPassword1!"));
-                Assert.Equal(HttpStatusCode.Forbidden, fail.StatusCode);
+                Assert.Equal(HttpStatusCode.Unauthorized, fail.StatusCode);
             }
 
             // Even with the correct password the account is now locked out.
             var locked = await _client.PostAsJsonAsync("/api/auth/login",
                 new LoginDto(email, ValidPassword));
 
-            Assert.Equal(HttpStatusCode.Forbidden, locked.StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, locked.StatusCode);
             var body = await locked.Content.ReadAsStringAsync();
             Assert.Contains("Cuenta bloqueada", body);
         }
@@ -177,7 +176,7 @@ namespace MRC.Agendia.Tests.Integration.Auth
             var reuse = await _client.PostAsJsonAsync("/api/auth/refresh",
                 new RefreshTokenRequestDto(originalRefresh));
 
-            Assert.Equal(HttpStatusCode.Forbidden, reuse.StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, reuse.StatusCode);
         }
 
         // ===================================================================
@@ -202,7 +201,7 @@ namespace MRC.Agendia.Tests.Integration.Auth
             var afterLogout = await _client.PostAsJsonAsync("/api/auth/refresh",
                 new RefreshTokenRequestDto(tokens.RefreshToken));
 
-            Assert.Equal(HttpStatusCode.Forbidden, afterLogout.StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, afterLogout.StatusCode);
         }
 
         // ===================================================================

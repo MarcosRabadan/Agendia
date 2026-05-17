@@ -5,6 +5,7 @@ using MRC.Agendia.Application.Auth;
 using MRC.Agendia.Application.Auth.DTO;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Infrastructure.Identity
@@ -177,19 +178,19 @@ namespace MRC.Agendia.Infrastructure.Identity
         public async Task<AuthResponseDto> LoginAsync(LoginDto dto)
         {
             var user = await _userManager.FindByEmailAsync(dto.Email)
-                ?? throw new UnauthorizedAccessException("Credenciales invalidas.");
+                ?? throw new AuthenticationException("Credenciales invalidas.");
 
             if (!user.IsActive)
-                throw new UnauthorizedAccessException("La cuenta esta desactivada.");
+                throw new AuthenticationException("La cuenta esta desactivada.");
 
             if (await _userManager.IsLockedOutAsync(user))
-                throw new UnauthorizedAccessException("Cuenta bloqueada temporalmente por demasiados intentos fallidos.");
+                throw new AuthenticationException("Cuenta bloqueada temporalmente por demasiados intentos fallidos.");
 
             var valid = await _userManager.CheckPasswordAsync(user, dto.Password);
             if (!valid)
             {
                 await _userManager.AccessFailedAsync(user);
-                throw new UnauthorizedAccessException("Credenciales invalidas.");
+                throw new AuthenticationException("Credenciales invalidas.");
             }
 
             await _userManager.ResetAccessFailedCountAsync(user);
@@ -199,16 +200,16 @@ namespace MRC.Agendia.Infrastructure.Identity
         public async Task<AuthResponseDto> RefreshAsync(string refreshToken)
         {
             var stored = await _refreshTokenStore.GetByTokenAsync(refreshToken)
-                ?? throw new UnauthorizedAccessException("Refresh token invalido.");
+                ?? throw new AuthenticationException("Refresh token invalido.");
 
             if (!stored.IsActive)
-                throw new UnauthorizedAccessException("Refresh token expirado o revocado.");
+                throw new AuthenticationException("Refresh token expirado o revocado.");
 
             var user = await _userManager.FindByIdAsync(stored.UserId)
-                ?? throw new UnauthorizedAccessException("Usuario no encontrado.");
+                ?? throw new AuthenticationException("Usuario no encontrado.");
 
             if (!user.IsActive)
-                throw new UnauthorizedAccessException("La cuenta esta desactivada.");
+                throw new AuthenticationException("La cuenta esta desactivada.");
 
             // Rotacion: revocar el actual y emitir uno nuevo
             var newRefreshToken = _jwtTokenService.GenerateRefreshToken();
