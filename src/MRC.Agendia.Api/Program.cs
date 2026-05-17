@@ -56,3 +56,7 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+// Required for WebApplicationFactory<Program> in integration tests to be able
+// to instantiate the host. Top-level Program is otherwise implicitly internal.
+public partial class Program { }

@@ -29,9 +29,23 @@ namespace MRC.Agendia.Api.Configuration
                 });
             }
 
-            app.UseHttpsRedirection();
+            // Skipped under "Testing" so WebApplicationFactory does not have to follow
+            // 307 redirects when calling the API over TestServer.
+            if (!app.Environment.IsEnvironment("Testing"))
+            {
+                app.UseHttpsRedirection();
+            }
+
             app.UseCors();
-            app.UseRateLimiter();
+
+            // Skipped under "Testing" because the auth rate limits (login 5/min,
+            // register 3/h) collide with integration scenarios that exercise the
+            // lockout-after-5-failures path or register several users in a row.
+            if (!app.Environment.IsEnvironment("Testing"))
+            {
+                app.UseRateLimiter();
+            }
+
             app.UseMiddleware<ExceptionHandlingMiddleware>();
             app.UseAuthentication();
             app.UseAuthorization();
