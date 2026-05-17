@@ -171,7 +171,8 @@ dotnet test
 # Migración nueva
 dotnet ef migrations add NombreMigracion --project src/MRC.Agendia.Infrastructure --startup-project src/MRC.Agendia.Api --output-dir Migrations
 
-# Aplicar migraciones a BD local
+# Aplicar migraciones a BD local (solo si se arranca sin pasar por `dotnet run`,
+# porque en Development la API las aplica automaticamente al arrancar)
 dotnet ef database update --project src/MRC.Agendia.Infrastructure --startup-project src/MRC.Agendia.Api
 
 # Quitar la última migración (antes de pushear)
