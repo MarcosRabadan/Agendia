@@ -111,6 +111,7 @@ src/
 ## Auth flow
 
 1. `POST /api/auth/register/client` (público) — registro de cliente
+   `POST /api/auth/register/owner` (público) — registro de owner + su negocio
 2. `POST /api/auth/login` (público) — devuelve `accessToken` (15 min) + `refreshToken` (7 días)
 3. Llamadas autenticadas: header `Authorization: Bearer <accessToken>`
 4. `POST /api/auth/refresh` cuando el access expira — rota el refresh token
