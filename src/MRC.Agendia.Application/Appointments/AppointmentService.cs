@@ -9,17 +9,20 @@ namespace MRC.Agendia.Application.Appointments
     public class AppointmentService : IAppointmentService
     {
         private readonly IAppointmentRepository _repository;
+        private readonly IClientRepository _clientRepository;
         private readonly IAppointmentSchedulingValidator _schedulingValidator;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
         public AppointmentService(
             IAppointmentRepository repository,
+            IClientRepository clientRepository,
             IAppointmentSchedulingValidator schedulingValidator,
             IUnitOfWork unitOfWork,
             IMapper mapper)
         {
             _repository = repository;
+            _clientRepository = clientRepository;
             _schedulingValidator = schedulingValidator;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -29,6 +32,22 @@ namespace MRC.Agendia.Application.Appointments
         public async Task<PagedResult<AppointmentDto>> GetPagedAsync(int page, int pageSize)
         {
             var (items, totalCount) = await _repository.GetPagedAsync(page, pageSize);
+            var dtos = _mapper.Map<List<AppointmentDto>>(items);
+            return PagedResult<AppointmentDto>.Create(dtos, totalCount, page, pageSize);
+        }
+
+        public async Task<PagedResult<AppointmentDto>> GetPagedByClientUserIdAsync(string userId, int page, int pageSize)
+        {
+            // Resolve the Client entity from the authenticated user. If the user has
+            // the Client role but no Client row (e.g. row removed while the JWT is still
+            // valid), return an empty page instead of leaking existence information.
+            var client = await _clientRepository.GetByUserIdAsync(userId);
+            if (client is null)
+            {
+                return PagedResult<AppointmentDto>.Create(Array.Empty<AppointmentDto>(), 0, page, pageSize);
+            }
+
+            var (items, totalCount) = await _repository.GetPagedByClientIdAsync(client.Id, page, pageSize);
             var dtos = _mapper.Map<List<AppointmentDto>>(items);
             return PagedResult<AppointmentDto>.Create(dtos, totalCount, page, pageSize);
         }

@@ -28,6 +28,15 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderByDescending(a => a.StartDate)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
+        public Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedByClientIdAsync(int clientId, int page, int pageSize, CancellationToken cancellationToken = default)
+            => _context.Appointments
+                .AsNoTracking()
+                .Include(a => a.Employee)
+                .Include(a => a.Service)
+                .Where(a => a.ClientId == clientId)
+                .OrderByDescending(a => a.StartDate)
+                .ToPagedListAsync(page, pageSize, cancellationToken);
+
         public async Task AddAsync(Appointment appointment)
             => await _context.Appointments.AddAsync(appointment);
 
