@@ -85,6 +85,30 @@ Cors__AllowedOrigins__0=https://app.tu-dominio.com
 Cors__AllowedOrigins__1=https://admin.tu-dominio.com
 ```
 
+## Forwarded Headers (IP real tras proxy)
+
+En producción la API normalmente vive detrás de un proxy o load balancer (nginx, Cloudflare, AWS ALB, Azure App Service, etc.). Sin configurar `ForwardedHeaders`, **todas** las peticiones llegan con la IP del proxy → el rate limiter del #42 mete a todo el mundo en la misma cuota y un único atacante consume el cupo global.
+
+La API activa `UseForwardedHeaders` automáticamente cuando `ASPNETCORE_ENVIRONMENT` no es ni `Development` ni `Testing`. Lee `X-Forwarded-For` y `X-Forwarded-Proto` y sustituye la IP/esquema que ven el rate limiter, los logs y la autenticación.
+
+**Por seguridad, ASP.NET solo confía en proxies loopback por defecto.** Si tu proxy está en otra máquina (Cloudflare, ALB), tienes que decírselo:
+
+```json
+"ForwardedHeaders": {
+  "KnownProxies": ["203.0.113.1"],
+  "KnownNetworks": ["10.0.0.0/8"]
+}
+```
+
+O como variables de entorno:
+
+```
+ForwardedHeaders__KnownProxies__0=203.0.113.1
+ForwardedHeaders__KnownNetworks__0=10.0.0.0/8
+```
+
+Si no añades ningún proxy y el tuyo no es loopback, ASP.NET **ignora** los headers y vuelves al problema original. Esto es **deseado**: evita que un cliente malicioso falsifique `X-Forwarded-For` desde fuera y se salte el rate limit.
+
 ## Arrancar la aplicación
 
 ```bash
