@@ -16,6 +16,11 @@ namespace MRC.Agendia.Infrastructure.Repositories
         public async Task<Client?> GetByIdAsync(int id)
             => await _context.Clients.FindAsync(id);
 
+        public Task<Client?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default)
+            => _context.Clients
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.UserId == userId, cancellationToken);
+
         public async Task<IEnumerable<Client>> GetAllAsync()
             => await _context.Clients.ToListAsync();
 

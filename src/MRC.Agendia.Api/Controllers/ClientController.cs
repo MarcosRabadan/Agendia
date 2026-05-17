@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MRC.Agendia.Application.Appointments.DTO;
+using MRC.Agendia.Application.Appointments.Queries;
 using MRC.Agendia.Application.Clients.Commands;
 using MRC.Agendia.Application.Clients.DTO;
 using MRC.Agendia.Application.Clients.Queries;
@@ -41,6 +43,25 @@ namespace MRC.Agendia.Api.Controllers
         {
             var result = await _mediator.Send(new GetClientByIdQuery(id));
             if (result is null) return NotFound();
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Devuelve las citas del cliente autenticado, paginadas y ordenadas
+        /// de mas reciente a mas antigua. La identidad del cliente se resuelve
+        /// desde el JWT, no se acepta clientId en la URL.
+        /// </summary>
+        [Authorize(Roles = Roles.Client)]
+        [HttpGet("me/appointments")]
+        [ProducesResponseType(typeof(PagedResult<AppointmentDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<PagedResult<AppointmentDto>>> GetMyAppointments(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50)
+        {
+            var result = await _mediator.Send(new GetMyAppointmentsAsClientQuery(page, pageSize));
             return Ok(result);
         }
 
