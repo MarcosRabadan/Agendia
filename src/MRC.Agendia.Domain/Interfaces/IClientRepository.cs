@@ -6,6 +6,7 @@ namespace MRC.Agendia.Domain.Interfaces
     {
         Task<Client?> GetByIdAsync(int id);
         Task<IEnumerable<Client>> GetAllAsync();
+        Task<(IReadOnlyList<Client> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default);
         Task AddAsync(Client client);
         void Update(Client client);
         void Delete(Client client);

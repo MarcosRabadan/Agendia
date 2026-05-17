@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using MRC.Agendia.Application.Clients.Commands;
 using MRC.Agendia.Application.Clients.DTO;
 using MRC.Agendia.Application.Clients.Queries;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Constants;
 
 namespace MRC.Agendia.Api.Controllers
@@ -22,10 +23,13 @@ namespace MRC.Agendia.Api.Controllers
 
         [Authorize(Roles = Roles.Admin)]
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<ClientDto>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<ClientDto>>> GetAll()
+        [ProducesResponseType(typeof(PagedResult<ClientDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<PagedResult<ClientDto>>> GetAll(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50)
         {
-            var result = await _mediator.Send(new GetAllClientsQuery());
+            var result = await _mediator.Send(new GetAllClientsQuery(page, pageSize));
             return Ok(result);
         }
 

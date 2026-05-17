@@ -1,5 +1,6 @@
 using AutoMapper;
 using MRC.Agendia.Application.Clients.DTO;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Interfaces;
 
@@ -19,10 +20,11 @@ namespace MRC.Agendia.Application.Clients
         }
 
         #region CRUD
-        public async Task<IEnumerable<ClientDto>> GetAllAsync()
+        public async Task<PagedResult<ClientDto>> GetPagedAsync(int page, int pageSize)
         {
-            var entities = await _repository.GetAllAsync();
-            return _mapper.Map<IEnumerable<ClientDto>>(entities);
+            var (items, totalCount) = await _repository.GetPagedAsync(page, pageSize);
+            var dtos = _mapper.Map<List<ClientDto>>(items);
+            return PagedResult<ClientDto>.Create(dtos, totalCount, page, pageSize);
         }
 
         public async Task<ClientDto?> GetByIdAsync(int id)

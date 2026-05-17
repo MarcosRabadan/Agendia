@@ -1,9 +1,10 @@
 using MediatR;
 using MRC.Agendia.Application.Appointments.DTO;
+using MRC.Agendia.Application.Common;
 
 namespace MRC.Agendia.Application.Appointments.Queries
 {
-    public class GetAllAppointmentsQueryHandler : IRequestHandler<GetAllAppointmentsQuery, IEnumerable<AppointmentDto>>
+    public class GetAllAppointmentsQueryHandler : IRequestHandler<GetAllAppointmentsQuery, PagedResult<AppointmentDto>>
     {
         private readonly IAppointmentService _service;
 
@@ -12,9 +13,7 @@ namespace MRC.Agendia.Application.Appointments.Queries
             _service = service;
         }
 
-        public async Task<IEnumerable<AppointmentDto>> Handle(GetAllAppointmentsQuery request, CancellationToken cancellationToken)
-        {
-            return await _service.GetAllAsync();
-        }
+        public Task<PagedResult<AppointmentDto>> Handle(GetAllAppointmentsQuery request, CancellationToken cancellationToken)
+            => _service.GetPagedAsync(request.Page, request.PageSize);
     }
 }

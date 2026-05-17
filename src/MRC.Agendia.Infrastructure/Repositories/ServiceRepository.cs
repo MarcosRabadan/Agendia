@@ -19,6 +19,12 @@ namespace MRC.Agendia.Infrastructure.Repositories
         public async Task<IEnumerable<Service>> GetAllAsync()
             => await _context.Services.ToListAsync();
 
+        public Task<(IReadOnlyList<Service> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+            => _context.Services
+                .AsNoTracking()
+                .OrderBy(s => s.Id)
+                .ToPagedListAsync(page, pageSize, cancellationToken);
+
         public async Task AddAsync(Service service)
             => await _context.Services.AddAsync(service);
 

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using MRC.Agendia.Application.Appointments.Commands;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Appointments.Queries;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Constants;
 
 namespace MRC.Agendia.Api.Controllers
@@ -22,10 +23,13 @@ namespace MRC.Agendia.Api.Controllers
 
         [Authorize(Roles = Roles.Admin)]
         [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<AppointmentDto>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<AppointmentDto>>> GetAll()
+        [ProducesResponseType(typeof(PagedResult<AppointmentDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<PagedResult<AppointmentDto>>> GetAll(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50)
         {
-            var result = await _mediator.Send(new GetAllAppointmentsQuery());
+            var result = await _mediator.Send(new GetAllAppointmentsQuery(page, pageSize));
             return Ok(result);
         }
 

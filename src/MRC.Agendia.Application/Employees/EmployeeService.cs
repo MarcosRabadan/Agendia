@@ -1,4 +1,5 @@
 using AutoMapper;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Employees.DTO;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Interfaces;
@@ -19,10 +20,11 @@ namespace MRC.Agendia.Application.Employees
         }
 
         #region CRUD
-        public async Task<IEnumerable<EmployeeDto>> GetAllAsync()
+        public async Task<PagedResult<EmployeeDto>> GetPagedAsync(int page, int pageSize)
         {
-            var entities = await _repository.GetAllAsync();
-            return _mapper.Map<IEnumerable<EmployeeDto>>(entities);
+            var (items, totalCount) = await _repository.GetPagedAsync(page, pageSize);
+            var dtos = _mapper.Map<List<EmployeeDto>>(items);
+            return PagedResult<EmployeeDto>.Create(dtos, totalCount, page, pageSize);
         }
 
         public async Task<EmployeeDto?> GetByIdAsync(int id)
