@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using FluentValidation;
+using MRC.Agendia.Domain.Exceptions;
 
 namespace MRC.Agendia.Api.Middleware
 {
@@ -48,6 +49,7 @@ namespace MRC.Agendia.Api.Middleware
 
             var (statusCode, code, message) = ex switch
             {
+                AuthenticationException => (HttpStatusCode.Unauthorized, "UNAUTHENTICATED", ex.Message),
                 KeyNotFoundException => (HttpStatusCode.NotFound, "NOT_FOUND", ex.Message),
                 UnauthorizedAccessException => (HttpStatusCode.Forbidden, "FORBIDDEN", ex.Message),
                 InvalidOperationException => (HttpStatusCode.BadRequest, "BAD_REQUEST", ex.Message),
