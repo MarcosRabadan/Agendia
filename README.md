@@ -59,6 +59,32 @@ ConnectionStrings__DefaultConnection=Server=...;Database=...;...
 
 ⚠️ Si `AdminSeed:Email` o `AdminSeed:Password` están vacíos, el seed del admin se omite y se registra un warning.
 
+## CORS por entorno
+
+La política CORS se configura desde la sección `Cors:AllowedOrigins`. La lista vive en `appsettings.<Entorno>.json` o en variables de entorno.
+
+```json
+"Cors": {
+  "AllowedOrigins": [
+    "http://localhost:5173",
+    "https://app.tu-dominio.com"
+  ]
+}
+```
+
+Comportamiento:
+
+- **Con orígenes definidos** → política restringida a esos hosts (`WithOrigins`).
+- **Lista vacía en Development** → fallback a `AllowAnyOrigin` con un warning en logs. Sirve para arrancar sin fricción, pero conviene definir orígenes explícitos.
+- **Lista vacía fuera de Development** → la app **no arranca** (fail-fast).
+
+En producción, define los orígenes como variables de entorno (uno por índice):
+
+```
+Cors__AllowedOrigins__0=https://app.tu-dominio.com
+Cors__AllowedOrigins__1=https://admin.tu-dominio.com
+```
+
 ## Arrancar la aplicación
 
 ```bash

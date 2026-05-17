@@ -16,7 +16,7 @@ builder.Services.AddHealthChecks();
 
 // Cross-cutting (CORS, rate limiting, Swagger)
 builder.Services
-    .AddCorsForMobile()
+    .AddCorsForMobile(builder.Configuration, builder.Environment)
     .AddAuthRateLimiting()
     .AddSwaggerWithJwt();
 
