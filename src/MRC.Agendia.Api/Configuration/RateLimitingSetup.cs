@@ -4,13 +4,12 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace MRC.Agendia.Api.Configuration
 {
     /// <summary>
-    /// Rate limiting para endpoints sensibles de autenticacion.
-    /// Particionado por IP del cliente.
+    /// Rate limiting for sensitive auth endpoints. Partitioned by client IP.
     ///
-    /// Politicas:
-    ///   - "auth-login"    : 5 / IP / minuto
-    ///   - "auth-refresh"  : 10 / IP / minuto
-    ///   - "auth-register" : 3 / IP / hora
+    /// Policies:
+    ///   - "auth-login"    : 5  / IP / minute
+    ///   - "auth-refresh"  : 10 / IP / minute
+    ///   - "auth-register" : 3  / IP / hour
     /// </summary>
     public static class RateLimitingSetup
     {

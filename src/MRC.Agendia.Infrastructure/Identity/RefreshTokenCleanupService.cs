@@ -7,13 +7,13 @@ using Microsoft.Extensions.Logging;
 namespace MRC.Agendia.Infrastructure.Identity
 {
     /// <summary>
-    /// Hosted service que elimina refresh tokens expirados de la base de datos.
+    /// Hosted service that prunes expired refresh tokens from the database.
     ///
-    /// Sin esto, la tabla RefreshTokens crece indefinidamente porque cada login
-    /// crea un token y cada refresh rota a otro nuevo, dejando el anterior
-    /// revocado (pero almacenado).
+    /// Without this the RefreshTokens table grows forever because every login
+    /// issues a token and every refresh rotates to a new one, leaving the
+    /// previous one revoked but still stored.
     ///
-    /// Configuracion (opcional, con defaults seguros):
+    /// Configuration (optional, with safe defaults):
     ///   "RefreshTokenCleanup": {
     ///     "IntervalHours": 24,
     ///     "RetentionDays": 30
@@ -48,7 +48,7 @@ namespace MRC.Agendia.Infrastructure.Identity
                 "RefreshTokenCleanupService iniciado. Intervalo: {Interval}, Retencion: {Retention}",
                 _interval, _retention);
 
-            // Pequeno delay inicial para no bloquear el arranque
+            // Short initial delay so cleanup does not compete with app startup.
             try
             {
                 await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);

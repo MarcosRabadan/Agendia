@@ -10,17 +10,17 @@ using MRC.Agendia.Infrastructure.Identity;
 namespace MRC.Agendia.Api.Configuration
 {
     /// <summary>
-    /// Configuracion de ASP.NET Identity + JWT Bearer.
+    /// Configures ASP.NET Identity + JWT Bearer authentication.
     ///
-    /// Identity se configura con politicas de password razonables y lockout
-    /// (5 intentos -> bloqueo de 15 minutos). El esquema JWT lee la clave
-    /// desde configuracion (Jwt:Key) y valida issuer, audience y firma.
+    /// Identity is configured with reasonable password policies and lockout
+    /// (5 failed attempts -> 15-minute block). The JWT scheme reads the key
+    /// from configuration (Jwt:Key) and validates issuer, audience and signature.
     /// </summary>
     public static class AuthenticationSetup
     {
         public static IServiceCollection AddIdentityAndJwt(this IServiceCollection services, IConfiguration configuration)
         {
-            // Identity
+            // Identity password and lockout policy.
             services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
                 options.Password.RequireDigit = true;
@@ -52,7 +52,7 @@ namespace MRC.Agendia.Api.Configuration
             .AddJwtBearer(options =>
             {
                 options.SaveToken = true;
-                // Se configura desde Program.cs via post-config si hace falta variar por entorno
+                // Per-environment overrides can be applied from Program.cs via post-configure if needed.
                 options.RequireHttpsMetadata = true;
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -69,14 +69,14 @@ namespace MRC.Agendia.Api.Configuration
 
             services.AddAuthorization();
 
-            // Resource-based authorization helpers (necesita HttpContext)
+            // Resource-based authorization helpers (need HttpContext to read the caller).
             services.AddHttpContextAccessor();
             services.AddScoped<ICurrentUserContext, CurrentUserContext>();
 
             return services;
         }
 
-        /// <summary>Validacion fail-fast: la app NO arranca si Jwt:Key no esta bien configurada.</summary>
+        /// <summary>Fail-fast validation: the app does NOT start if Jwt:Key is missing or too short.</summary>
         private static string ValidateAndGetJwtKey(IConfiguration configuration)
         {
             var jwtKey = configuration["Jwt:Key"];

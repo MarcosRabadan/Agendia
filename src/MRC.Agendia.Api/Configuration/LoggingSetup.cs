@@ -3,7 +3,7 @@ using Serilog;
 namespace MRC.Agendia.Api.Configuration
 {
     /// <summary>
-    /// Configuracion de Serilog (consola + Seq).
+    /// Serilog configuration (console + Seq sink).
     /// </summary>
     public static class LoggingSetup
     {
