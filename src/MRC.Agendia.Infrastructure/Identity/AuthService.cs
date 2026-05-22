@@ -1,8 +1,10 @@
+using System.Net;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using MRC.Agendia.Application.Auth;
 using MRC.Agendia.Application.Auth.DTO;
+using MRC.Agendia.Application.Common.Email;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Exceptions;
@@ -20,6 +22,7 @@ namespace MRC.Agendia.Infrastructure.Identity
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IConfiguration _configuration;
+        private readonly IEmailSender _emailSender;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
@@ -29,7 +32,8 @@ namespace MRC.Agendia.Infrastructure.Identity
             IBusinessRepository businessRepository,
             IEmployeeRepository employeeRepository,
             IUnitOfWork unitOfWork,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IEmailSender emailSender)
         {
             _userManager = userManager;
             _jwtTokenService = jwtTokenService;
@@ -39,6 +43,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             _employeeRepository = employeeRepository;
             _unitOfWork = unitOfWork;
             _configuration = configuration;
+            _emailSender = emailSender;
         }
 
         public async Task<AuthResponseDto> RegisterClientAsync(RegisterClientDto dto)
@@ -73,6 +78,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             await _clientRepository.AddAsync(client);
             await _unitOfWork.Save();
 
+            await SendEmailConfirmationAsync(user);
             return await BuildAuthResponseAsync(user);
         }
 
@@ -128,6 +134,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             await _employeeRepository.AddAsync(ownerEmployee);
             await _unitOfWork.Save();
 
+            await SendEmailConfirmationAsync(user);
             return await BuildAuthResponseAsync(user);
         }
 
@@ -171,6 +178,8 @@ namespace MRC.Agendia.Infrastructure.Identity
             await _employeeRepository.AddAsync(employee);
             await _unitOfWork.Save();
 
+            await SendEmailConfirmationAsync(user);
+
             var roles = await _userManager.GetRolesAsync(user);
             return new UserDto(user.Id, user.Email!, user.FullName, user.PhoneNumber, user.IsActive, roles);
         }
@@ -194,6 +203,13 @@ namespace MRC.Agendia.Infrastructure.Identity
             }
 
             await _userManager.ResetAccessFailedCountAsync(user);
+
+            // Optional email-confirmation gate (off by default so existing flows
+            // and tests are unaffected). When enabled, unconfirmed users cannot
+            // log in until they follow the confirmation link sent at registration.
+            if (_configuration.GetValue<bool>("Auth:RequireConfirmedEmail") && !user.EmailConfirmed)
+                throw new AuthenticationException("Debes confirmar tu email antes de iniciar sesion.");
+
             return await BuildAuthResponseAsync(user);
         }
 
@@ -240,6 +256,52 @@ namespace MRC.Agendia.Infrastructure.Identity
                 throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
         }
 
+        public async Task ForgotPasswordAsync(ForgotPasswordDto dto)
+        {
+            var user = await _userManager.FindByEmailAsync(dto.Email);
+
+            // Anti-enumeration: never reveal whether the email exists. The
+            // endpoint always returns success; we only send the email for an
+            // existing, active account and stay silent otherwise.
+            if (user is null || !user.IsActive)
+                return;
+
+            await SendPasswordResetAsync(user);
+        }
+
+        public async Task ResetPasswordAsync(ResetPasswordDto dto)
+        {
+            var user = await _userManager.FindByEmailAsync(dto.Email);
+            // Uniform message so a missing user is indistinguishable from a bad token.
+            if (user is null)
+                throw new InvalidOperationException("Token de restablecimiento invalido o expirado.");
+
+            var result = await _userManager.ResetPasswordAsync(user, dto.Token, dto.NewPassword);
+            if (!result.Succeeded)
+            {
+                if (result.Errors.Any(e => e.Code == "InvalidToken"))
+                    throw new InvalidOperationException("Token de restablecimiento invalido o expirado.");
+                // Surface password-policy failures (weak password, etc.).
+                throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+            }
+
+            // A successful reset proves account ownership, so clear any active
+            // lockout to let the user sign in immediately.
+            await _userManager.SetLockoutEndDateAsync(user, null);
+            await _userManager.ResetAccessFailedCountAsync(user);
+        }
+
+        public async Task ConfirmEmailAsync(ConfirmEmailDto dto)
+        {
+            var user = await _userManager.FindByIdAsync(dto.UserId);
+            if (user is null)
+                throw new InvalidOperationException("Token de confirmacion invalido o expirado.");
+
+            var result = await _userManager.ConfirmEmailAsync(user, dto.Token);
+            if (!result.Succeeded)
+                throw new InvalidOperationException("Token de confirmacion invalido o expirado.");
+        }
+
         public async Task<UserDto> GetCurrentUserAsync(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId)
@@ -270,6 +332,41 @@ namespace MRC.Agendia.Infrastructure.Identity
 
             var userDto = new UserDto(user.Id, user.Email!, user.FullName, user.PhoneNumber, user.IsActive, roles);
             return new AuthResponseDto(accessToken, accessExpires, refreshTokenValue, refreshExpires, userDto);
+        }
+
+        private async Task SendEmailConfirmationAsync(ApplicationUser user)
+        {
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var link = BuildFrontendLink("confirm-email",
+                $"userId={Uri.EscapeDataString(user.Id)}&token={Uri.EscapeDataString(token)}");
+
+            var body =
+                $"<p>Hola {WebUtility.HtmlEncode(user.FullName)},</p>" +
+                "<p>Confirma tu direccion de email para activar tu cuenta:</p>" +
+                $"<p><a href=\"{link}\">Confirmar email</a></p>";
+
+            await _emailSender.SendAsync(user.Email!, "Confirma tu email - Agendia", body);
+        }
+
+        private async Task SendPasswordResetAsync(ApplicationUser user)
+        {
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var link = BuildFrontendLink("reset-password",
+                $"email={Uri.EscapeDataString(user.Email!)}&token={Uri.EscapeDataString(token)}");
+
+            var body =
+                $"<p>Hola {WebUtility.HtmlEncode(user.FullName)},</p>" +
+                "<p>Has solicitado restablecer tu contrasena. El enlace caduca en 1 hora:</p>" +
+                $"<p><a href=\"{link}\">Restablecer contrasena</a></p>" +
+                "<p>Si no has sido tu, ignora este correo.</p>";
+
+            await _emailSender.SendAsync(user.Email!, "Restablecer contrasena - Agendia", body);
+        }
+
+        private string BuildFrontendLink(string path, string query)
+        {
+            var baseUrl = (_configuration["Email:FrontendBaseUrl"] ?? string.Empty).TrimEnd('/');
+            return $"{baseUrl}/{path}?{query}";
         }
     }
 }

@@ -18,6 +18,9 @@ namespace MRC.Agendia.Api.Configuration
     /// </summary>
     public static class AuthenticationSetup
     {
+        // Name of the short-lived token provider used for password reset.
+        private const string PasswordResetProvider = "PasswordResetShortLived";
+
         public static IServiceCollection AddIdentityAndJwt(this IServiceCollection services, IConfiguration configuration)
         {
             // Identity password and lockout policy.
@@ -33,9 +36,23 @@ namespace MRC.Agendia.Api.Configuration
                 options.Lockout.MaxFailedAccessAttempts = 5;
 
                 options.User.RequireUniqueEmail = true;
+
+                // Password reset uses a dedicated short-lived provider; email
+                // confirmation keeps the default DataProtectorTokenProvider.
+                options.Tokens.PasswordResetTokenProvider = PasswordResetProvider;
             })
             .AddEntityFrameworkStores<AgendiaDbContext>()
-            .AddDefaultTokenProviders();
+            .AddDefaultTokenProviders()
+            .AddTokenProvider<ShortLivedTokenProvider<ApplicationUser>>(PasswordResetProvider);
+
+            // Token lifespans (configurable). Email confirmation rides on the
+            // default provider; password reset on the short-lived one.
+            var emailConfirmHours = configuration.GetValue<int?>("Auth:EmailConfirmationTokenHours") ?? 24;
+            var resetHours = configuration.GetValue<int?>("Auth:PasswordResetTokenHours") ?? 1;
+            services.Configure<DataProtectionTokenProviderOptions>(o =>
+                o.TokenLifespan = TimeSpan.FromHours(emailConfirmHours));
+            services.Configure<ShortLivedTokenProviderOptions>(o =>
+                o.TokenLifespan = TimeSpan.FromHours(resetHours));
 
             // JWT
             var jwtKey = ValidateAndGetJwtKey(configuration);

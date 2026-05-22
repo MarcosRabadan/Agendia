@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using MRC.Agendia.Application.Common.Email;
 using MRC.Agendia.Infrastructure;
 
 namespace MRC.Agendia.Tests.Integration.Infrastructure
@@ -27,6 +28,9 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
     public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
         private readonly string _databaseName = $"agendia-tests-{Guid.NewGuid()}";
+
+        /// <summary>Captures emails so tests can read the reset/confirmation token.</summary>
+        public FakeEmailSender EmailSender { get; } = new();
 
         public CustomWebApplicationFactory()
         {
@@ -63,6 +67,11 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
                     options.UseInMemoryDatabase(_databaseName);
                     options.ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning));
                 });
+
+                // Capture outgoing emails instead of logging them, so tests can
+                // read the reset/confirmation token out of the body.
+                services.RemoveAll<IEmailSender>();
+                services.AddSingleton<IEmailSender>(EmailSender);
             });
         }
     }

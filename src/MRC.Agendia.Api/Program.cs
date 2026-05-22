@@ -25,6 +25,9 @@ builder.Services
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// Email sender (Logging en Dev/Test, SMTP en el resto)
+builder.Services.AddEmailSender(builder.Configuration, builder.Environment);
+
 // Identity + JWT (depende de Infrastructure por el DbContext)
 builder.Services.AddIdentityAndJwt(builder.Configuration);
 
