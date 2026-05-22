@@ -116,5 +116,40 @@ namespace MRC.Agendia.Api.Controllers
             await _mediator.Send(new ChangePasswordCommand(userId, dto));
             return NoContent();
         }
+
+        /// <summary>Solicita un enlace de restablecimiento de contrasena. Responde siempre 204 (no revela si el email existe).</summary>
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        [EnableRateLimiting("auth-register")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        {
+            await _mediator.Send(new ForgotPasswordCommand(dto));
+            return NoContent();
+        }
+
+        /// <summary>Restablece la contrasena con el token recibido por email.</summary>
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+        {
+            await _mediator.Send(new ResetPasswordCommand(dto));
+            return NoContent();
+        }
+
+        /// <summary>Confirma el email de un usuario con el token enviado al registrarse.</summary>
+        [HttpPost("confirm-email")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto dto)
+        {
+            await _mediator.Send(new ConfirmEmailCommand(dto));
+            return NoContent();
+        }
     }
 }
