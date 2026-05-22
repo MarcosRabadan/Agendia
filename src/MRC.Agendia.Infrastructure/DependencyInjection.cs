@@ -44,7 +44,10 @@ namespace MRC.Agendia.Infrastructure
             // Identity helpers (JWT y refresh tokens)
             services.AddScoped<IJwtTokenService, JwtTokenService>();
             services.AddScoped<IRefreshTokenStore, RefreshTokenStore>();
+            services.AddScoped<IAuthResponseFactory, AuthResponseFactory>();
+            services.AddScoped<IAuthEmailService, AuthEmailService>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IUserRegistrationService, UserRegistrationService>();
 
             // Resource-based authorization (mas configuracion en API porque
             // depende de IHttpContextAccessor; aqui solo el servicio infraestructural)
