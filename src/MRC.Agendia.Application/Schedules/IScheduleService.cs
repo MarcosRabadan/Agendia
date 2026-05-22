@@ -18,9 +18,6 @@ namespace MRC.Agendia.Application.Schedules
         Task<ScheduleOverrideDto> UpdateOverrideAsync(UpdateScheduleOverrideDto dto);
         Task<bool> DeleteOverrideAsync(int id);
 
-        // Generate
-        Task<GenerateScheduleResponseDto> GenerateScheduleAsync(GenerateScheduleRequestDto dto);
-
         // Effective Schedule
         Task<EffectiveScheduleDto> GetEffectiveScheduleAsync(int businessId, DateOnly date);
         Task<IEnumerable<CalendarDayDto>> GetCalendarAsync(int businessId, DateOnly from, DateOnly to);

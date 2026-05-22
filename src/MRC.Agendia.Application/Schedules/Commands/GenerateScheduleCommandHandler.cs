@@ -6,10 +6,10 @@ namespace MRC.Agendia.Application.Schedules.Commands
 {
     public class GenerateScheduleCommandHandler : IRequestHandler<GenerateScheduleCommand, GenerateScheduleResponseDto>
     {
-        private readonly IScheduleService _service;
+        private readonly IScheduleGenerationService _service;
         private readonly IResourceAuthorizationService _auth;
 
-        public GenerateScheduleCommandHandler(IScheduleService service, IResourceAuthorizationService auth)
+        public GenerateScheduleCommandHandler(IScheduleGenerationService service, IResourceAuthorizationService auth)
         {
             _service = service;
             _auth = auth;
