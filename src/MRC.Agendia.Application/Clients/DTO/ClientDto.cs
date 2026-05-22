@@ -1,7 +1,7 @@
 namespace MRC.Agendia.Application.Clients.DTO
 {
     public record ClientDto(
-        int Id, 
+        int Id,
         string Name,
         string Phone,
         string? Email);

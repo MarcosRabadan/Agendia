@@ -1,4 +1,4 @@
-﻿namespace MRC.Agendia.Domain.Interfaces
+namespace MRC.Agendia.Domain.Interfaces
 {
     public interface IUnitOfWork : IDisposable
     {

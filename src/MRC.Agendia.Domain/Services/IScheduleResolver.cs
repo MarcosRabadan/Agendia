@@ -1,5 +1,3 @@
-using MRC.Agendia.Domain.Entities;
-
 namespace MRC.Agendia.Domain.Services
 {
     public interface IScheduleResolver

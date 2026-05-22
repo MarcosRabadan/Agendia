@@ -1,4 +1,4 @@
-﻿namespace MRC.Agendia.Domain.Entities
+namespace MRC.Agendia.Domain.Entities
 {
     public class Business
     {
