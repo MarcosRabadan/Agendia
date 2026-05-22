@@ -1,5 +1,4 @@
 using FluentValidation;
-using MRC.Agendia.Application.Schedules.DTO;
 
 namespace MRC.Agendia.Application.Schedules.Commands
 {

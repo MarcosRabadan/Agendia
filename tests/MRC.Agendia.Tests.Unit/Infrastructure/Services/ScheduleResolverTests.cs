@@ -277,14 +277,14 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Services
             ScheduleOverrideType overrideType,
             string? reason,
             IEnumerable<CustomTimeSlot>? customSlots = null) => new()
-        {
-            Id = 200,
-            BusinessId = BusinessId,
-            Date = MondayDate,
-            OverrideType = overrideType,
-            Reason = reason,
-            CustomSlots = (customSlots ?? Enumerable.Empty<CustomTimeSlot>()).ToList(),
-        };
+            {
+                Id = 200,
+                BusinessId = BusinessId,
+                Date = MondayDate,
+                OverrideType = overrideType,
+                Reason = reason,
+                CustomSlots = (customSlots ?? Enumerable.Empty<CustomTimeSlot>()).ToList(),
+            };
 
         private static CustomTimeSlot CreateCustomSlot(TimeOnly start, TimeOnly end) => new()
         {

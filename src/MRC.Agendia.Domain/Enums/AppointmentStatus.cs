@@ -1,4 +1,4 @@
-﻿namespace MRC.Agendia.Domain.Enums
+namespace MRC.Agendia.Domain.Enums
 {
     public enum AppointmentStatus
     {

@@ -1,5 +1,3 @@
-using MRC.Agendia.Domain.Enums;
-
 namespace MRC.Agendia.Domain.Entities
 {
     public class ScheduleTemplate

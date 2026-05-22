@@ -1,10 +1,10 @@
 namespace MRC.Agendia.Application.Services.DTO
 {
     public record ServiceDto(
-        int Id, 
+        int Id,
         int BusinessId,
-        string Name, 
-        string? Description, 
-        int DurationMinutes, 
+        string Name,
+        string? Description,
+        int DurationMinutes,
         decimal Price);
 }

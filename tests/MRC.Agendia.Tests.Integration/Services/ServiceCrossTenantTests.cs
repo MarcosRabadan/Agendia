@@ -6,7 +6,6 @@ using MRC.Agendia.Application.Auth.DTO;
 using MRC.Agendia.Application.Business.DTO;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Services.DTO;
-using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Tests.Integration.Infrastructure;
 

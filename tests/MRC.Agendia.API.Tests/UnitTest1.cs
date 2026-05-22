@@ -1,4 +1,4 @@
-﻿namespace MRC.Agendia.API.Tests;
+namespace MRC.Agendia.API.Tests;
 
 public class UnitTest1
 {

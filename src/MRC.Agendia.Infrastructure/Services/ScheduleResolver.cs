@@ -1,4 +1,3 @@
-using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Domain.Services;

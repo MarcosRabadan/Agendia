@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
 namespace MRC.Agendia.Api.Configuration

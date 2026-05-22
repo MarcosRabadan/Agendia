@@ -63,7 +63,7 @@ namespace MRC.Agendia.Application.Services
         }
 
         #endregion CRUD
-    
-        
+
+
     }
 }

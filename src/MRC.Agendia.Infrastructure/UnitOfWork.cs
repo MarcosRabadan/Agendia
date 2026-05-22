@@ -1,4 +1,4 @@
-﻿using MRC.Agendia.Domain.Interfaces;
+using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Infrastructure
 {

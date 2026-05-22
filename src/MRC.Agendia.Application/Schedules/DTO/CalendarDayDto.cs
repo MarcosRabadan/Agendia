@@ -1,5 +1,3 @@
-using MRC.Agendia.Domain.Enums;
-
 namespace MRC.Agendia.Application.Schedules.DTO
 {
     public record CalendarDayDto(

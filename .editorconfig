@@ -1,0 +1,31 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+# C# style aligned with the current convention
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_prefer_braces = true:suggestion
+csharp_using_directive_placement = outside_namespace:suggestion
+
+# Diagnostics as warning (not error - do not block local builds)
+dotnet_diagnostic.IDE0005.severity = warning   # unnecessary usings
+dotnet_diagnostic.IDE0044.severity = warning   # readonly modifier
+dotnet_diagnostic.IDE0060.severity = suggestion # unused parameters
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false # markdown needs trailing spaces for line breaks

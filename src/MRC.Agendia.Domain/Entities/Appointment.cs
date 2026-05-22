@@ -1,4 +1,4 @@
-﻿using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Enums;
 
 namespace MRC.Agendia.Domain.Entities
 {

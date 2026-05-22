@@ -1,5 +1,4 @@
 using FluentValidation;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Appointments.Commands;

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Common.Email;
 using MRC.Agendia.Infrastructure.Email;
 using Serilog;
