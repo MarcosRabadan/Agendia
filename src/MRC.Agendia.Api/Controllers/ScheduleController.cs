@@ -90,6 +90,18 @@ namespace MRC.Agendia.Api.Controllers
             return Created($"api/businesses/{businessId}/schedules/templates", result);
         }
 
+        /// <summary>Previsualiza el calendario resultante de un generate sin persistir nada.</summary>
+        [Authorize(Roles = RolePolicies.Staff)]
+        [HttpPost("preview")]
+        [ProducesResponseType(typeof(IEnumerable<CalendarDayDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<IEnumerable<CalendarDayDto>>> PreviewSchedule(int businessId, [FromBody] GenerateScheduleRequestDto dto)
+        {
+            if (dto.BusinessId != businessId) return BadRequest("BusinessId in URL and body must match.");
+            var result = await _mediator.Send(new PreviewScheduleQuery(dto));
+            return Ok(result);
+        }
+
         #endregion
 
         #region Overrides

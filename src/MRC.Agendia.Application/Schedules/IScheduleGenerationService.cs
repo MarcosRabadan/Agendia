@@ -11,5 +11,13 @@ namespace MRC.Agendia.Application.Schedules
     public interface IScheduleGenerationService
     {
         Task<GenerateScheduleResponseDto> GenerateScheduleAsync(GenerateScheduleRequestDto dto);
+
+        /// <summary>
+        /// Same input and validations as <see cref="GenerateScheduleAsync"/> but
+        /// persists nothing: builds the templates/overrides in memory, merges
+        /// them with the business's existing schedule and returns the resulting
+        /// calendar for the whole year so the front can show "así te quedará".
+        /// </summary>
+        Task<IEnumerable<CalendarDayDto>> PreviewScheduleAsync(GenerateScheduleRequestDto dto);
     }
 }
