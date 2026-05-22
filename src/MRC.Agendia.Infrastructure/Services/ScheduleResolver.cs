@@ -1,3 +1,4 @@
+using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Domain.Services;
@@ -19,9 +20,53 @@ namespace MRC.Agendia.Infrastructure.Services
 
         public async Task<EffectiveSchedule> GetEffectiveScheduleAsync(int businessId, DateOnly date)
         {
-            // 1. Check for overrides first
+            // An override for the date wins; only hit the template store if there is none.
             var scheduleOverride = await _overrideRepository.GetByBusinessIdAndDateAsync(businessId, date);
+            var template = scheduleOverride is null
+                ? await _templateRepository.GetEffectiveTemplateAsync(businessId, date)
+                : null;
 
+            return BuildEffectiveSchedule(scheduleOverride, template, date);
+        }
+
+        public async Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(int businessId, DateOnly from, DateOnly to)
+        {
+            var results = new List<EffectiveSchedule>();
+
+            for (var date = from; date <= to; date = date.AddDays(1))
+            {
+                results.Add(await GetEffectiveScheduleAsync(businessId, date));
+            }
+
+            return results;
+        }
+
+        public EffectiveSchedule Resolve(
+            IEnumerable<ScheduleTemplate> templates,
+            IEnumerable<ScheduleOverride> overrides,
+            DateOnly date)
+        {
+            var scheduleOverride = overrides.FirstOrDefault(o => o.Date == date);
+            var template = scheduleOverride is null
+                ? templates
+                    .Where(t => t.EffectiveFrom <= date && t.EffectiveTo >= date)
+                    .OrderByDescending(t => t.IsDefault ? 0 : 1)
+                    .FirstOrDefault()
+                : null;
+
+            return BuildEffectiveSchedule(scheduleOverride, template, date);
+        }
+
+        /// <summary>
+        /// Single source of truth for turning an (optional) override + (optional)
+        /// template into an EffectiveSchedule for a given date. Shared by the
+        /// DB-backed lookups and the in-memory <see cref="Resolve"/>.
+        /// </summary>
+        private static EffectiveSchedule BuildEffectiveSchedule(
+            ScheduleOverride? scheduleOverride,
+            ScheduleTemplate? template,
+            DateOnly date)
+        {
             if (scheduleOverride != null)
             {
                 if (scheduleOverride.OverrideType == ScheduleOverrideType.CustomHours)
@@ -54,9 +99,6 @@ namespace MRC.Agendia.Infrastructure.Services
                 };
             }
 
-            // 2. Find effective template
-            var template = await _templateRepository.GetEffectiveTemplateAsync(businessId, date);
-
             if (template == null)
             {
                 return new EffectiveSchedule
@@ -68,7 +110,6 @@ namespace MRC.Agendia.Infrastructure.Services
                 };
             }
 
-            // 3. Get slots for this day of week
             var daySlots = template.WeeklySlots
                 .Where(ws => ws.DayOfWeek == date.DayOfWeek)
                 .OrderBy(ws => ws.StartTime)
@@ -86,18 +127,6 @@ namespace MRC.Agendia.Infrastructure.Services
                 ClosedReason = daySlots.Count > 0 ? null : "Dia no laborable",
                 TimeSlots = daySlots
             };
-        }
-
-        public async Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(int businessId, DateOnly from, DateOnly to)
-        {
-            var results = new List<EffectiveSchedule>();
-
-            for (var date = from; date <= to; date = date.AddDays(1))
-            {
-                results.Add(await GetEffectiveScheduleAsync(businessId, date));
-            }
-
-            return results;
         }
     }
 }

@@ -3,6 +3,7 @@ using MRC.Agendia.Application.Schedules.DTO;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Interfaces;
+using MRC.Agendia.Domain.Services;
 
 namespace MRC.Agendia.Application.Schedules
 {
@@ -11,6 +12,7 @@ namespace MRC.Agendia.Application.Schedules
         private readonly IScheduleTemplateRepository _templateRepository;
         private readonly IScheduleOverrideRepository _overrideRepository;
         private readonly IHolidayCalendarRepository _holidayRepository;
+        private readonly IScheduleResolver _scheduleResolver;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
@@ -18,25 +20,84 @@ namespace MRC.Agendia.Application.Schedules
             IScheduleTemplateRepository templateRepository,
             IScheduleOverrideRepository overrideRepository,
             IHolidayCalendarRepository holidayRepository,
+            IScheduleResolver scheduleResolver,
             IUnitOfWork unitOfWork,
             IMapper mapper)
         {
             _templateRepository = templateRepository;
             _overrideRepository = overrideRepository;
             _holidayRepository = holidayRepository;
+            _scheduleResolver = scheduleResolver;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
 
         public async Task<GenerateScheduleResponseDto> GenerateScheduleAsync(GenerateScheduleRequestDto dto)
         {
+            var build = await BuildAsync(dto);
+
+            foreach (var template in build.Templates)
+                await _templateRepository.AddAsync(template);
+
+            if (build.Overrides.Count > 0)
+                await _overrideRepository.AddRangeAsync(build.Overrides);
+
+            await _unitOfWork.Save();
+
+            return new GenerateScheduleResponseDto(
+                TemplateIds: build.Templates.Select(t => t.Id).ToList(),
+                TotalWorkingDays: build.TotalWorkingDays,
+                TotalHolidays: build.HolidayCount,
+                TotalVacationDays: build.VacationDays,
+                TotalClosedDays: build.CustomClosedDays,
+                Warnings: build.Warnings.Count > 0 ? build.Warnings : null);
+        }
+
+        public async Task<IEnumerable<CalendarDayDto>> PreviewScheduleAsync(GenerateScheduleRequestDto dto)
+        {
+            var build = await BuildAsync(dto);
+
+            var yearFrom = new DateOnly(dto.Year, 1, 1);
+            var yearTo = new DateOnly(dto.Year, 12, 31);
+
+            // Merge the (unpersisted) request with the business's existing schedule
+            // so the preview reflects what the calendar would actually look like.
+            var existingTemplates = await _templateRepository.GetByBusinessIdAsync(dto.BusinessId);
+            var existingOverrides = await _overrideRepository.GetByBusinessIdAndDateRangeAsync(dto.BusinessId, yearFrom, yearTo);
+
+            var allTemplates = existingTemplates.Concat(build.Templates).ToList();
+            var allOverrides = existingOverrides.Concat(build.Overrides).ToList();
+
+            var days = new List<CalendarDayDto>();
+            for (var date = yearFrom; date <= yearTo; date = date.AddDays(1))
+            {
+                var effective = _scheduleResolver.Resolve(allTemplates, allOverrides, date);
+                days.Add(new CalendarDayDto(
+                    Date: effective.Date,
+                    IsOpen: effective.IsOpen,
+                    Status: effective.IsOpen ? "Abierto" : effective.ClosedReason ?? "Cerrado",
+                    TimeSlots: effective.IsOpen
+                        ? effective.TimeSlots.Select(ts => new EffectiveTimeSlotDto(ts.StartTime, ts.EndTime)).ToList()
+                        : null));
+            }
+
+            return days;
+        }
+
+        /// <summary>
+        /// Validates the request and builds the templates + overrides in memory
+        /// (no persistence). Shared by generate (which then saves) and preview
+        /// (which resolves them against the existing schedule).
+        /// </summary>
+        private async Task<ScheduleBuild> BuildAsync(GenerateScheduleRequestDto dto)
+        {
             if (dto.Templates is null || dto.Templates.Count == 0)
                 throw new InvalidOperationException("Debe proporcionar al menos una plantilla de horario.");
 
-            // 1. Validar que las plantillas no se solapen entre si
+            // 1. Validate the requested templates do not overlap each other.
             ValidateTemplatesDoNotOverlap(dto.Templates);
 
-            // 2. Validar contra plantillas existentes en la BD
+            // 2. Validate against templates already in the DB.
             foreach (var templateInput in dto.Templates)
             {
                 if (await _templateRepository.HasOverlappingTemplateAsync(dto.BusinessId, templateInput.EffectiveFrom, templateInput.EffectiveTo))
@@ -45,27 +106,25 @@ namespace MRC.Agendia.Application.Schedules
 
             var warnings = new List<string>();
 
-            // 3. Crear todas las plantillas con sus slots
+            // 3. Build the templates with their slots (not persisted here).
             var templates = new List<ScheduleTemplate>();
             foreach (var templateInput in dto.Templates)
             {
                 var template = _mapper.Map<ScheduleTemplate>(templateInput);
                 template.BusinessId = dto.BusinessId;
                 template.CreatedAt = DateTime.UtcNow;
-
-                await _templateRepository.AddAsync(template);
                 templates.Add(template);
             }
 
-            // 4. Calcular el rango total que cubre el año (para festivos/vacaciones)
+            // 4. Year range that covers the holidays/vacations.
             var yearFrom = new DateOnly(dto.Year, 1, 1);
             var yearTo = new DateOnly(dto.Year, 12, 31);
 
-            // 5. Recolectar overrides
+            // 5. Collect overrides.
             var overrides = new List<ScheduleOverride>();
             var holidayDates = new HashSet<DateOnly>();
 
-            // 5a. Festivos nacionales/locales
+            // 5a. National/local holidays.
             if (dto.IncludeNationalHolidays || dto.IncludeLocalHolidays)
             {
                 var holidays = await _holidayRepository.GetByDateRangeAsync(yearFrom, yearTo);
@@ -75,7 +134,7 @@ namespace MRC.Agendia.Application.Schedules
                     if (holiday.Scope == HolidayScope.National && !dto.IncludeNationalHolidays) continue;
                     if (holiday.Scope != HolidayScope.National && !dto.IncludeLocalHolidays) continue;
 
-                    if (holidayDates.Contains(holiday.Date)) continue; // evitar duplicados
+                    if (holidayDates.Contains(holiday.Date)) continue; // avoid duplicates
 
                     holidayDates.Add(holiday.Date);
                     overrides.Add(new ScheduleOverride
@@ -91,7 +150,7 @@ namespace MRC.Agendia.Application.Schedules
                 }
             }
 
-            // 5b. Vacaciones
+            // 5b. Vacation periods.
             int vacationDays = 0;
             if (dto.VacationPeriods != null)
             {
@@ -118,7 +177,7 @@ namespace MRC.Agendia.Application.Schedules
                 }
             }
 
-            // 5c. Cierres puntuales
+            // 5c. Ad-hoc closures.
             int customClosedDays = 0;
             if (dto.CustomClosedDates != null)
             {
@@ -142,12 +201,7 @@ namespace MRC.Agendia.Application.Schedules
                 }
             }
 
-            if (overrides.Count > 0)
-                await _overrideRepository.AddRangeAsync(overrides);
-
-            await _unitOfWork.Save();
-
-            // 6. Calcular dias laborables totales sumando los rangos de todas las plantillas
+            // 6. Total working days across all template ranges.
             int totalWorkingDays = 0;
             foreach (var templateInput in dto.Templates)
             {
@@ -163,13 +217,9 @@ namespace MRC.Agendia.Application.Schedules
                 }
             }
 
-            return new GenerateScheduleResponseDto(
-                TemplateIds: templates.Select(t => t.Id).ToList(),
-                TotalWorkingDays: totalWorkingDays,
-                TotalHolidays: holidayDates.Count,
-                TotalVacationDays: vacationDays,
-                TotalClosedDays: customClosedDays,
-                Warnings: warnings.Count > 0 ? warnings : null);
+            return new ScheduleBuild(
+                templates, overrides, warnings,
+                holidayDates.Count, vacationDays, customClosedDays, totalWorkingDays);
         }
 
         private static void ValidateTemplatesDoNotOverlap(List<GenerateScheduleTemplateInputDto> templates)
@@ -190,5 +240,14 @@ namespace MRC.Agendia.Application.Schedules
                 }
             }
         }
+
+        private sealed record ScheduleBuild(
+            List<ScheduleTemplate> Templates,
+            List<ScheduleOverride> Overrides,
+            List<string> Warnings,
+            int HolidayCount,
+            int VacationDays,
+            int CustomClosedDays,
+            int TotalWorkingDays);
     }
 }
