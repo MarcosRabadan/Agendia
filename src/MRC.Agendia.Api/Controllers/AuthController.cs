@@ -95,6 +95,18 @@ namespace MRC.Agendia.Api.Controllers
             return NoContent();
         }
 
+        /// <summary>Revoca todas las sesiones (refresh tokens) del usuario autenticado.</summary>
+        [HttpPost("logout-all")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> LogoutAll()
+        {
+            var userId = User.GetUserId();
+            await _mediator.Send(new LogoutAllCommand(userId));
+            return NoContent();
+        }
+
         [HttpGet("me")]
         [Authorize]
         [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]

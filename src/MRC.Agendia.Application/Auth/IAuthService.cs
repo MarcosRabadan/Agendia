@@ -11,6 +11,7 @@ namespace MRC.Agendia.Application.Auth
         Task<AuthResponseDto> LoginAsync(LoginDto dto);
         Task<AuthResponseDto> RefreshAsync(string refreshToken);
         Task LogoutAsync(string refreshToken);
+        Task LogoutAllAsync(string userId);
         Task ChangePasswordAsync(string userId, ChangePasswordDto dto);
         Task ForgotPasswordAsync(ForgotPasswordDto dto);
         Task ResetPasswordAsync(ResetPasswordDto dto);

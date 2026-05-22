@@ -100,6 +100,11 @@ namespace MRC.Agendia.Infrastructure.Identity
             await _refreshTokenStore.SaveChangesAsync();
         }
 
+        public async Task LogoutAllAsync(string userId)
+        {
+            await RevokeAllSessionsAsync(userId);
+        }
+
         public async Task ChangePasswordAsync(string userId, ChangePasswordDto dto)
         {
             var user = await _userManager.FindByIdAsync(userId)
@@ -108,6 +113,9 @@ namespace MRC.Agendia.Infrastructure.Identity
             var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
             if (!result.Succeeded)
                 throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+
+            // Changing the password invalidates every other session.
+            await RevokeAllSessionsAsync(userId);
         }
 
         public async Task ForgotPasswordAsync(ForgotPasswordDto dto)
@@ -143,6 +151,9 @@ namespace MRC.Agendia.Infrastructure.Identity
             // lockout to let the user sign in immediately.
             await _userManager.SetLockoutEndDateAsync(user, null);
             await _userManager.ResetAccessFailedCountAsync(user);
+
+            // A reset is a compromise-recovery signal: invalidate every session.
+            await RevokeAllSessionsAsync(user.Id);
         }
 
         public async Task ConfirmEmailAsync(ConfirmEmailDto dto)
@@ -163,6 +174,21 @@ namespace MRC.Agendia.Infrastructure.Identity
 
             var roles = await _userManager.GetRolesAsync(user);
             return new UserDto(user.Id, user.Email!, user.FullName, user.PhoneNumber, user.IsActive, roles);
+        }
+
+        /// <summary>Revokes every active refresh token for the user. Idempotent.</summary>
+        private async Task RevokeAllSessionsAsync(string userId)
+        {
+            var tokens = await _refreshTokenStore.GetActiveByUserIdAsync(userId);
+            if (tokens.Count == 0) return;
+
+            var now = DateTime.UtcNow;
+            foreach (var token in tokens)
+            {
+                token.RevokedAt = now;
+                _refreshTokenStore.Update(token);
+            }
+            await _refreshTokenStore.SaveChangesAsync();
         }
     }
 }
