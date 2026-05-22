@@ -2,11 +2,12 @@ using MRC.Agendia.Application.Auth.DTO;
 
 namespace MRC.Agendia.Application.Auth
 {
+    /// <summary>
+    /// Credential and account management. User registration lives in
+    /// <see cref="IUserRegistrationService"/>.
+    /// </summary>
     public interface IAuthService
     {
-        Task<AuthResponseDto> RegisterClientAsync(RegisterClientDto dto);
-        Task<AuthResponseDto> RegisterOwnerAsync(RegisterOwnerDto dto);
-        Task<UserDto> RegisterEmployeeAsync(RegisterEmployeeDto dto, string currentOwnerUserId);
         Task<AuthResponseDto> LoginAsync(LoginDto dto);
         Task<AuthResponseDto> RefreshAsync(string refreshToken);
         Task LogoutAsync(string refreshToken);
