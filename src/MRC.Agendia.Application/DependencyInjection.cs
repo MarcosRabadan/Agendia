@@ -47,6 +47,7 @@ namespace MRC.Agendia.Application
             services.AddScoped<IEmployeeService, EmployeeService>();
             services.AddScoped<IServicesService, ServicesService>();
             services.AddScoped<IScheduleService, ScheduleService>();
+            services.AddScoped<IScheduleGenerationService, ScheduleGenerationService>();
             services.AddScoped<IHolidayService, HolidayService>();
             services.AddScoped<IAvailabilityService, AvailabilityService>();
 
