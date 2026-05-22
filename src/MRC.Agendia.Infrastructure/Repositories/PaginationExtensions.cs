@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Application.Common;
+using MRC.Agendia.Domain.Constants;
 
 namespace MRC.Agendia.Infrastructure.Repositories
 {

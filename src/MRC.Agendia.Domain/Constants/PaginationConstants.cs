@@ -1,4 +1,4 @@
-namespace MRC.Agendia.Application.Common
+namespace MRC.Agendia.Domain.Constants
 {
     /// <summary>
     /// Shared pagination defaults and hard limits.
