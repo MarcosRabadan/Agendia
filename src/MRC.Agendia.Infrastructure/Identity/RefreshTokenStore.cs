@@ -14,6 +14,14 @@ namespace MRC.Agendia.Infrastructure.Identity
         public async Task<RefreshToken?> GetByTokenAsync(string token)
             => await _context.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == token);
 
+        public async Task<IReadOnlyList<RefreshToken>> GetActiveByUserIdAsync(string userId)
+        {
+            var now = DateTime.UtcNow;
+            return await _context.RefreshTokens
+                .Where(rt => rt.UserId == userId && rt.RevokedAt == null && rt.ExpiresAt > now)
+                .ToListAsync();
+        }
+
         public async Task AddAsync(RefreshToken refreshToken)
             => await _context.RefreshTokens.AddAsync(refreshToken);
 
