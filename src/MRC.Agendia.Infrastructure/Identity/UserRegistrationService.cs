@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Auth;
 using MRC.Agendia.Application.Auth.DTO;
@@ -19,6 +20,7 @@ namespace MRC.Agendia.Infrastructure.Identity
         private readonly IAuthEmailService _authEmailService;
         private readonly IAuthResponseFactory _authResponseFactory;
         private readonly IAuditLogger _auditLogger;
+        private readonly IConfiguration _configuration;
 
         public UserRegistrationService(
             UserManager<ApplicationUser> userManager,
@@ -28,7 +30,8 @@ namespace MRC.Agendia.Infrastructure.Identity
             IUnitOfWork unitOfWork,
             IAuthEmailService authEmailService,
             IAuthResponseFactory authResponseFactory,
-            IAuditLogger auditLogger)
+            IAuditLogger auditLogger,
+            IConfiguration configuration)
         {
             _userManager = userManager;
             _clientRepository = clientRepository;
@@ -38,6 +41,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             _authEmailService = authEmailService;
             _authResponseFactory = authResponseFactory;
             _auditLogger = auditLogger;
+            _configuration = configuration;
         }
 
         public async Task<AuthResponseDto> RegisterClientAsync(RegisterClientDto dto, CancellationToken cancellationToken = default)
@@ -74,6 +78,13 @@ namespace MRC.Agendia.Infrastructure.Identity
 
             await _auditLogger.LogAsync(AuditActions.UserCreated, "User", user.Id, new { user.Email, role = Roles.Client }, cancellationToken);
             await _authEmailService.SendEmailConfirmationAsync(user, cancellationToken);
+
+            // When email confirmation is required, do not auto-login: the login
+            // gate blocks unconfirmed users, so issuing a session here would bypass
+            // it. The account exists; the user confirms then logs in.
+            if (_configuration.GetValue<bool>("Auth:RequireConfirmedEmail"))
+                return await _authResponseFactory.CreateWithoutSessionAsync(user);
+
             return await _authResponseFactory.CreateAsync(user, cancellationToken: cancellationToken);
         }
 
@@ -131,6 +142,13 @@ namespace MRC.Agendia.Infrastructure.Identity
 
             await _auditLogger.LogAsync(AuditActions.UserCreated, "User", user.Id, new { user.Email, role = Roles.BusinessOwner }, cancellationToken);
             await _authEmailService.SendEmailConfirmationAsync(user, cancellationToken);
+
+            // When email confirmation is required, do not auto-login: the login
+            // gate blocks unconfirmed users, so issuing a session here would bypass
+            // it. The account exists; the user confirms then logs in.
+            if (_configuration.GetValue<bool>("Auth:RequireConfirmedEmail"))
+                return await _authResponseFactory.CreateWithoutSessionAsync(user);
+
             return await _authResponseFactory.CreateAsync(user, cancellationToken: cancellationToken);
         }
 
