@@ -179,6 +179,31 @@ namespace MRC.Agendia.Tests.Integration.Auth
             Assert.Equal(HttpStatusCode.Unauthorized, reuse.StatusCode);
         }
 
+        [Fact]
+        public async Task Refresh_ReusoDeTokenRotado_RevocaTodaLaFamilia()
+        {
+            var (_, tokens) = await RegisterUserAsync();
+            var originalRefresh = tokens.RefreshToken;
+
+            // Rotate once: original -> rotated (original is now revoked + replaced).
+            var firstRefresh = await _client.PostAsJsonAsync("/api/auth/refresh",
+                new RefreshTokenRequestDto(originalRefresh));
+            firstRefresh.EnsureSuccessStatusCode();
+            var rotated = await firstRefresh.Content.ReadFromJsonAsync<AuthResponseDto>();
+            Assert.NotNull(rotated);
+
+            // Replaying the already-rotated token triggers reuse detection.
+            var reuse = await _client.PostAsJsonAsync("/api/auth/refresh",
+                new RefreshTokenRequestDto(originalRefresh));
+            Assert.Equal(HttpStatusCode.Unauthorized, reuse.StatusCode);
+
+            // Reuse detection revokes the whole family, so the still-active rotated
+            // token can no longer be used either.
+            var afterWipe = await _client.PostAsJsonAsync("/api/auth/refresh",
+                new RefreshTokenRequestDto(rotated!.RefreshToken));
+            Assert.Equal(HttpStatusCode.Unauthorized, afterWipe.StatusCode);
+        }
+
         // ===================================================================
         //  Logout
         // ===================================================================

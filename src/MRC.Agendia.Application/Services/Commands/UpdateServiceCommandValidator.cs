@@ -8,7 +8,6 @@ namespace MRC.Agendia.Application.Services.Commands
         {
             RuleFor(x => x.Dto).NotNull();
             RuleFor(x => x.Dto.Id).GreaterThan(0);
-            RuleFor(x => x.Dto.BusinessId).GreaterThan(0);
             RuleFor(x => x.Dto.Name).NotEmpty().MaximumLength(200);
             RuleFor(x => x.Dto.Description).MaximumLength(2000);
             RuleFor(x => x.Dto.DurationMinutes)
