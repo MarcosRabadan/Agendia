@@ -21,6 +21,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         private readonly IAppointmentRepository _repository = Substitute.For<IAppointmentRepository>();
         private readonly IClientRepository _clientRepository = Substitute.For<IClientRepository>();
         private readonly IAppointmentSchedulingValidator _validator = Substitute.For<IAppointmentSchedulingValidator>();
+        private readonly IBookingConcurrencyGuard _bookingGuard = Substitute.For<IBookingConcurrencyGuard>();
         private readonly INotificationService _notificationService = Substitute.For<INotificationService>();
         private readonly IAuditLogger _auditLogger = Substitute.For<IAuditLogger>();
         private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
@@ -29,9 +30,40 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
         public AppointmentServiceTests()
         {
+            // In unit tests the guard just runs the critical section directly.
+            _bookingGuard.ExecuteSerializedAsync(
+                    Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task<Appointment>>>(), Arg.Any<CancellationToken>())
+                .Returns(ci => ci.Arg<Func<Task<Appointment>>>()());
+            _bookingGuard.ExecuteSerializedAsync(
+                    Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
+                .Returns(ci => ci.Arg<Func<Task>>()());
+
             _sut = new AppointmentService(
-                _repository, _clientRepository, _validator,
+                _repository, _clientRepository, _validator, _bookingGuard,
                 _notificationService, _auditLogger, _unitOfWork, _mapper);
+        }
+
+        [Fact]
+        public async Task CreateAsync_EjecutaLaSeccionCriticaDentroDelGuard()
+        {
+            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = 11 });
+            _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
+
+            var dto = new CreateAppointmentDto(
+                ClientId: 1, EmployeeId: 2, ServiceId: 3,
+                StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
+                EndDate: new DateTime(2030, 1, 1, 9, 30, 0, DateTimeKind.Utc),
+                Notes: null);
+
+            await _sut.CreateAsync(dto);
+
+            // The validate + insert must run inside the per-employee/day guard.
+            await _bookingGuard.Received(1).ExecuteSerializedAsync(
+                dto.EmployeeId, DateOnly.FromDateTime(dto.StartDate),
+                Arg.Any<Func<Task<Appointment>>>(), Arg.Any<CancellationToken>());
+            await _validator.Received(1).EnsureValidAsync(
+                Arg.Any<int?>(), dto.ClientId, dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate, Arg.Any<CancellationToken>());
+            await _repository.Received(1).AddAsync(Arg.Any<Appointment>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]

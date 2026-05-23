@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Auth;
 using MRC.Agendia.Application.Authorization;
@@ -53,6 +54,9 @@ namespace MRC.Agendia.Infrastructure
 
             // Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+            // Serializes the booking critical section per employee/day (anti double-booking)
+            services.AddScoped<IBookingConcurrencyGuard, BookingConcurrencyGuard>();
 
             // Domain services
             services.AddScoped<IScheduleResolver, ScheduleResolver>();
