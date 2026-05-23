@@ -40,6 +40,32 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
                     string.Equals(e.To, email, StringComparison.OrdinalIgnoreCase));
             }
         }
+
+        /// <summary>
+        /// Polls until an email to the recipient (optionally matching a predicate,
+        /// e.g. a subject) is captured, or the timeout elapses. Keeps tests
+        /// deterministic when the send runs in the background. Returns the last
+        /// matching email, or null. A predicate avoids matching an earlier email
+        /// to the same address (e.g. the confirmation email before a reset).
+        /// </summary>
+        public async Task<SentEmail?> WaitForAsync(string email, Func<SentEmail, bool>? match = null, int timeoutMs = 2000)
+        {
+            var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+            SentEmail? found;
+            while ((found = LastMatching(email, match)) is null && DateTime.UtcNow < deadline)
+                await Task.Delay(25);
+            return found;
+        }
+
+        private SentEmail? LastMatching(string email, Func<SentEmail, bool>? match)
+        {
+            lock (_gate)
+            {
+                return _sent.LastOrDefault(e =>
+                    string.Equals(e.To, email, StringComparison.OrdinalIgnoreCase)
+                    && (match is null || match(e)));
+            }
+        }
     }
 
     public record SentEmail(string To, string Subject, string Body)

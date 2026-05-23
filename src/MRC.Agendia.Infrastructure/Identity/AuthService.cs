@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Auth;
 using MRC.Agendia.Application.Auth.DTO;
@@ -24,6 +26,8 @@ namespace MRC.Agendia.Infrastructure.Identity
         private readonly IAuthResponseFactory _authResponseFactory;
         private readonly IAuthEmailService _authEmailService;
         private readonly IAuditLogger _auditLogger;
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ILogger<AuthService> _logger;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
@@ -32,7 +36,9 @@ namespace MRC.Agendia.Infrastructure.Identity
             IConfiguration configuration,
             IAuthResponseFactory authResponseFactory,
             IAuthEmailService authEmailService,
-            IAuditLogger auditLogger)
+            IAuditLogger auditLogger,
+            IServiceScopeFactory scopeFactory,
+            ILogger<AuthService> logger)
         {
             _userManager = userManager;
             _jwtTokenService = jwtTokenService;
@@ -41,6 +47,8 @@ namespace MRC.Agendia.Infrastructure.Identity
             _authResponseFactory = authResponseFactory;
             _authEmailService = authEmailService;
             _auditLogger = auditLogger;
+            _scopeFactory = scopeFactory;
+            _logger = logger;
         }
 
         public async Task<AuthResponseDto> LoginAsync(LoginDto dto, CancellationToken cancellationToken = default)
@@ -153,17 +161,34 @@ namespace MRC.Agendia.Infrastructure.Identity
             await _auditLogger.LogAsync(AuditActions.PasswordChanged, "User", userId, cancellationToken: cancellationToken);
         }
 
-        public async Task ForgotPasswordAsync(ForgotPasswordDto dto, CancellationToken cancellationToken = default)
+        public Task ForgotPasswordAsync(ForgotPasswordDto dto, CancellationToken cancellationToken = default)
         {
-            var user = await _userManager.FindByEmailAsync(dto.Email);
+            // Anti-enumeration: respond in constant time regardless of whether the
+            // account exists. Doing the lookup + token + SMTP inline would make an
+            // existing account measurably slower than a missing one (a timing
+            // oracle) and surface a 500 only for existing accounts on SMTP failure.
+            // The work runs best-effort in its own DI scope so the request returns
+            // immediately (and always 204 upstream).
+            var email = dto.Email;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                    var emailService = scope.ServiceProvider.GetRequiredService<IAuthEmailService>();
 
-            // Anti-enumeration: never reveal whether the email exists. The
-            // endpoint always returns success; we only send the email for an
-            // existing, active account and stay silent otherwise.
-            if (user is null || !user.IsActive)
-                return;
+                    var user = await userManager.FindByEmailAsync(email);
+                    if (user is not null && user.IsActive)
+                        await emailService.SendPasswordResetAsync(user);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error enviando el email de restablecimiento de contrasena (best-effort).");
+                }
+            });
 
-            await _authEmailService.SendPasswordResetAsync(user, cancellationToken);
+            return Task.CompletedTask;
         }
 
         public async Task ResetPasswordAsync(ResetPasswordDto dto, CancellationToken cancellationToken = default)
