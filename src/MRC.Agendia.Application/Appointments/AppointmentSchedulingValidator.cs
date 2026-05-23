@@ -41,13 +41,13 @@ namespace MRC.Agendia.Application.Appointments
         {
             // ---------- Basic input checks ----------
             if (startDate == default || endDate == default)
-                throw new InvalidOperationException("StartDate y EndDate son obligatorios.");
+                throw new InvalidAppointmentTimeException("StartDate y EndDate son obligatorios.");
 
             if (endDate <= startDate)
-                throw new InvalidOperationException("EndDate debe ser posterior a StartDate.");
+                throw new InvalidAppointmentTimeException("EndDate debe ser posterior a StartDate.");
 
             if (startDate < DateTime.UtcNow)
-                throw new InvalidOperationException("No se pueden crear ni mover citas al pasado.");
+                throw new InvalidAppointmentTimeException("No se pueden crear ni mover citas al pasado.");
 
             // ---------- Existence + activity ----------
             _ = await _clientRepository.GetByIdAsync(clientId, cancellationToken)
@@ -56,20 +56,19 @@ namespace MRC.Agendia.Application.Appointments
             var employee = await _employeeRepository.GetByIdAsync(employeeId, cancellationToken)
                 ?? throw new EmployeeNotFoundException(employeeId);
             if (!employee.IsActive)
-                throw new InvalidOperationException("El empleado indicado esta inactivo.");
+                throw new EmployeeInactiveException();
 
             var service = await _serviceRepository.GetByIdAsync(serviceId, cancellationToken)
                 ?? throw new ServiceNotFoundException(serviceId);
 
             if (service.BusinessId != employee.BusinessId)
-                throw new InvalidOperationException(
-                    "El servicio y el empleado pertenecen a negocios distintos.");
+                throw new ServiceEmployeeMismatchException();
 
             // ---------- Duration matches the service ----------
             var actualDuration = (endDate - startDate).TotalMinutes;
             if (Math.Abs(actualDuration - service.DurationMinutes) > DurationToleranceMinutes)
             {
-                throw new InvalidOperationException(
+                throw new AppointmentDurationMismatchException(
                     $"La duracion de la cita ({actualDuration:0.#} min) no coincide con la del servicio ({service.DurationMinutes} min).");
             }
 

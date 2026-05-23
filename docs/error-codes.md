@@ -46,6 +46,10 @@ El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan 
 | `SCHEDULE_TEMPLATES_OVERLAP` | `TemplatesOverlapException` | Plantillas de horario con fechas solapadas. |
 | `APPOINTMENT_OUTSIDE_SCHEDULE` | `AppointmentOutsideScheduleException` | La cita cae en día cerrado o fuera de las franjas abiertas. |
 | `APPOINTMENT_CONFLICT` | `AppointmentConflictException` | Se supera la capacidad (`MaxConcurrentAppointments`) del empleado. |
+| `INVALID_APPOINTMENT_TIME` | `InvalidAppointmentTimeException` | Fechas de la cita ausentes, invertidas o en el pasado. |
+| `EMPLOYEE_INACTIVE` | `EmployeeInactiveException` | El empleado seleccionado está inactivo. |
+| `SERVICE_EMPLOYEE_MISMATCH` | `ServiceEmployeeMismatchException` | El servicio y el empleado pertenecen a negocios distintos. |
+| `APPOINTMENT_DURATION_MISMATCH` | `AppointmentDurationMismatchException` | La duración de la cita no coincide con la del servicio. |
 
 ## Cómo añadir un código nuevo
 
