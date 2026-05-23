@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Notifications;
 using MRC.Agendia.Domain.Enums;
 
@@ -22,16 +23,19 @@ namespace MRC.Agendia.Infrastructure.Notifications
     public class AppointmentReminderService : BackgroundService
     {
         private readonly IServiceProvider _serviceProvider;
+        private readonly IClock _clock;
         private readonly ILogger<AppointmentReminderService> _logger;
         private readonly TimeSpan _interval;
         private readonly TimeSpan _window;
 
         public AppointmentReminderService(
             IServiceProvider serviceProvider,
+            IClock clock,
             IConfiguration configuration,
             ILogger<AppointmentReminderService> logger)
         {
             _serviceProvider = serviceProvider;
+            _clock = clock;
             _logger = logger;
 
             var section = configuration.GetSection("Notifications");
@@ -89,7 +93,9 @@ namespace MRC.Agendia.Infrastructure.Notifications
             var context = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
             var notifications = scope.ServiceProvider.GetRequiredService<INotificationService>();
 
-            var now = DateTime.UtcNow;
+            // Wall-clock "now" in the business timezone, to line up with the
+            // wall-clock StartDate of appointments.
+            var now = _clock.BusinessNow;
             var until = now + _window;
 
             // IgnoreQueryFilters + explicit conditions so a soft-deleted parent
@@ -123,7 +129,7 @@ namespace MRC.Agendia.Infrastructure.Notifications
                 // silently lost.
                 if (await notifications.SendAppointmentReminderAsync(appointment.Id, cancellationToken))
                 {
-                    appointment.ReminderSentAt = now;
+                    appointment.ReminderSentAt = DateTime.UtcNow;
                     sent++;
                 }
             }

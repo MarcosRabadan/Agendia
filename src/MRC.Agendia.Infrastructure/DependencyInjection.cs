@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Auth;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Application.Notifications;
 using MRC.Agendia.Domain.Interfaces;
@@ -16,6 +17,7 @@ using MRC.Agendia.Infrastructure.Notifications;
 using MRC.Agendia.Infrastructure.Persistence;
 using MRC.Agendia.Infrastructure.Repositories;
 using MRC.Agendia.Infrastructure.Services;
+using MRC.Agendia.Infrastructure.Time;
 
 namespace MRC.Agendia.Infrastructure
 {
@@ -57,6 +59,9 @@ namespace MRC.Agendia.Infrastructure
 
             // Serializes the booking critical section per employee/day (anti double-booking)
             services.AddScoped<IBookingConcurrencyGuard, BookingConcurrencyGuard>();
+
+            // Single app-wide business timezone for "now" comparisons in the booking flow
+            services.AddSingleton<IClock, BusinessClock>();
 
             // Domain services
             services.AddScoped<IScheduleResolver, ScheduleResolver>();
