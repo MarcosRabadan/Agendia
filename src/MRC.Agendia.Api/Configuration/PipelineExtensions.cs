@@ -32,6 +32,10 @@ namespace MRC.Agendia.Api.Configuration
                 app.UseForwardedHeaders(BuildForwardedHeadersOptions(app.Configuration));
             }
 
+            // Correlation id as early as possible so every log line and error
+            // response (which echoes TraceIdentifier) carries the same id.
+            app.UseMiddleware<CorrelationIdMiddleware>();
+
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
