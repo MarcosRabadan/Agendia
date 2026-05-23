@@ -28,15 +28,10 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderBy(e => e.Id)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
-        public async Task<IEnumerable<Employee>> GetByBusinessIdAsync(int businessId, bool onlyActive = true, CancellationToken cancellationToken = default)
-        {
-            var query = Set.AsNoTracking()
-                .Where(e => e.BusinessId == businessId);
-
-            if (onlyActive)
-                query = query.Where(e => e.IsActive);
-
-            return await query.OrderBy(e => e.Id).ToListAsync(cancellationToken);
-        }
+        public async Task<IEnumerable<Employee>> GetActiveByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default)
+            => await Set.AsNoTracking()
+                .Where(e => e.BusinessId == businessId && e.IsActive)
+                .OrderBy(e => e.Id)
+                .ToListAsync(cancellationToken);
     }
 }

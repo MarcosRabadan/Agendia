@@ -13,9 +13,6 @@ namespace MRC.Agendia.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task AddAsync(AuditLog log, CancellationToken cancellationToken = default)
-            => await _context.AuditLogs.AddAsync(log, cancellationToken);
-
         public Task<(IReadOnlyList<AuditLog> Items, int TotalCount)> GetPagedFilteredAsync(
             string? userId,
             string? action,

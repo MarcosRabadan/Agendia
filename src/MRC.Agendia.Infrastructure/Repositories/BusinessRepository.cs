@@ -20,12 +20,6 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .AsNoTracking()
                 .FirstOrDefaultAsync(b => b.Id == id && b.IsActive, cancellationToken);
 
-        public Task<(IReadOnlyList<Business> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
-            => Set
-                .AsNoTracking()
-                .OrderBy(b => b.Id)
-                .ToPagedListAsync(page, pageSize, cancellationToken);
-
         public Task<(IReadOnlyList<Business> Items, int TotalCount)> GetPagedActiveAsync(int page, int pageSize, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()

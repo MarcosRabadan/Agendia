@@ -21,8 +21,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             string userId,
             string email,
             string fullName,
-            IEnumerable<string> roles,
-            IEnumerable<Claim>? extraClaims = null)
+            IEnumerable<string> roles)
         {
             var jwtSection = _configuration.GetSection("Jwt");
             var key = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key not configured");
@@ -42,9 +41,6 @@ namespace MRC.Agendia.Infrastructure.Identity
 
             foreach (var role in roles)
                 claims.Add(new Claim(ClaimTypes.Role, role));
-
-            if (extraClaims != null)
-                claims.AddRange(extraClaims);
 
             var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
             var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
