@@ -13,6 +13,12 @@ namespace MRC.Agendia.Domain.Entities
         public AppointmentStatus Status { get; set; }
         public string? Notes { get; set; }
 
+        /// <summary>
+        /// When the 24h reminder email was sent, or null if not yet sent. Used by
+        /// the reminder background job to avoid sending duplicate reminders.
+        /// </summary>
+        public DateTime? ReminderSentAt { get; set; }
+
         public Client Client { get; set; } = null!;
         public Employee Employee { get; set; } = null!;
         public Service Service { get; set; } = null!;

@@ -1,0 +1,121 @@
+using System.Net;
+using Microsoft.Extensions.Logging;
+using MRC.Agendia.Application.Common.Email;
+using MRC.Agendia.Application.Notifications;
+using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Domain.Interfaces;
+
+namespace MRC.Agendia.Infrastructure.Notifications
+{
+    /// <summary>
+    /// Email implementation of <see cref="INotificationService"/>. Loads the
+    /// appointment with its client/service/employee/business and sends a Spanish
+    /// HTML email via <see cref="IEmailSender"/>. Best-effort: any failure (no
+    /// recipient email, delivery error...) is logged and swallowed so it never
+    /// breaks the booking flow.
+    /// </summary>
+    public class NotificationService : INotificationService
+    {
+        private readonly IAppointmentRepository _appointmentRepository;
+        private readonly IEmailSender _emailSender;
+        private readonly ILogger<NotificationService> _logger;
+
+        public NotificationService(
+            IAppointmentRepository appointmentRepository,
+            IEmailSender emailSender,
+            ILogger<NotificationService> logger)
+        {
+            _appointmentRepository = appointmentRepository;
+            _emailSender = emailSender;
+            _logger = logger;
+        }
+
+        public Task SendAppointmentConfirmationAsync(int appointmentId, CancellationToken cancellationToken = default)
+            => SendAsync(appointmentId, "confirmation", BuildConfirmation, cancellationToken);
+
+        public Task SendAppointmentReminderAsync(int appointmentId, CancellationToken cancellationToken = default)
+            => SendAsync(appointmentId, "reminder", BuildReminder, cancellationToken);
+
+        public Task SendAppointmentCancellationAsync(int appointmentId, CancellationToken cancellationToken = default)
+            => SendAsync(appointmentId, "cancellation", BuildCancellation, cancellationToken);
+
+        private async Task SendAsync(
+            int appointmentId,
+            string kind,
+            Func<Appointment, (string Subject, string Body)> compose,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var appointment = await _appointmentRepository.GetByIdWithDetailsAsync(appointmentId, cancellationToken);
+                if (appointment is null)
+                {
+                    _logger.LogWarning("Notification {Kind}: appointment {Id} not found.", kind, appointmentId);
+                    return;
+                }
+
+                var email = appointment.Client?.Email;
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    _logger.LogWarning(
+                        "Notification {Kind}: appointment {Id} client has no email; skipping.", kind, appointmentId);
+                    return;
+                }
+
+                var (subject, body) = compose(appointment);
+                await _emailSender.SendAsync(email, subject, body);
+
+                _logger.LogInformation(
+                    "Notification {Kind} sent for appointment {Id} to {Email}.", kind, appointmentId, email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex, "Notification {Kind} failed for appointment {Id}.", kind, appointmentId);
+            }
+        }
+
+        private static (string Subject, string Body) BuildConfirmation(Appointment a)
+        {
+            var subject = "Cita confirmada - Agendia";
+            var body =
+                $"<p>Hola {Encode(a.Client.Name)},</p>" +
+                $"<p>Tu cita ha sido confirmada:</p>" +
+                Details(a) +
+                "<p>Te esperamos. Si necesitas cancelarla, hazlo desde la app.</p>";
+            return (subject, body);
+        }
+
+        private static (string Subject, string Body) BuildReminder(Appointment a)
+        {
+            var subject = "Recordatorio de tu cita - Agendia";
+            var body =
+                $"<p>Hola {Encode(a.Client.Name)},</p>" +
+                "<p>Te recordamos tu proxima cita:</p>" +
+                Details(a) +
+                "<p>Si no puedes asistir, cancelala con antelacion desde la app.</p>";
+            return (subject, body);
+        }
+
+        private static (string Subject, string Body) BuildCancellation(Appointment a)
+        {
+            var subject = "Cita cancelada - Agendia";
+            var body =
+                $"<p>Hola {Encode(a.Client.Name)},</p>" +
+                "<p>Tu cita ha sido cancelada:</p>" +
+                Details(a) +
+                "<p>Puedes reservar una nueva cuando quieras desde la app.</p>";
+            return (subject, body);
+        }
+
+        private static string Details(Appointment a)
+            => "<ul>" +
+               $"<li><strong>Servicio:</strong> {Encode(a.Service.Name)}</li>" +
+               $"<li><strong>Profesional:</strong> {Encode(a.Employee.FullName)}</li>" +
+               $"<li><strong>Negocio:</strong> {Encode(a.Employee.Business.Name)}</li>" +
+               $"<li><strong>Fecha:</strong> {a.StartDate:dd/MM/yyyy HH:mm} - {a.EndDate:HH:mm}</li>" +
+               "</ul>";
+
+        private static string Encode(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
+    }
+}

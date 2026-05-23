@@ -1,7 +1,9 @@
 using AutoMapper;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Common;
+using MRC.Agendia.Application.Notifications;
 using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 
@@ -12,6 +14,7 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IAppointmentRepository _repository;
         private readonly IClientRepository _clientRepository;
         private readonly IAppointmentSchedulingValidator _schedulingValidator;
+        private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
@@ -19,12 +22,14 @@ namespace MRC.Agendia.Application.Appointments
             IAppointmentRepository repository,
             IClientRepository clientRepository,
             IAppointmentSchedulingValidator schedulingValidator,
+            INotificationService notificationService,
             IUnitOfWork unitOfWork,
             IMapper mapper)
         {
             _repository = repository;
             _clientRepository = clientRepository;
             _schedulingValidator = schedulingValidator;
+            _notificationService = notificationService;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
@@ -75,6 +80,10 @@ namespace MRC.Agendia.Application.Appointments
             var entity = _mapper.Map<Appointment>(dto);
             await _repository.AddAsync(entity, cancellationToken);
             await _unitOfWork.Save(cancellationToken);
+
+            // Best-effort confirmation email (never breaks the booking).
+            await _notificationService.SendAppointmentConfirmationAsync(entity.Id, cancellationToken);
+
             return _mapper.Map<AppointmentDto>(entity);
         }
 
@@ -82,6 +91,8 @@ namespace MRC.Agendia.Application.Appointments
         {
             var entity = await _repository.GetByIdAsync(dto.Id, cancellationToken)
                 ?? throw new AppointmentNotFoundException(dto.Id);
+
+            var wasCancelled = entity.Status == AppointmentStatus.Cancelled;
 
             // Validate the new state against the schedule and other
             // appointments, excluding the current one from the conflict check.
@@ -97,6 +108,11 @@ namespace MRC.Agendia.Application.Appointments
             _mapper.Map(dto, entity);
             _repository.Update(entity);
             await _unitOfWork.Save(cancellationToken);
+
+            // Best-effort cancellation email when the appointment is cancelled.
+            if (!wasCancelled && entity.Status == AppointmentStatus.Cancelled)
+                await _notificationService.SendAppointmentCancellationAsync(entity.Id, cancellationToken);
+
             return _mapper.Map<AppointmentDto>(entity);
         }
 

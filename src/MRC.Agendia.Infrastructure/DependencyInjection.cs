@@ -3,10 +3,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Auth;
 using MRC.Agendia.Application.Authorization;
+using MRC.Agendia.Application.Notifications;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Domain.Services;
 using MRC.Agendia.Infrastructure.Authorization;
 using MRC.Agendia.Infrastructure.Identity;
+using MRC.Agendia.Infrastructure.Notifications;
 using MRC.Agendia.Infrastructure.Repositories;
 using MRC.Agendia.Infrastructure.Services;
 
@@ -53,8 +55,12 @@ namespace MRC.Agendia.Infrastructure
             // it depends on IHttpContextAccessor; here just the infrastructural service)
             services.AddScoped<IResourceAuthorizationService, ResourceAuthorizationService>();
 
+            // Notifications (email; push/FCM tracked separately)
+            services.AddScoped<INotificationService, NotificationService>();
+
             // Hosted services
             services.AddHostedService<RefreshTokenCleanupService>();
+            services.AddHostedService<AppointmentReminderService>();
 
             return services;
         }
