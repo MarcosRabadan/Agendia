@@ -17,5 +17,11 @@ namespace MRC.Agendia.Domain.Interfaces
             DateTime startDate,
             DateTime endDate,
             CancellationToken cancellationToken = default);
+        Task<int> CountOverlappingForEmployeeAsync(
+            int employeeId,
+            DateTime startDate,
+            DateTime endDate,
+            int? excludeAppointmentId,
+            CancellationToken cancellationToken = default);
     }
 }

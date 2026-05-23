@@ -17,6 +17,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
 
         public async Task<IEnumerable<ScheduleTemplate>> GetByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default)
             => await Set
+                .AsNoTracking()
                 .Include(st => st.WeeklySlots)
                 .Where(st => st.BusinessId == businessId)
                 .OrderBy(st => st.EffectiveFrom)
@@ -24,6 +25,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
 
         public async Task<ScheduleTemplate?> GetEffectiveTemplateAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default)
             => await Set
+                .AsNoTracking()
                 .Include(st => st.WeeklySlots)
                 .Where(st => st.BusinessId == businessId
                     && st.EffectiveFrom <= date

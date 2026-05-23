@@ -17,5 +17,17 @@ namespace MRC.Agendia.Domain.Services
             IEnumerable<ScheduleTemplate> templates,
             IEnumerable<ScheduleOverride> overrides,
             DateOnly date);
+
+        /// <summary>
+        /// Pure, in-memory resolution of a whole date range from the supplied
+        /// templates and overrides (no DB access). Indexes the overrides by date
+        /// once so each day is resolved in O(1). Shared by the calendar lookup and
+        /// the schedule preview.
+        /// </summary>
+        IEnumerable<EffectiveSchedule> ResolveRange(
+            IEnumerable<ScheduleTemplate> templates,
+            IEnumerable<ScheduleOverride> overrides,
+            DateOnly from,
+            DateOnly to);
     }
 }

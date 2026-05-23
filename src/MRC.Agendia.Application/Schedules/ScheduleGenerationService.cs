@@ -69,20 +69,10 @@ namespace MRC.Agendia.Application.Schedules
             var allTemplates = existingTemplates.Concat(build.Templates).ToList();
             var allOverrides = existingOverrides.Concat(build.Overrides).ToList();
 
-            var days = new List<CalendarDayDto>();
-            for (var date = yearFrom; date <= yearTo; date = date.AddDays(1))
-            {
-                var effective = _scheduleResolver.Resolve(allTemplates, allOverrides, date);
-                days.Add(new CalendarDayDto(
-                    Date: effective.Date,
-                    IsOpen: effective.IsOpen,
-                    Status: effective.IsOpen ? "Abierto" : effective.ClosedReason ?? "Cerrado",
-                    TimeSlots: effective.IsOpen
-                        ? effective.TimeSlots.Select(ts => new EffectiveTimeSlotDto(ts.StartTime, ts.EndTime)).ToList()
-                        : null));
-            }
-
-            return days;
+            return _scheduleResolver
+                .ResolveRange(allTemplates, allOverrides, yearFrom, yearTo)
+                .Select(CalendarDayDto.FromEffective)
+                .ToList();
         }
 
         /// <summary>
