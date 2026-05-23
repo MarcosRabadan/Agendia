@@ -24,7 +24,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             _configuration = configuration;
         }
 
-        public async Task<AuthResponseDto> CreateAsync(ApplicationUser user, string? existingRefreshToken = null)
+        public async Task<AuthResponseDto> CreateAsync(ApplicationUser user, string? existingRefreshToken = null, CancellationToken cancellationToken = default)
         {
             var roles = await _userManager.GetRolesAsync(user);
             var (accessToken, accessExpires) = _jwtTokenService.GenerateAccessToken(
@@ -40,8 +40,8 @@ namespace MRC.Agendia.Infrastructure.Identity
                 UserId = user.Id,
                 ExpiresAt = refreshExpires
             };
-            await _refreshTokenStore.AddAsync(refreshToken);
-            await _refreshTokenStore.SaveChangesAsync();
+            await _refreshTokenStore.AddAsync(refreshToken, cancellationToken);
+            await _refreshTokenStore.SaveChangesAsync(cancellationToken);
 
             var userDto = new UserDto(user.Id, user.Email!, user.FullName, user.PhoneNumber, user.IsActive, roles);
             return new AuthResponseDto(accessToken, accessExpires, refreshTokenValue, refreshExpires, userDto);

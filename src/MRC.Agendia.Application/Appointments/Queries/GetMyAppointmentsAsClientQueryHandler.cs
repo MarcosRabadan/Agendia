@@ -29,7 +29,7 @@ namespace MRC.Agendia.Application.Appointments.Queries
                 throw new UnauthorizedAccessException("No hay usuario autenticado.");
             }
 
-            return _service.GetPagedByClientUserIdAsync(userId, request.Page, request.PageSize);
+            return _service.GetPagedByClientUserIdAsync(userId, request.Page, request.PageSize, cancellationToken);
         }
     }
 }

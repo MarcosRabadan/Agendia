@@ -50,15 +50,15 @@ namespace MRC.Agendia.Application.Appointments
                 throw new InvalidOperationException("No se pueden crear ni mover citas al pasado.");
 
             // ---------- Existence + activity ----------
-            _ = await _clientRepository.GetByIdAsync(clientId)
+            _ = await _clientRepository.GetByIdAsync(clientId, cancellationToken)
                 ?? throw new ClientNotFoundException(clientId);
 
-            var employee = await _employeeRepository.GetByIdAsync(employeeId)
+            var employee = await _employeeRepository.GetByIdAsync(employeeId, cancellationToken)
                 ?? throw new EmployeeNotFoundException(employeeId);
             if (!employee.IsActive)
                 throw new InvalidOperationException("El empleado indicado esta inactivo.");
 
-            var service = await _serviceRepository.GetByIdAsync(serviceId)
+            var service = await _serviceRepository.GetByIdAsync(serviceId, cancellationToken)
                 ?? throw new ServiceNotFoundException(serviceId);
 
             if (service.BusinessId != employee.BusinessId)
@@ -75,7 +75,7 @@ namespace MRC.Agendia.Application.Appointments
 
             // ---------- Day must be open in the effective schedule ----------
             var date = DateOnly.FromDateTime(startDate);
-            var effective = await _scheduleResolver.GetEffectiveScheduleAsync(employee.BusinessId, date);
+            var effective = await _scheduleResolver.GetEffectiveScheduleAsync(employee.BusinessId, date, cancellationToken);
 
             if (!effective.IsOpen || effective.TimeSlots.Count == 0)
             {
@@ -105,7 +105,7 @@ namespace MRC.Agendia.Application.Appointments
             var dayEnd = date.ToDateTime(new TimeOnly(23, 59, 59));
 
             var overlappingCount = (await _appointmentRepository
-                    .GetByBusinessIdAndDateRangeAsync(employee.BusinessId, dayStart, dayEnd))
+                    .GetByBusinessIdAndDateRangeAsync(employee.BusinessId, dayStart, dayEnd, cancellationToken))
                 .Where(a => a.EmployeeId == employeeId)
                 .Where(a => a.Status != AppointmentStatus.Cancelled && a.Status != AppointmentStatus.NoShow)
                 .Where(a => appointmentId is null || a.Id != appointmentId.Value)

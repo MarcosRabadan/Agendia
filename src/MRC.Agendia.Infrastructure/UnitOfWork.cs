@@ -11,8 +11,8 @@ namespace MRC.Agendia.Infrastructure
             _context = context;
         }
 
-        public async Task<int> Save()
-        => await _context.SaveChangesAsync();
+        public async Task<int> Save(CancellationToken cancellationToken = default)
+        => await _context.SaveChangesAsync(cancellationToken);
 
         public void Dispose()
         {

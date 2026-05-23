@@ -36,7 +36,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             _authResponseFactory = authResponseFactory;
         }
 
-        public async Task<AuthResponseDto> RegisterClientAsync(RegisterClientDto dto)
+        public async Task<AuthResponseDto> RegisterClientAsync(RegisterClientDto dto, CancellationToken cancellationToken = default)
         {
             var existing = await _userManager.FindByEmailAsync(dto.Email);
             if (existing != null)
@@ -65,14 +65,14 @@ namespace MRC.Agendia.Infrastructure.Identity
                 Email = dto.Email,
                 UserId = user.Id
             };
-            await _clientRepository.AddAsync(client);
-            await _unitOfWork.Save();
+            await _clientRepository.AddAsync(client, cancellationToken);
+            await _unitOfWork.Save(cancellationToken);
 
-            await _authEmailService.SendEmailConfirmationAsync(user);
-            return await _authResponseFactory.CreateAsync(user);
+            await _authEmailService.SendEmailConfirmationAsync(user, cancellationToken);
+            return await _authResponseFactory.CreateAsync(user, cancellationToken: cancellationToken);
         }
 
-        public async Task<AuthResponseDto> RegisterOwnerAsync(RegisterOwnerDto dto)
+        public async Task<AuthResponseDto> RegisterOwnerAsync(RegisterOwnerDto dto, CancellationToken cancellationToken = default)
         {
             var existing = await _userManager.FindByEmailAsync(dto.Email);
             if (existing != null)
@@ -104,8 +104,8 @@ namespace MRC.Agendia.Infrastructure.Identity
                 IsActive = true,
                 OwnerUserId = user.Id
             };
-            await _businessRepository.AddAsync(business);
-            await _unitOfWork.Save();
+            await _businessRepository.AddAsync(business, cancellationToken);
+            await _unitOfWork.Save(cancellationToken);
 
             // Also auto-create an Employee record for the owner so a solo
             // professional can start taking bookings immediately without an
@@ -121,17 +121,17 @@ namespace MRC.Agendia.Infrastructure.Identity
                 UserId = user.Id,
                 MaxConcurrentAppointments = 1
             };
-            await _employeeRepository.AddAsync(ownerEmployee);
-            await _unitOfWork.Save();
+            await _employeeRepository.AddAsync(ownerEmployee, cancellationToken);
+            await _unitOfWork.Save(cancellationToken);
 
-            await _authEmailService.SendEmailConfirmationAsync(user);
-            return await _authResponseFactory.CreateAsync(user);
+            await _authEmailService.SendEmailConfirmationAsync(user, cancellationToken);
+            return await _authResponseFactory.CreateAsync(user, cancellationToken: cancellationToken);
         }
 
-        public async Task<UserDto> RegisterEmployeeAsync(RegisterEmployeeDto dto, string currentOwnerUserId)
+        public async Task<UserDto> RegisterEmployeeAsync(RegisterEmployeeDto dto, string currentOwnerUserId, CancellationToken cancellationToken = default)
         {
             // Validate the business exists and the caller owns it.
-            var business = await _businessRepository.GetByIdAsync(dto.BusinessId)
+            var business = await _businessRepository.GetByIdAsync(dto.BusinessId, cancellationToken)
                 ?? throw new BusinessNotFoundException(dto.BusinessId);
 
             if (business.OwnerUserId != currentOwnerUserId)
@@ -165,10 +165,10 @@ namespace MRC.Agendia.Infrastructure.Identity
                 IsActive = true,
                 UserId = user.Id
             };
-            await _employeeRepository.AddAsync(employee);
-            await _unitOfWork.Save();
+            await _employeeRepository.AddAsync(employee, cancellationToken);
+            await _unitOfWork.Save(cancellationToken);
 
-            await _authEmailService.SendEmailConfirmationAsync(user);
+            await _authEmailService.SendEmailConfirmationAsync(user, cancellationToken);
 
             var roles = await _userManager.GetRolesAsync(user);
             return new UserDto(user.Id, user.Email!, user.FullName, user.PhoneNumber, user.IsActive, roles);

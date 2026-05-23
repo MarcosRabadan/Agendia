@@ -4,12 +4,12 @@ namespace MRC.Agendia.Domain.Interfaces
 {
     public interface IEmployeeRepository
     {
-        Task<Employee?> GetByIdAsync(int id);
-        Task<IEnumerable<Employee>> GetAllAsync();
-        Task<IEnumerable<Employee>> GetByBusinessIdAsync(int businessId, bool onlyActive = true);
+        Task<Employee?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<IEnumerable<Employee>> GetAllAsync(CancellationToken cancellationToken = default);
+        Task<IEnumerable<Employee>> GetByBusinessIdAsync(int businessId, bool onlyActive = true, CancellationToken cancellationToken = default);
         Task<(IReadOnlyList<Employee> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default);
         Task<(IReadOnlyList<Employee> Items, int TotalCount)> GetPagedByOwnerUserIdAsync(string ownerUserId, int page, int pageSize, CancellationToken cancellationToken = default);
-        Task AddAsync(Employee employee);
+        Task AddAsync(Employee employee, CancellationToken cancellationToken = default);
         void Update(Employee employee);
         void Delete(Employee employee);
     }

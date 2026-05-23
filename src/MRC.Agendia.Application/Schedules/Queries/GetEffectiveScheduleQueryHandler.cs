@@ -14,7 +14,7 @@ namespace MRC.Agendia.Application.Schedules.Queries
 
         public async Task<EffectiveScheduleDto> Handle(GetEffectiveScheduleQuery request, CancellationToken cancellationToken)
         {
-            return await _service.GetEffectiveScheduleAsync(request.BusinessId, request.Date);
+            return await _service.GetEffectiveScheduleAsync(request.BusinessId, request.Date, cancellationToken);
         }
     }
 }

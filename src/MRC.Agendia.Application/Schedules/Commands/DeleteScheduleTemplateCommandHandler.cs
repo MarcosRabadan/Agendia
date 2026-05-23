@@ -16,8 +16,8 @@ namespace MRC.Agendia.Application.Schedules.Commands
 
         public async Task<bool> Handle(DeleteScheduleTemplateCommand request, CancellationToken cancellationToken)
         {
-            await _auth.EnsureCanManageScheduleTemplateAsync(request.Id);
-            return await _service.DeleteTemplateAsync(request.Id);
+            await _auth.EnsureCanManageScheduleTemplateAsync(request.Id, cancellationToken);
+            return await _service.DeleteTemplateAsync(request.Id, cancellationToken);
         }
     }
 }

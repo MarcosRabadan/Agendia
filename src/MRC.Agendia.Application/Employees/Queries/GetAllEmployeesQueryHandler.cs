@@ -28,14 +28,14 @@ namespace MRC.Agendia.Application.Employees.Queries
         {
             if (_currentUser.IsInRole(Roles.Admin))
             {
-                return _service.GetPagedAsync(request.Page, request.PageSize);
+                return _service.GetPagedAsync(request.Page, request.PageSize, cancellationToken);
             }
 
             if (_currentUser.IsInRole(Roles.BusinessOwner))
             {
                 var userId = _currentUser.UserId
                     ?? throw new UnauthorizedAccessException("Usuario no autenticado.");
-                return _service.GetPagedByOwnerUserIdAsync(userId, request.Page, request.PageSize);
+                return _service.GetPagedByOwnerUserIdAsync(userId, request.Page, request.PageSize, cancellationToken);
             }
 
             throw new UnauthorizedAccessException("No tienes permiso para listar empleados.");

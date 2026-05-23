@@ -4,8 +4,8 @@ namespace MRC.Agendia.Domain.Services
 {
     public interface IScheduleResolver
     {
-        Task<EffectiveSchedule> GetEffectiveScheduleAsync(int businessId, DateOnly date);
-        Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(int businessId, DateOnly from, DateOnly to);
+        Task<EffectiveSchedule> GetEffectiveScheduleAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default);
+        Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(int businessId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Pure, in-memory resolution from the supplied templates and overrides

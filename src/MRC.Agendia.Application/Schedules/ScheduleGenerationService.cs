@@ -33,17 +33,17 @@ namespace MRC.Agendia.Application.Schedules
             _mapper = mapper;
         }
 
-        public async Task<GenerateScheduleResponseDto> GenerateScheduleAsync(GenerateScheduleRequestDto dto)
+        public async Task<GenerateScheduleResponseDto> GenerateScheduleAsync(GenerateScheduleRequestDto dto, CancellationToken cancellationToken = default)
         {
-            var build = await BuildAsync(dto);
+            var build = await BuildAsync(dto, cancellationToken);
 
             foreach (var template in build.Templates)
-                await _templateRepository.AddAsync(template);
+                await _templateRepository.AddAsync(template, cancellationToken);
 
             if (build.Overrides.Count > 0)
-                await _overrideRepository.AddRangeAsync(build.Overrides);
+                await _overrideRepository.AddRangeAsync(build.Overrides, cancellationToken);
 
-            await _unitOfWork.Save();
+            await _unitOfWork.Save(cancellationToken);
 
             return new GenerateScheduleResponseDto(
                 TemplateIds: build.Templates.Select(t => t.Id).ToList(),
@@ -54,17 +54,17 @@ namespace MRC.Agendia.Application.Schedules
                 Warnings: build.Warnings.Count > 0 ? build.Warnings : null);
         }
 
-        public async Task<IEnumerable<CalendarDayDto>> PreviewScheduleAsync(GenerateScheduleRequestDto dto)
+        public async Task<IEnumerable<CalendarDayDto>> PreviewScheduleAsync(GenerateScheduleRequestDto dto, CancellationToken cancellationToken = default)
         {
-            var build = await BuildAsync(dto);
+            var build = await BuildAsync(dto, cancellationToken);
 
             var yearFrom = new DateOnly(dto.Year, 1, 1);
             var yearTo = new DateOnly(dto.Year, 12, 31);
 
             // Merge the (unpersisted) request with the business's existing schedule
             // so the preview reflects what the calendar would actually look like.
-            var existingTemplates = await _templateRepository.GetByBusinessIdAsync(dto.BusinessId);
-            var existingOverrides = await _overrideRepository.GetByBusinessIdAndDateRangeAsync(dto.BusinessId, yearFrom, yearTo);
+            var existingTemplates = await _templateRepository.GetByBusinessIdAsync(dto.BusinessId, cancellationToken);
+            var existingOverrides = await _overrideRepository.GetByBusinessIdAndDateRangeAsync(dto.BusinessId, yearFrom, yearTo, cancellationToken);
 
             var allTemplates = existingTemplates.Concat(build.Templates).ToList();
             var allOverrides = existingOverrides.Concat(build.Overrides).ToList();
@@ -90,7 +90,7 @@ namespace MRC.Agendia.Application.Schedules
         /// (no persistence). Shared by generate (which then saves) and preview
         /// (which resolves them against the existing schedule).
         /// </summary>
-        private async Task<ScheduleBuild> BuildAsync(GenerateScheduleRequestDto dto)
+        private async Task<ScheduleBuild> BuildAsync(GenerateScheduleRequestDto dto, CancellationToken cancellationToken = default)
         {
             if (dto.Templates is null || dto.Templates.Count == 0)
                 throw new InvalidOperationException("Debe proporcionar al menos una plantilla de horario.");
@@ -101,7 +101,7 @@ namespace MRC.Agendia.Application.Schedules
             // 2. Validate against templates already in the DB.
             foreach (var templateInput in dto.Templates)
             {
-                if (await _templateRepository.HasOverlappingTemplateAsync(dto.BusinessId, templateInput.EffectiveFrom, templateInput.EffectiveTo))
+                if (await _templateRepository.HasOverlappingTemplateAsync(dto.BusinessId, templateInput.EffectiveFrom, templateInput.EffectiveTo, cancellationToken: cancellationToken))
                     throw new TemplatesOverlapException($"La plantilla '{templateInput.Name}' se solapa con una plantilla existente del negocio.");
             }
 
@@ -128,7 +128,7 @@ namespace MRC.Agendia.Application.Schedules
             // 5a. National/local holidays.
             if (dto.IncludeNationalHolidays || dto.IncludeLocalHolidays)
             {
-                var holidays = await _holidayRepository.GetByDateRangeAsync(yearFrom, yearTo);
+                var holidays = await _holidayRepository.GetByDateRangeAsync(yearFrom, yearTo, cancellationToken);
 
                 foreach (var holiday in holidays)
                 {

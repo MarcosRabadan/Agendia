@@ -14,7 +14,7 @@ namespace MRC.Agendia.Application.Schedules.Queries
 
         public async Task<IEnumerable<ScheduleTemplateDto>> Handle(GetScheduleTemplatesByBusinessIdQuery request, CancellationToken cancellationToken)
         {
-            return await _service.GetTemplatesByBusinessIdAsync(request.BusinessId);
+            return await _service.GetTemplatesByBusinessIdAsync(request.BusinessId, cancellationToken);
         }
     }
 }

@@ -13,7 +13,7 @@ namespace MRC.Agendia.Application.Holidays.Commands
 
         public async Task<bool> Handle(DeleteHolidayCommand request, CancellationToken cancellationToken)
         {
-            return await _service.DeleteAsync(request.Id);
+            return await _service.DeleteAsync(request.Id, cancellationToken);
         }
     }
 }

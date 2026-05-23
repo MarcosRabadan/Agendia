@@ -11,6 +11,6 @@ namespace MRC.Agendia.Infrastructure.Identity
     /// </summary>
     public interface IAuthResponseFactory
     {
-        Task<AuthResponseDto> CreateAsync(ApplicationUser user, string? existingRefreshToken = null);
+        Task<AuthResponseDto> CreateAsync(ApplicationUser user, string? existingRefreshToken = null, CancellationToken cancellationToken = default);
     }
 }

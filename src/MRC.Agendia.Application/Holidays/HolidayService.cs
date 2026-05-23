@@ -19,50 +19,50 @@ namespace MRC.Agendia.Application.Holidays
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<HolidayCalendarDto>> GetAllAsync()
+        public async Task<IEnumerable<HolidayCalendarDto>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            var entities = await _repository.GetAllAsync();
+            var entities = await _repository.GetAllAsync(cancellationToken);
             return _mapper.Map<IEnumerable<HolidayCalendarDto>>(entities);
         }
 
-        public async Task<IEnumerable<HolidayCalendarDto>> GetByYearAsync(int year)
+        public async Task<IEnumerable<HolidayCalendarDto>> GetByYearAsync(int year, CancellationToken cancellationToken = default)
         {
-            var entities = await _repository.GetByYearAsync(year);
+            var entities = await _repository.GetByYearAsync(year, cancellationToken);
             return _mapper.Map<IEnumerable<HolidayCalendarDto>>(entities);
         }
 
-        public async Task<HolidayCalendarDto?> GetByIdAsync(int id)
+        public async Task<HolidayCalendarDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            var entity = await _repository.GetByIdAsync(id);
+            var entity = await _repository.GetByIdAsync(id, cancellationToken);
             return entity is null ? null : _mapper.Map<HolidayCalendarDto>(entity);
         }
 
-        public async Task<HolidayCalendarDto> CreateAsync(CreateHolidayCalendarDto dto)
+        public async Task<HolidayCalendarDto> CreateAsync(CreateHolidayCalendarDto dto, CancellationToken cancellationToken = default)
         {
             var entity = _mapper.Map<HolidayCalendar>(dto);
-            await _repository.AddAsync(entity);
-            await _unitOfWork.Save();
+            await _repository.AddAsync(entity, cancellationToken);
+            await _unitOfWork.Save(cancellationToken);
             return _mapper.Map<HolidayCalendarDto>(entity);
         }
 
-        public async Task<HolidayCalendarDto> UpdateAsync(UpdateHolidayCalendarDto dto)
+        public async Task<HolidayCalendarDto> UpdateAsync(UpdateHolidayCalendarDto dto, CancellationToken cancellationToken = default)
         {
-            var entity = await _repository.GetByIdAsync(dto.Id)
+            var entity = await _repository.GetByIdAsync(dto.Id, cancellationToken)
                 ?? throw new HolidayNotFoundException(dto.Id);
 
             _mapper.Map(dto, entity);
             _repository.Update(entity);
-            await _unitOfWork.Save();
+            await _unitOfWork.Save(cancellationToken);
             return _mapper.Map<HolidayCalendarDto>(entity);
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
-            var entity = await _repository.GetByIdAsync(id)
+            var entity = await _repository.GetByIdAsync(id, cancellationToken)
                 ?? throw new HolidayNotFoundException(id);
 
             _repository.Delete(entity);
-            await _unitOfWork.Save();
+            await _unitOfWork.Save(cancellationToken);
             return true;
         }
     }

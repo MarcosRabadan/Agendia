@@ -17,8 +17,8 @@ namespace MRC.Agendia.Application.Appointments.Queries
 
         public async Task<IEnumerable<AppointmentDto>> Handle(GetAppointmentsByDateRangeQuery request, CancellationToken cancellationToken)
         {
-            await _auth.EnsureCanManageBusinessResourcesAsync(request.BusinessId);
-            return await _service.GetByBusinessIdAndDateRangeAsync(request.BusinessId, request.StartDate, request.EndDate);
+            await _auth.EnsureCanManageBusinessResourcesAsync(request.BusinessId, cancellationToken);
+            return await _service.GetByBusinessIdAndDateRangeAsync(request.BusinessId, request.StartDate, request.EndDate, cancellationToken);
         }
     }
 }

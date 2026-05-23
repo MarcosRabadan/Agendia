@@ -22,8 +22,8 @@ namespace MRC.Agendia.Application.Services.Commands
             // that belongs to a different tenant, see issue #91. The DTO's BusinessId
             // is additionally ignored by AutoMapper so reassignment is not possible
             // even after passing the check.
-            await _auth.EnsureCanManageServiceAsync(request.Dto.Id);
-            return await _service.UpdateAsync(request.Dto);
+            await _auth.EnsureCanManageServiceAsync(request.Dto.Id, cancellationToken);
+            return await _service.UpdateAsync(request.Dto, cancellationToken);
         }
     }
 }

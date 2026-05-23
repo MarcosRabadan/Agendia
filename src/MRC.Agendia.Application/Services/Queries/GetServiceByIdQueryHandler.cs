@@ -14,7 +14,7 @@ namespace MRC.Agendia.Application.Services.Queries
 
         public async Task<ServiceDto?> Handle(GetServiceByIdQuery request, CancellationToken cancellationToken)
         {
-            return await _service.GetByIdAsync(request.Id);
+            return await _service.GetByIdAsync(request.Id, cancellationToken);
         }
     }
 }

@@ -14,7 +14,7 @@ namespace MRC.Agendia.Application.Schedules.Queries
 
         public async Task<ScheduleOverrideDto?> Handle(GetScheduleOverrideByIdQuery request, CancellationToken cancellationToken)
         {
-            return await _service.GetOverrideByIdAsync(request.Id);
+            return await _service.GetOverrideByIdAsync(request.Id, cancellationToken);
         }
     }
 }

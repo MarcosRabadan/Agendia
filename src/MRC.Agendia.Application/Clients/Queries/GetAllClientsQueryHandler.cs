@@ -14,6 +14,6 @@ namespace MRC.Agendia.Application.Clients.Queries
         }
 
         public Task<PagedResult<ClientDto>> Handle(GetAllClientsQuery request, CancellationToken cancellationToken)
-            => _service.GetPagedAsync(request.Page, request.PageSize);
+            => _service.GetPagedAsync(request.Page, request.PageSize, cancellationToken);
     }
 }

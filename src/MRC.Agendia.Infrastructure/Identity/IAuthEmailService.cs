@@ -7,7 +7,7 @@ namespace MRC.Agendia.Infrastructure.Identity
     /// </summary>
     public interface IAuthEmailService
     {
-        Task SendEmailConfirmationAsync(ApplicationUser user);
-        Task SendPasswordResetAsync(ApplicationUser user);
+        Task SendEmailConfirmationAsync(ApplicationUser user, CancellationToken cancellationToken = default);
+        Task SendPasswordResetAsync(ApplicationUser user, CancellationToken cancellationToken = default);
     }
 }

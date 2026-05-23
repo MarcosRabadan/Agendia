@@ -8,7 +8,7 @@ namespace MRC.Agendia.Application.Auth.Commands
         public LogoutCommandHandler(IAuthService service) { _service = service; }
         public async Task<Unit> Handle(LogoutCommand request, CancellationToken cancellationToken)
         {
-            await _service.LogoutAsync(request.RefreshToken);
+            await _service.LogoutAsync(request.RefreshToken, cancellationToken);
             return Unit.Value;
         }
     }

@@ -30,36 +30,36 @@ namespace MRC.Agendia.Application.Appointments
         }
 
         #region CRUD
-        public async Task<PagedResult<AppointmentDto>> GetPagedAsync(int page, int pageSize)
+        public async Task<PagedResult<AppointmentDto>> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
         {
-            var (items, totalCount) = await _repository.GetPagedAsync(page, pageSize);
+            var (items, totalCount) = await _repository.GetPagedAsync(page, pageSize, cancellationToken);
             var dtos = _mapper.Map<List<AppointmentDto>>(items);
             return PagedResult<AppointmentDto>.Create(dtos, totalCount, page, pageSize);
         }
 
-        public async Task<PagedResult<AppointmentDto>> GetPagedByClientUserIdAsync(string userId, int page, int pageSize)
+        public async Task<PagedResult<AppointmentDto>> GetPagedByClientUserIdAsync(string userId, int page, int pageSize, CancellationToken cancellationToken = default)
         {
             // Resolve the Client entity from the authenticated user. If the user has
             // the Client role but no Client row (e.g. row removed while the JWT is still
             // valid), return an empty page instead of leaking existence information.
-            var client = await _clientRepository.GetByUserIdAsync(userId);
+            var client = await _clientRepository.GetByUserIdAsync(userId, cancellationToken);
             if (client is null)
             {
                 return PagedResult<AppointmentDto>.Create(Array.Empty<AppointmentDto>(), 0, page, pageSize);
             }
 
-            var (items, totalCount) = await _repository.GetPagedByClientIdAsync(client.Id, page, pageSize);
+            var (items, totalCount) = await _repository.GetPagedByClientIdAsync(client.Id, page, pageSize, cancellationToken);
             var dtos = _mapper.Map<List<AppointmentDto>>(items);
             return PagedResult<AppointmentDto>.Create(dtos, totalCount, page, pageSize);
         }
 
-        public async Task<AppointmentDto?> GetByIdAsync(int id)
+        public async Task<AppointmentDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            var entity = await _repository.GetByIdAsync(id);
+            var entity = await _repository.GetByIdAsync(id, cancellationToken);
             return entity is null ? null : _mapper.Map<AppointmentDto>(entity);
         }
 
-        public async Task<AppointmentDto> CreateAsync(CreateAppointmentDto dto)
+        public async Task<AppointmentDto> CreateAsync(CreateAppointmentDto dto, CancellationToken cancellationToken = default)
         {
             // Validate the appointment against the business schedule and
             // existing appointments BEFORE persisting it.
@@ -69,17 +69,18 @@ namespace MRC.Agendia.Application.Appointments
                 employeeId: dto.EmployeeId,
                 serviceId: dto.ServiceId,
                 startDate: dto.StartDate,
-                endDate: dto.EndDate);
+                endDate: dto.EndDate,
+                cancellationToken: cancellationToken);
 
             var entity = _mapper.Map<Appointment>(dto);
-            await _repository.AddAsync(entity);
-            await _unitOfWork.Save();
+            await _repository.AddAsync(entity, cancellationToken);
+            await _unitOfWork.Save(cancellationToken);
             return _mapper.Map<AppointmentDto>(entity);
         }
 
-        public async Task<AppointmentDto> UpdateAsync(UpdateAppointmentDto dto)
+        public async Task<AppointmentDto> UpdateAsync(UpdateAppointmentDto dto, CancellationToken cancellationToken = default)
         {
-            var entity = await _repository.GetByIdAsync(dto.Id)
+            var entity = await _repository.GetByIdAsync(dto.Id, cancellationToken)
                 ?? throw new AppointmentNotFoundException(dto.Id);
 
             // Validate the new state against the schedule and other
@@ -90,29 +91,30 @@ namespace MRC.Agendia.Application.Appointments
                 employeeId: dto.EmployeeId,
                 serviceId: dto.ServiceId,
                 startDate: dto.StartDate,
-                endDate: dto.EndDate);
+                endDate: dto.EndDate,
+                cancellationToken: cancellationToken);
 
             _mapper.Map(dto, entity);
             _repository.Update(entity);
-            await _unitOfWork.Save();
+            await _unitOfWork.Save(cancellationToken);
             return _mapper.Map<AppointmentDto>(entity);
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
-            var entity = await _repository.GetByIdAsync(id)
+            var entity = await _repository.GetByIdAsync(id, cancellationToken)
                 ?? throw new AppointmentNotFoundException(id);
 
             _repository.Delete(entity);
-            await _unitOfWork.Save();
+            await _unitOfWork.Save(cancellationToken);
             return true;
         }
         #endregion CRUD
 
-        public async Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate)
+        public async Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
         {
             ValidateRangeQuery(startDate, endDate);
-            var entities = await _repository.GetByBusinessIdAndDateRangeAsync(businessId, startDate, endDate);
+            var entities = await _repository.GetByBusinessIdAndDateRangeAsync(businessId, startDate, endDate, cancellationToken);
             return entities is null ? Enumerable.Empty<AppointmentDto>() : _mapper.Map<IEnumerable<AppointmentDto>>(entities);
         }
 

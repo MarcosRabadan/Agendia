@@ -8,6 +8,6 @@ namespace MRC.Agendia.Application.Auth.Commands
         private readonly IAuthService _service;
         public LoginCommandHandler(IAuthService service) { _service = service; }
         public Task<AuthResponseDto> Handle(LoginCommand request, CancellationToken cancellationToken)
-            => _service.LoginAsync(request.Dto);
+            => _service.LoginAsync(request.Dto, cancellationToken);
     }
 }

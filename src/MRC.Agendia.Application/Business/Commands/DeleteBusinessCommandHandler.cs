@@ -13,7 +13,7 @@ namespace MRC.Agendia.Application.Business.Commands
 
         public async Task<bool> Handle(DeleteBusinessCommand request, CancellationToken cancellationToken)
         {
-            return await _service.DeleteAsync(request.Id);
+            return await _service.DeleteAsync(request.Id, cancellationToken);
         }
     }
 }

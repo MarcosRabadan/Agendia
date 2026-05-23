@@ -30,20 +30,20 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
         // ---------- BUSINESS ----------
 
-        public async Task EnsureCanManageBusinessAsync(int businessId)
+        public async Task EnsureCanManageBusinessAsync(int businessId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
 
             var isOwner = await _context.Businesses
                 .AsNoTracking()
-                .AnyAsync(b => b.Id == businessId && b.OwnerUserId == userId);
+                .AnyAsync(b => b.Id == businessId && b.OwnerUserId == userId, cancellationToken);
 
             if (!isOwner)
                 throw new UnauthorizedAccessException("No tienes permiso para gestionar este negocio.");
         }
 
-        public async Task EnsureCanManageBusinessResourcesAsync(int businessId)
+        public async Task EnsureCanManageBusinessResourcesAsync(int businessId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
@@ -51,13 +51,13 @@ namespace MRC.Agendia.Infrastructure.Authorization
             // Owner del negocio?
             var isOwner = await _context.Businesses
                 .AsNoTracking()
-                .AnyAsync(b => b.Id == businessId && b.OwnerUserId == userId);
+                .AnyAsync(b => b.Id == businessId && b.OwnerUserId == userId, cancellationToken);
             if (isOwner) return;
 
             // Empleado del negocio?
             var isEmployee = await _context.Employees
                 .AsNoTracking()
-                .AnyAsync(e => e.BusinessId == businessId && e.UserId == userId && e.IsActive);
+                .AnyAsync(e => e.BusinessId == businessId && e.UserId == userId && e.IsActive, cancellationToken);
             if (isEmployee) return;
 
             throw new UnauthorizedAccessException("No tienes permiso para gestionar recursos de este negocio.");
@@ -65,7 +65,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
         // ---------- EMPLOYEE ----------
 
-        public async Task EnsureCanViewEmployeeAsync(int employeeId)
+        public async Task EnsureCanViewEmployeeAsync(int employeeId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
@@ -74,7 +74,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .AsNoTracking()
                 .Where(e => e.Id == employeeId)
                 .Select(e => new { e.UserId, e.BusinessId })
-                .FirstOrDefaultAsync()
+                .FirstOrDefaultAsync(cancellationToken)
                 ?? throw new EmployeeNotFoundException(employeeId);
 
             // El propio empleado
@@ -83,19 +83,19 @@ namespace MRC.Agendia.Infrastructure.Authorization
             // Dueno del negocio del empleado
             var isOwner = await _context.Businesses
                 .AsNoTracking()
-                .AnyAsync(b => b.Id == employee.BusinessId && b.OwnerUserId == userId);
+                .AnyAsync(b => b.Id == employee.BusinessId && b.OwnerUserId == userId, cancellationToken);
             if (isOwner) return;
 
             throw new UnauthorizedAccessException("No tienes permiso para ver este empleado.");
         }
 
-        public async Task EnsureCanUpdateEmployeeAsync(int employeeId)
+        public async Task EnsureCanUpdateEmployeeAsync(int employeeId, CancellationToken cancellationToken = default)
         {
             // Mismas reglas que ver: admin, dueno, o el propio empleado
-            await EnsureCanViewEmployeeAsync(employeeId);
+            await EnsureCanViewEmployeeAsync(employeeId, cancellationToken);
         }
 
-        public async Task EnsureCanDeleteEmployeeAsync(int employeeId)
+        public async Task EnsureCanDeleteEmployeeAsync(int employeeId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
@@ -104,14 +104,14 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .AsNoTracking()
                 .Where(e => e.Id == employeeId)
                 .Select(e => (int?)e.BusinessId)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (businessId is null)
                 throw new EmployeeNotFoundException(employeeId);
 
             var isOwner = await _context.Businesses
                 .AsNoTracking()
-                .AnyAsync(b => b.Id == businessId.Value && b.OwnerUserId == userId);
+                .AnyAsync(b => b.Id == businessId.Value && b.OwnerUserId == userId, cancellationToken);
 
             if (!isOwner)
                 throw new UnauthorizedAccessException("Solo el dueno del negocio (o un admin) puede eliminar empleados.");
@@ -119,14 +119,14 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
         // ---------- CLIENT ----------
 
-        public async Task EnsureCanManageClientAsync(int clientId)
+        public async Task EnsureCanManageClientAsync(int clientId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
 
             var isOwnClient = await _context.Clients
                 .AsNoTracking()
-                .AnyAsync(c => c.Id == clientId && c.UserId == userId);
+                .AnyAsync(c => c.Id == clientId && c.UserId == userId, cancellationToken);
 
             if (!isOwnClient)
                 throw new UnauthorizedAccessException("Solo puedes gestionar tu propia cuenta de cliente.");
@@ -134,7 +134,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
         // ---------- APPOINTMENT ----------
 
-        public async Task EnsureCanManageAppointmentAsync(int appointmentId)
+        public async Task EnsureCanManageAppointmentAsync(int appointmentId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
@@ -151,7 +151,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                     ClientUserId = a.Client.UserId,
                     EmployeeUserId = a.Employee.UserId
                 })
-                .FirstOrDefaultAsync()
+                .FirstOrDefaultAsync(cancellationToken)
                 ?? throw new AppointmentNotFoundException(appointmentId);
 
             // Owner del negocio
@@ -160,7 +160,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
             // Empleado del negocio (cualquiera, no solo el de la cita)
             var isEmployeeOfBusiness = await _context.Employees
                 .AsNoTracking()
-                .AnyAsync(e => e.BusinessId == appointment.BusinessId && e.UserId == userId && e.IsActive);
+                .AnyAsync(e => e.BusinessId == appointment.BusinessId && e.UserId == userId && e.IsActive, cancellationToken);
             if (isEmployeeOfBusiness) return;
 
             // Cliente de la cita
@@ -169,7 +169,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
             throw new UnauthorizedAccessException("No tienes permiso para gestionar esta cita.");
         }
 
-        public async Task EnsureCanCreateAppointmentAsync(int clientId, int employeeId)
+        public async Task EnsureCanCreateAppointmentAsync(int clientId, int employeeId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
@@ -179,7 +179,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .AsNoTracking()
                 .Where(e => e.Id == employeeId)
                 .Select(e => new { e.BusinessId, BusinessOwnerUserId = e.Business.OwnerUserId })
-                .FirstOrDefaultAsync()
+                .FirstOrDefaultAsync(cancellationToken)
                 ?? throw new EmployeeNotFoundException(employeeId);
 
             // Owner del negocio del empleado
@@ -188,7 +188,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
             // Empleado del mismo negocio
             var isEmployeeOfBusiness = await _context.Employees
                 .AsNoTracking()
-                .AnyAsync(e => e.BusinessId == employee.BusinessId && e.UserId == userId && e.IsActive);
+                .AnyAsync(e => e.BusinessId == employee.BusinessId && e.UserId == userId && e.IsActive, cancellationToken);
             if (isEmployeeOfBusiness) return;
 
             // Si es Client, solo puede crear cita para si mismo
@@ -198,7 +198,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                     .AsNoTracking()
                     .Where(c => c.Id == clientId)
                     .Select(c => c.UserId)
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync(cancellationToken);
 
                 if (clientUserId == userId) return;
 
@@ -210,46 +210,46 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
         // ---------- BUSINESS-SCOPED RESOURCES (with id lookup) ----------
 
-        public async Task EnsureCanManageServiceAsync(int serviceId)
+        public async Task EnsureCanManageServiceAsync(int serviceId, CancellationToken cancellationToken = default)
         {
             var businessId = await _context.Services
                 .AsNoTracking()
                 .Where(s => s.Id == serviceId)
                 .Select(s => (int?)s.BusinessId)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (businessId is null)
                 throw new ServiceNotFoundException(serviceId);
 
-            await EnsureCanManageBusinessResourcesAsync(businessId.Value);
+            await EnsureCanManageBusinessResourcesAsync(businessId.Value, cancellationToken);
         }
 
-        public async Task EnsureCanManageScheduleTemplateAsync(int templateId)
+        public async Task EnsureCanManageScheduleTemplateAsync(int templateId, CancellationToken cancellationToken = default)
         {
             var businessId = await _context.ScheduleTemplates
                 .AsNoTracking()
                 .Where(t => t.Id == templateId)
                 .Select(t => (int?)t.BusinessId)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (businessId is null)
                 throw new ScheduleTemplateNotFoundException(templateId);
 
-            await EnsureCanManageBusinessResourcesAsync(businessId.Value);
+            await EnsureCanManageBusinessResourcesAsync(businessId.Value, cancellationToken);
         }
 
-        public async Task EnsureCanManageScheduleOverrideAsync(int overrideId)
+        public async Task EnsureCanManageScheduleOverrideAsync(int overrideId, CancellationToken cancellationToken = default)
         {
             var businessId = await _context.ScheduleOverrides
                 .AsNoTracking()
                 .Where(o => o.Id == overrideId)
                 .Select(o => (int?)o.BusinessId)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (businessId is null)
                 throw new ScheduleOverrideNotFoundException(overrideId);
 
-            await EnsureCanManageBusinessResourcesAsync(businessId.Value);
+            await EnsureCanManageBusinessResourcesAsync(businessId.Value, cancellationToken);
         }
     }
 }

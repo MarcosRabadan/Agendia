@@ -4,10 +4,10 @@ namespace MRC.Agendia.Domain.Interfaces
 {
     public interface IServiceRepository
     {
-        Task<Service?> GetByIdAsync(int id);
-        Task<IEnumerable<Service>> GetAllAsync();
+        Task<Service?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<IEnumerable<Service>> GetAllAsync(CancellationToken cancellationToken = default);
         Task<(IReadOnlyList<Service> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default);
-        Task AddAsync(Service service);
+        Task AddAsync(Service service, CancellationToken cancellationToken = default);
         void Update(Service service);
         void Delete(Service service);
     }

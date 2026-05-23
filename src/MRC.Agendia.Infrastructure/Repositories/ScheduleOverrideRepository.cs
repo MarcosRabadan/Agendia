@@ -13,40 +13,40 @@ namespace MRC.Agendia.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<ScheduleOverride?> GetByIdAsync(int id)
-            => await _context.ScheduleOverrides.FindAsync(id);
+        public async Task<ScheduleOverride?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+            => await _context.ScheduleOverrides.FindAsync(new object?[] { id }, cancellationToken);
 
-        public async Task<ScheduleOverride?> GetByIdWithSlotsAsync(int id)
+        public async Task<ScheduleOverride?> GetByIdWithSlotsAsync(int id, CancellationToken cancellationToken = default)
             => await _context.ScheduleOverrides
                 .Include(so => so.CustomSlots)
-                .FirstOrDefaultAsync(so => so.Id == id);
+                .FirstOrDefaultAsync(so => so.Id == id, cancellationToken);
 
-        public async Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAsync(int businessId)
+        public async Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default)
             => await _context.ScheduleOverrides
                 .Include(so => so.CustomSlots)
                 .Where(so => so.BusinessId == businessId)
                 .OrderBy(so => so.Date)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
-        public async Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAndDateRangeAsync(int businessId, DateOnly from, DateOnly to)
+        public async Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAndDateRangeAsync(int businessId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
             => await _context.ScheduleOverrides
                 .Include(so => so.CustomSlots)
                 .Where(so => so.BusinessId == businessId
                     && so.Date >= from
                     && so.Date <= to)
                 .OrderBy(so => so.Date)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
-        public async Task<ScheduleOverride?> GetByBusinessIdAndDateAsync(int businessId, DateOnly date)
+        public async Task<ScheduleOverride?> GetByBusinessIdAndDateAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default)
             => await _context.ScheduleOverrides
                 .Include(so => so.CustomSlots)
-                .FirstOrDefaultAsync(so => so.BusinessId == businessId && so.Date == date);
+                .FirstOrDefaultAsync(so => so.BusinessId == businessId && so.Date == date, cancellationToken);
 
-        public async Task AddAsync(ScheduleOverride scheduleOverride)
-            => await _context.ScheduleOverrides.AddAsync(scheduleOverride);
+        public async Task AddAsync(ScheduleOverride scheduleOverride, CancellationToken cancellationToken = default)
+            => await _context.ScheduleOverrides.AddAsync(scheduleOverride, cancellationToken);
 
-        public async Task AddRangeAsync(IEnumerable<ScheduleOverride> overrides)
-            => await _context.ScheduleOverrides.AddRangeAsync(overrides);
+        public async Task AddRangeAsync(IEnumerable<ScheduleOverride> overrides, CancellationToken cancellationToken = default)
+            => await _context.ScheduleOverrides.AddRangeAsync(overrides, cancellationToken);
 
         public void Update(ScheduleOverride scheduleOverride)
             => _context.ScheduleOverrides.Update(scheduleOverride);

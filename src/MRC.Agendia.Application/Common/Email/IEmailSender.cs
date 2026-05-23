@@ -7,6 +7,6 @@ namespace MRC.Agendia.Application.Common.Email
     /// </summary>
     public interface IEmailSender
     {
-        Task SendAsync(string toEmail, string subject, string htmlBody);
+        Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken cancellationToken = default);
     }
 }

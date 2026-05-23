@@ -10,7 +10,7 @@ namespace MRC.Agendia.Application.Schedules
     /// </summary>
     public interface IScheduleGenerationService
     {
-        Task<GenerateScheduleResponseDto> GenerateScheduleAsync(GenerateScheduleRequestDto dto);
+        Task<GenerateScheduleResponseDto> GenerateScheduleAsync(GenerateScheduleRequestDto dto, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Same input and validations as <see cref="GenerateScheduleAsync"/> but
@@ -18,6 +18,6 @@ namespace MRC.Agendia.Application.Schedules
         /// them with the business's existing schedule and returns the resulting
         /// calendar for the whole year so the front can show "así te quedará".
         /// </summary>
-        Task<IEnumerable<CalendarDayDto>> PreviewScheduleAsync(GenerateScheduleRequestDto dto);
+        Task<IEnumerable<CalendarDayDto>> PreviewScheduleAsync(GenerateScheduleRequestDto dto, CancellationToken cancellationToken = default);
     }
 }

@@ -13,7 +13,7 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
         private readonly object _gate = new();
         private readonly List<SentEmail> _sent = new();
 
-        public Task SendAsync(string toEmail, string subject, string htmlBody)
+        public Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken cancellationToken = default)
         {
             lock (_gate)
             {

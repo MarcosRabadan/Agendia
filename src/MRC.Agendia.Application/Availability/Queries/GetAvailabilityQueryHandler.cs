@@ -18,6 +18,7 @@ namespace MRC.Agendia.Application.Availability.Queries
                 request.Date,
                 request.ServiceId,
                 request.EmployeeId,
-                request.StepMinutes);
+                request.StepMinutes,
+                cancellationToken);
     }
 }

@@ -17,8 +17,8 @@ namespace MRC.Agendia.Application.Clients.Queries
 
         public async Task<ClientDto?> Handle(GetClientByIdQuery request, CancellationToken cancellationToken)
         {
-            await _auth.EnsureCanManageClientAsync(request.Id);
-            return await _service.GetByIdAsync(request.Id);
+            await _auth.EnsureCanManageClientAsync(request.Id, cancellationToken);
+            return await _service.GetByIdAsync(request.Id, cancellationToken);
         }
     }
 }

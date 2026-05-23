@@ -13,16 +13,16 @@ namespace MRC.Agendia.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<Business?> GetByIdAsync(int id)
-            => await _context.Businesses.FindAsync(id);
+        public async Task<Business?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+            => await _context.Businesses.FindAsync(new object?[] { id }, cancellationToken);
 
         public Task<Business?> GetActiveByIdAsync(int id, CancellationToken cancellationToken = default)
             => _context.Businesses
                 .AsNoTracking()
                 .FirstOrDefaultAsync(b => b.Id == id && b.IsActive, cancellationToken);
 
-        public async Task<IEnumerable<Business>> GetAllAsync()
-            => await _context.Businesses.ToListAsync();
+        public async Task<IEnumerable<Business>> GetAllAsync(CancellationToken cancellationToken = default)
+            => await _context.Businesses.ToListAsync(cancellationToken);
 
         public Task<(IReadOnlyList<Business> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
             => _context.Businesses
@@ -37,8 +37,8 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderBy(b => b.Id)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
-        public async Task AddAsync(Business business)
-            => await _context.Businesses.AddAsync(business);
+        public async Task AddAsync(Business business, CancellationToken cancellationToken = default)
+            => await _context.Businesses.AddAsync(business, cancellationToken);
 
         public void Update(Business business)
             => _context.Businesses.Update(business);

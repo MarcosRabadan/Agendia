@@ -8,6 +8,6 @@ namespace MRC.Agendia.Application.Auth.Commands
         private readonly IAuthService _service;
         public RefreshTokenCommandHandler(IAuthService service) { _service = service; }
         public Task<AuthResponseDto> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
-            => _service.RefreshAsync(request.RefreshToken);
+            => _service.RefreshAsync(request.RefreshToken, cancellationToken);
     }
 }

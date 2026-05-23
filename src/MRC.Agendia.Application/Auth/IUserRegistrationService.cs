@@ -10,8 +10,8 @@ namespace MRC.Agendia.Application.Auth
     /// </summary>
     public interface IUserRegistrationService
     {
-        Task<AuthResponseDto> RegisterClientAsync(RegisterClientDto dto);
-        Task<AuthResponseDto> RegisterOwnerAsync(RegisterOwnerDto dto);
-        Task<UserDto> RegisterEmployeeAsync(RegisterEmployeeDto dto, string currentOwnerUserId);
+        Task<AuthResponseDto> RegisterClientAsync(RegisterClientDto dto, CancellationToken cancellationToken = default);
+        Task<AuthResponseDto> RegisterOwnerAsync(RegisterOwnerDto dto, CancellationToken cancellationToken = default);
+        Task<UserDto> RegisterEmployeeAsync(RegisterEmployeeDto dto, string currentOwnerUserId, CancellationToken cancellationToken = default);
     }
 }
