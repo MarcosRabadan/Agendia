@@ -4,39 +4,21 @@ using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Infrastructure.Repositories
 {
-    public class ServiceRepository : IServiceRepository
+    public class ServiceRepository : RepositoryBase<Service>, IServiceRepository
     {
-        private readonly AgendiaDbContext _context;
-
-        public ServiceRepository(AgendiaDbContext context)
+        public ServiceRepository(AgendiaDbContext context) : base(context)
         {
-            _context = context;
         }
 
-        public async Task<Service?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
-            => await _context.Services.FindAsync(new object?[] { id }, cancellationToken);
-
         public Task<Service?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default)
-            => _context.Services
+            => Set
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
 
-        public async Task<IEnumerable<Service>> GetAllAsync(CancellationToken cancellationToken = default)
-            => await _context.Services.ToListAsync(cancellationToken);
-
         public Task<(IReadOnlyList<Service> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
-            => _context.Services
+            => Set
                 .AsNoTracking()
                 .OrderBy(s => s.Id)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
-
-        public async Task AddAsync(Service service, CancellationToken cancellationToken = default)
-            => await _context.Services.AddAsync(service, cancellationToken);
-
-        public void Update(Service service)
-            => _context.Services.Update(service);
-
-        public void Delete(Service service)
-            => _context.Services.Remove(service);
     }
 }

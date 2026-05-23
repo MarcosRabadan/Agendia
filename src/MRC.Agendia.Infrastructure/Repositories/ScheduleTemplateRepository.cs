@@ -4,32 +4,26 @@ using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Infrastructure.Repositories
 {
-    public class ScheduleTemplateRepository : IScheduleTemplateRepository
+    public class ScheduleTemplateRepository : RepositoryBase<ScheduleTemplate>, IScheduleTemplateRepository
     {
-        private readonly AgendiaDbContext _context;
-
-        public ScheduleTemplateRepository(AgendiaDbContext context)
+        public ScheduleTemplateRepository(AgendiaDbContext context) : base(context)
         {
-            _context = context;
         }
 
-        public async Task<ScheduleTemplate?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
-            => await _context.ScheduleTemplates.FindAsync(new object?[] { id }, cancellationToken);
-
         public async Task<ScheduleTemplate?> GetByIdWithSlotsAsync(int id, CancellationToken cancellationToken = default)
-            => await _context.ScheduleTemplates
+            => await Set
                 .Include(st => st.WeeklySlots)
                 .FirstOrDefaultAsync(st => st.Id == id, cancellationToken);
 
         public async Task<IEnumerable<ScheduleTemplate>> GetByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default)
-            => await _context.ScheduleTemplates
+            => await Set
                 .Include(st => st.WeeklySlots)
                 .Where(st => st.BusinessId == businessId)
                 .OrderBy(st => st.EffectiveFrom)
                 .ToListAsync(cancellationToken);
 
         public async Task<ScheduleTemplate?> GetEffectiveTemplateAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default)
-            => await _context.ScheduleTemplates
+            => await Set
                 .Include(st => st.WeeklySlots)
                 .Where(st => st.BusinessId == businessId
                     && st.EffectiveFrom <= date
@@ -39,7 +33,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
 
         public async Task<bool> HasOverlappingTemplateAsync(int businessId, DateOnly from, DateOnly to, int? excludeId = null, CancellationToken cancellationToken = default)
         {
-            var query = _context.ScheduleTemplates
+            var query = Set
                 .Where(st => st.BusinessId == businessId
                     && st.EffectiveFrom <= to
                     && st.EffectiveTo >= from);
@@ -49,14 +43,5 @@ namespace MRC.Agendia.Infrastructure.Repositories
 
             return await query.AnyAsync(cancellationToken);
         }
-
-        public async Task AddAsync(ScheduleTemplate template, CancellationToken cancellationToken = default)
-            => await _context.ScheduleTemplates.AddAsync(template, cancellationToken);
-
-        public void Update(ScheduleTemplate template)
-            => _context.ScheduleTemplates.Update(template);
-
-        public void Delete(ScheduleTemplate template)
-            => _context.ScheduleTemplates.Remove(template);
     }
 }
