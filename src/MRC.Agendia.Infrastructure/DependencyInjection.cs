@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Auditing;
@@ -11,6 +12,7 @@ using MRC.Agendia.Infrastructure.Auditing;
 using MRC.Agendia.Infrastructure.Authorization;
 using MRC.Agendia.Infrastructure.Identity;
 using MRC.Agendia.Infrastructure.Notifications;
+using MRC.Agendia.Infrastructure.Persistence;
 using MRC.Agendia.Infrastructure.Repositories;
 using MRC.Agendia.Infrastructure.Services;
 
@@ -26,8 +28,17 @@ namespace MRC.Agendia.Infrastructure
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             // Persistence (EF Core)
-            services.AddDbContext<AgendiaDbContext>(options =>
-                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+            services.AddScoped<AuditableSaveChangesInterceptor>();
+            services.AddDbContext<AgendiaDbContext>((sp, options) =>
+                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
+                       .AddInterceptors(sp.GetRequiredService<AuditableSaveChangesInterceptor>())
+                       // Business has a soft-delete query filter while its schedule
+                       // children (ScheduleTemplate/Override) intentionally do not.
+                       // Schedule queries never traverse the Business navigation
+                       // (they filter by the BusinessId scalar), so the interaction
+                       // warning describes a path this codebase never takes.
+                       .ConfigureWarnings(w => w.Ignore(
+                           CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning)));
 
             // Repositories
             services.AddScoped<IAppointmentRepository, AppointmentRepository>();

@@ -74,6 +74,20 @@ namespace MRC.Agendia.Application.Business
             await _unitOfWork.Save(cancellationToken);
             return true;
         }
+
+        public async Task<bool> RestoreAsync(int id, CancellationToken cancellationToken = default)
+        {
+            var entity = await _repository.GetByIdIncludingDeletedAsync(id, cancellationToken)
+                ?? throw new BusinessNotFoundException(id);
+
+            if (!entity.IsDeleted) return true;
+
+            entity.IsDeleted = false;
+            entity.DeletedAt = null;
+            _repository.Update(entity);
+            await _unitOfWork.Save(cancellationToken);
+            return true;
+        }
         #endregion CRUD
     }
 }

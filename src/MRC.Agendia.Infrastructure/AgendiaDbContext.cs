@@ -146,5 +146,21 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<AuditLog>()
             .HasIndex(a => a.Action)
             .HasDatabaseName("IX_AuditLog_Action");
+
+        // Soft delete: hide deleted rows from every query by default.
+        // Restore paths use IgnoreQueryFilters() to reach them again.
+        modelBuilder.Entity<Business>().HasQueryFilter(b => !b.IsDeleted);
+        modelBuilder.Entity<Client>().HasQueryFilter(c => !c.IsDeleted);
+        modelBuilder.Entity<Employee>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Service>().HasQueryFilter(s => !s.IsDeleted);
+        modelBuilder.Entity<Appointment>().HasQueryFilter(a => !a.IsDeleted);
+
+        // Backfill CreatedAt for rows that existed before audit fields were added.
+        // New rows get their value from AuditableSaveChangesInterceptor before insert.
+        modelBuilder.Entity<Business>().Property(b => b.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+        modelBuilder.Entity<Client>().Property(c => c.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+        modelBuilder.Entity<Employee>().Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+        modelBuilder.Entity<Service>().Property(s => s.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+        modelBuilder.Entity<Appointment>().Property(a => a.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
     }
 }

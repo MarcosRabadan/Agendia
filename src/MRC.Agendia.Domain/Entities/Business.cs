@@ -1,6 +1,8 @@
+using MRC.Agendia.Domain.Common;
+
 namespace MRC.Agendia.Domain.Entities
 {
-    public class Business
+    public class Business : IAuditable, ISoftDelete
     {
         public int Id { get; set; }
         public string Name { get; set; } = null!;
@@ -16,5 +18,11 @@ namespace MRC.Agendia.Domain.Entities
         public ICollection<ScheduleTemplate> ScheduleTemplates { get; set; } = new List<ScheduleTemplate>();
         public ICollection<ScheduleOverride> ScheduleOverrides { get; set; } = new List<ScheduleOverride>();
 
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public string? CreatedBy { get; set; }
+        public string? UpdatedBy { get; set; }
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
     }
 }

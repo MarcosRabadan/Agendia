@@ -89,5 +89,18 @@ namespace MRC.Agendia.Api.Controllers
             await _mediator.Send(new DeleteAppointmentCommand(id));
             return NoContent();
         }
+
+        /// <summary>
+        /// Restaura una cita previamente eliminada (soft delete). Solo Admin.
+        /// </summary>
+        [Authorize(Roles = Roles.Admin)]
+        [HttpPost("{id}/restore")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Restore(int id)
+        {
+            await _mediator.Send(new RestoreAppointmentCommand(id));
+            return NoContent();
+        }
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MRC.Agendia.Application.Common.Email;
 using MRC.Agendia.Infrastructure;
+using MRC.Agendia.Infrastructure.Persistence;
 
 namespace MRC.Agendia.Tests.Integration.Infrastructure
 {
@@ -62,10 +63,18 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
                 services.RemoveAll<DbContextOptions<AgendiaDbContext>>();
                 services.RemoveAll<AgendiaDbContext>();
 
-                services.AddDbContext<AgendiaDbContext>(options =>
+                services.AddDbContext<AgendiaDbContext>((sp, options) =>
                 {
                     options.UseInMemoryDatabase(_databaseName);
-                    options.ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning));
+                    options.ConfigureWarnings(w =>
+                    {
+                        w.Ignore(InMemoryEventId.TransactionIgnoredWarning);
+                        // See DependencyInjection.AddInfrastructure for why this is safe.
+                        w.Ignore(CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning);
+                    });
+                    // Keep the audit/soft-delete interceptor wired so tests exercise
+                    // the same SaveChanges behaviour as production.
+                    options.AddInterceptors(sp.GetRequiredService<AuditableSaveChangesInterceptor>());
                 });
 
                 // Capture outgoing emails instead of logging them, so tests can

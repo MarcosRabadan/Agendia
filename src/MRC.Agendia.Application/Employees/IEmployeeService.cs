@@ -11,5 +11,6 @@ namespace MRC.Agendia.Application.Employees
         Task<EmployeeDto> CreateAsync(CreateEmployeeDto dto, CancellationToken cancellationToken = default);
         Task<EmployeeDto> UpdateAsync(UpdateEmployeeDto dto, CancellationToken cancellationToken = default);
         Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
+        Task<bool> RestoreAsync(int id, CancellationToken cancellationToken = default);
     }
 }
