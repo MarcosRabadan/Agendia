@@ -218,22 +218,25 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Services
             var from = new DateOnly(2026, 5, 18); // Monday
             var to = new DateOnly(2026, 5, 20);   // Wednesday (inclusive => 3 days)
 
-            // Monday has a template slot, Tuesday is a CustomHours override, Wednesday has nothing.
+            // Monday is covered by a template (Monday slot), Tuesday by a CustomHours
+            // override, Wednesday by nothing. GetEffectiveSchedulesAsync loads the
+            // whole range once (templates + overrides) and resolves it in memory.
             var mondayTemplate = CreateTemplate(weeklySlots: new[]
             {
                 CreateWeeklySlot(DayOfWeek.Monday, new TimeOnly(9, 0), new TimeOnly(13, 0)),
             });
+            mondayTemplate.EffectiveTo = from; // covers Monday but not Wednesday
+
             var tuesdayOverride = CreateOverride(ScheduleOverrideType.CustomHours, reason: null, customSlots: new[]
             {
                 CreateCustomSlot(new TimeOnly(10, 0), new TimeOnly(14, 0)),
             });
+            tuesdayOverride.Date = from.AddDays(1);
 
-            _overrideRepository.GetByBusinessIdAndDateAsync(BusinessId, from).Returns((ScheduleOverride?)null);
-            _overrideRepository.GetByBusinessIdAndDateAsync(BusinessId, from.AddDays(1)).Returns(tuesdayOverride);
-            _overrideRepository.GetByBusinessIdAndDateAsync(BusinessId, to).Returns((ScheduleOverride?)null);
-
-            _templateRepository.GetEffectiveTemplateAsync(BusinessId, from).Returns(mondayTemplate);
-            _templateRepository.GetEffectiveTemplateAsync(BusinessId, to).Returns((ScheduleTemplate?)null);
+            _templateRepository.GetByBusinessIdAsync(BusinessId)
+                .Returns(new List<ScheduleTemplate> { mondayTemplate });
+            _overrideRepository.GetByBusinessIdAndDateRangeAsync(BusinessId, from, to)
+                .Returns(new List<ScheduleOverride> { tuesdayOverride });
 
             var results = (await _sut.GetEffectiveSchedulesAsync(BusinessId, from, to)).ToList();
 

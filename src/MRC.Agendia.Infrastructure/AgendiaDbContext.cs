@@ -170,5 +170,10 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<Employee>().HasIndex(e => e.IsDeleted);
         modelBuilder.Entity<Service>().HasIndex(s => s.IsDeleted);
         modelBuilder.Entity<Appointment>().HasIndex(a => a.IsDeleted);
+
+        // The reminder job and the date-range reads filter appointments by StartDate.
+        modelBuilder.Entity<Appointment>()
+            .HasIndex(a => a.StartDate)
+            .HasDatabaseName("IX_Appointment_StartDate");
     }
 }

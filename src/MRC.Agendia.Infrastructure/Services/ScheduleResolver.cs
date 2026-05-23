@@ -31,14 +31,13 @@ namespace MRC.Agendia.Infrastructure.Services
 
         public async Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(int businessId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
         {
-            var results = new List<EffectiveSchedule>();
+            // Load the whole range once and resolve in memory instead of issuing
+            // 1-2 queries per day. The old per-day loop was an N+1 that made the
+            // calendar endpoint a DoS vector for large ranges.
+            var templates = await _templateRepository.GetByBusinessIdAsync(businessId, cancellationToken);
+            var overrides = await _overrideRepository.GetByBusinessIdAndDateRangeAsync(businessId, from, to, cancellationToken);
 
-            for (var date = from; date <= to; date = date.AddDays(1))
-            {
-                results.Add(await GetEffectiveScheduleAsync(businessId, date, cancellationToken));
-            }
-
-            return results;
+            return ResolveRange(templates, overrides, from, to);
         }
 
         public EffectiveSchedule Resolve(
@@ -47,15 +46,41 @@ namespace MRC.Agendia.Infrastructure.Services
             DateOnly date)
         {
             var scheduleOverride = overrides.FirstOrDefault(o => o.Date == date);
-            var template = scheduleOverride is null
-                ? templates
-                    .Where(t => t.EffectiveFrom <= date && t.EffectiveTo >= date)
-                    .OrderByDescending(t => t.IsDefault ? 0 : 1)
-                    .FirstOrDefault()
-                : null;
-
+            var template = scheduleOverride is null ? SelectTemplate(templates, date) : null;
             return BuildEffectiveSchedule(scheduleOverride, template, date);
         }
+
+        public IEnumerable<EffectiveSchedule> ResolveRange(
+            IEnumerable<ScheduleTemplate> templates,
+            IEnumerable<ScheduleOverride> overrides,
+            DateOnly from,
+            DateOnly to)
+        {
+            var templateList = templates as IReadOnlyCollection<ScheduleTemplate> ?? templates.ToList();
+
+            // (BusinessId, Date) is unique per business, but a preview merges
+            // existing + generated overrides which can collide on a date; keep the
+            // first occurrence to match the previous FirstOrDefault behaviour.
+            var overridesByDate = new Dictionary<DateOnly, ScheduleOverride>();
+            foreach (var scheduleOverride in overrides)
+                overridesByDate.TryAdd(scheduleOverride.Date, scheduleOverride);
+
+            var results = new List<EffectiveSchedule>();
+            for (var date = from; date <= to; date = date.AddDays(1))
+            {
+                overridesByDate.TryGetValue(date, out var todayOverride);
+                var template = todayOverride is null ? SelectTemplate(templateList, date) : null;
+                results.Add(BuildEffectiveSchedule(todayOverride, template, date));
+            }
+
+            return results;
+        }
+
+        private static ScheduleTemplate? SelectTemplate(IEnumerable<ScheduleTemplate> templates, DateOnly date)
+            => templates
+                .Where(t => t.EffectiveFrom <= date && t.EffectiveTo >= date)
+                .OrderByDescending(t => t.IsDefault ? 0 : 1)
+                .FirstOrDefault();
 
         /// <summary>
         /// Single source of truth for turning an (optional) override + (optional)

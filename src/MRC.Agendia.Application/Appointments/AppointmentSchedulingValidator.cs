@@ -1,4 +1,3 @@
-using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Domain.Services;
@@ -107,16 +106,10 @@ namespace MRC.Agendia.Application.Appointments
             // ---------- Employee capacity check ----------
             // The employee can hold up to MaxConcurrentAppointments overlapping
             // appointments at the same time. Reject only when adding this one
-            // would exceed that limit.
-            var dayStart = date.ToDateTime(TimeOnly.MinValue);
-            var dayEnd = date.ToDateTime(new TimeOnly(23, 59, 59));
-
-            var overlappingCount = (await _appointmentRepository
-                    .GetByBusinessIdAndDateRangeAsync(employee.BusinessId, dayStart, dayEnd, cancellationToken))
-                .Where(a => a.EmployeeId == employeeId)
-                .Where(a => a.Status.OccupiesCapacity())
-                .Where(a => appointmentId is null || a.Id != appointmentId.Value)
-                .Count(a => a.StartDate < endDate && a.EndDate > startDate);
+            // would exceed that limit. Counted in the DB so we do not load the
+            // whole day's appointments just to count one employee's.
+            var overlappingCount = await _appointmentRepository.CountOverlappingForEmployeeAsync(
+                employeeId, startDate, endDate, appointmentId, cancellationToken);
 
             if (overlappingCount >= employee.MaxConcurrentAppointments)
             {

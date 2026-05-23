@@ -11,16 +11,18 @@ namespace MRC.Agendia.Infrastructure.Repositories
         }
 
         public async Task<IEnumerable<HolidayCalendar>> GetAllAsync(CancellationToken cancellationToken = default)
-            => await Set.OrderBy(h => h.Date).ToListAsync(cancellationToken);
+            => await Set.AsNoTracking().OrderBy(h => h.Date).ToListAsync(cancellationToken);
 
         public async Task<IEnumerable<HolidayCalendar>> GetByYearAsync(int year, CancellationToken cancellationToken = default)
             => await Set
+                .AsNoTracking()
                 .Where(h => h.Year == year)
                 .OrderBy(h => h.Date)
                 .ToListAsync(cancellationToken);
 
         public async Task<IEnumerable<HolidayCalendar>> GetByDateRangeAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
             => await Set
+                .AsNoTracking()
                 .Where(h => h.Date >= from && h.Date <= to)
                 .OrderBy(h => h.Date)
                 .ToListAsync(cancellationToken);

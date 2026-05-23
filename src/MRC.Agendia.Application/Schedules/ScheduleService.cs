@@ -196,14 +196,7 @@ namespace MRC.Agendia.Application.Schedules
         public async Task<IEnumerable<CalendarDayDto>> GetCalendarAsync(int businessId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
         {
             var days = await _scheduleResolver.GetEffectiveSchedulesAsync(businessId, from, to, cancellationToken);
-            return days.Select(d => new CalendarDayDto(
-                Date: d.Date,
-                IsOpen: d.IsOpen,
-                Status: d.IsOpen ? "Abierto" : d.ClosedReason ?? "Cerrado",
-                TimeSlots: d.IsOpen
-                    ? d.TimeSlots.Select(ts => new EffectiveTimeSlotDto(ts.StartTime, ts.EndTime)).ToList()
-                    : null
-            ));
+            return days.Select(CalendarDayDto.FromEffective).ToList();
         }
         #endregion
     }

@@ -17,6 +17,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
 
         public async Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default)
             => await Set
+                .AsNoTracking()
                 .Include(so => so.CustomSlots)
                 .Where(so => so.BusinessId == businessId)
                 .OrderBy(so => so.Date)
@@ -24,6 +25,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
 
         public async Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAndDateRangeAsync(int businessId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
             => await Set
+                .AsNoTracking()
                 .Include(so => so.CustomSlots)
                 .Where(so => so.BusinessId == businessId
                     && so.Date >= from
@@ -33,6 +35,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
 
         public async Task<ScheduleOverride?> GetByBusinessIdAndDateAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default)
             => await Set
+                .AsNoTracking()
                 .Include(so => so.CustomSlots)
                 .FirstOrDefaultAsync(so => so.BusinessId == businessId && so.Date == date, cancellationToken);
 

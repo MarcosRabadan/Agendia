@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Infrastructure.Repositories
@@ -37,9 +38,6 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .AsNoTracking()
                 .IgnoreQueryFilters()
                 .Where(a => !a.IsDeleted)
-                .Include(a => a.Client)
-                .Include(a => a.Employee)
-                .Include(a => a.Service)
                 .OrderByDescending(a => a.StartDate)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
@@ -47,8 +45,6 @@ namespace MRC.Agendia.Infrastructure.Repositories
             => Set
                 .AsNoTracking()
                 .IgnoreQueryFilters()
-                .Include(a => a.Employee)
-                .Include(a => a.Service)
                 .Where(a => a.ClientId == clientId && !a.IsDeleted)
                 .OrderByDescending(a => a.StartDate)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
@@ -58,7 +54,6 @@ namespace MRC.Agendia.Infrastructure.Repositories
             var appointments = await Set
                  .AsNoTracking()
                  .IgnoreQueryFilters()
-                 .Include(a => a.Employee)
                  .Where(a => !a.IsDeleted &&
                              a.Employee.BusinessId == businessId &&
                              a.StartDate >= startDate &&
@@ -66,5 +61,25 @@ namespace MRC.Agendia.Infrastructure.Repositories
                  .ToListAsync(cancellationToken);
             return appointments;
         }
+
+        public Task<int> CountOverlappingForEmployeeAsync(
+            int employeeId,
+            DateTime startDate,
+            DateTime endDate,
+            int? excludeAppointmentId,
+            CancellationToken cancellationToken = default)
+            // Mirror of AppointmentStatus.OccupiesCapacity() (Pending|Confirmed),
+            // inlined because the extension method cannot be translated to SQL.
+            // IgnoreQueryFilters + !IsDeleted so a live appointment whose parent is
+            // soft-deleted still counts against capacity (consistent with #133).
+            => Set
+                .IgnoreQueryFilters()
+                .CountAsync(a => !a.IsDeleted
+                    && a.EmployeeId == employeeId
+                    && (a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Confirmed)
+                    && (excludeAppointmentId == null || a.Id != excludeAppointmentId.Value)
+                    && a.StartDate < endDate
+                    && a.EndDate > startDate,
+                    cancellationToken);
     }
 }
