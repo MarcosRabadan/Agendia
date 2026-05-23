@@ -2,6 +2,7 @@ using System.Net;
 using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MRC.Agendia.Api.Middleware;
 
 namespace MRC.Agendia.Api.Configuration
@@ -72,27 +73,44 @@ namespace MRC.Agendia.Api.Configuration
             // /health      -> every check (full JSON report)
             // /health/ready-> critical dependencies (SQL, Seq) for orchestrators
             // /health/live -> process is up (no dependency checks)
+            // Outside Development the body is minimal (overall status only) so the
+            // anonymous health endpoints do not leak dependency names/durations.
+            // Orchestrator probes only rely on the status code, which the middleware
+            // still sets. In Development the rich report + dashboard stay on.
+            Func<HttpContext, HealthReport, Task> healthWriter = app.Environment.IsDevelopment()
+                ? UIResponseWriter.WriteHealthCheckUIResponse
+                : WriteMinimalHealth;
+
             app.MapHealthChecks("/health", new HealthCheckOptions
             {
-                ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+                ResponseWriter = healthWriter
             });
             app.MapHealthChecks("/health/ready", new HealthCheckOptions
             {
                 Predicate = check => check.Tags.Contains(HealthChecksSetup.ReadyTag),
-                ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+                ResponseWriter = healthWriter
             });
             app.MapHealthChecks("/health/live", new HealthCheckOptions
             {
                 Predicate = _ => false
             });
 
-            // Dashboard UI runs a background poller; not wired under Testing.
-            if (!app.Environment.IsEnvironment("Testing"))
+            // The dashboard polls /health/ready for the detailed report, which is
+            // only exposed in Development, so wire the UI only there.
+            if (app.Environment.IsDevelopment())
             {
                 app.MapHealthChecksUI(options => options.UIPath = "/health-ui");
             }
 
             return app;
+        }
+
+        // Minimal health body for non-Development: overall status only, no per-check
+        // names or durations (avoids leaking infra detail to anonymous callers).
+        private static Task WriteMinimalHealth(HttpContext context, HealthReport report)
+        {
+            context.Response.ContentType = "application/json";
+            return context.Response.WriteAsync($"{{\"status\":\"{report.Status}\"}}");
         }
 
         /// <summary>
