@@ -16,6 +16,15 @@ namespace MRC.Agendia.Infrastructure.Repositories
         public async Task<Appointment?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
             => await _context.Appointments.FindAsync(new object?[] { id }, cancellationToken);
 
+        public Task<Appointment?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default)
+            => _context.Appointments
+                .AsNoTracking()
+                .Include(a => a.Client)
+                .Include(a => a.Service)
+                .Include(a => a.Employee)
+                    .ThenInclude(e => e.Business)
+                .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+
         public async Task<IEnumerable<Appointment>> GetAllAsync(CancellationToken cancellationToken = default)
             => await _context.Appointments.ToListAsync(cancellationToken);
 
