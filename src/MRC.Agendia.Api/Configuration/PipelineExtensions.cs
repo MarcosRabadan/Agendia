@@ -1,4 +1,6 @@
 using System.Net;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using MRC.Agendia.Api.Middleware;
 
@@ -62,7 +64,29 @@ namespace MRC.Agendia.Api.Configuration
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();
-            app.MapHealthChecks("/health");
+
+            // /health      -> every check (full JSON report)
+            // /health/ready-> critical dependencies (SQL, Seq) for orchestrators
+            // /health/live -> process is up (no dependency checks)
+            app.MapHealthChecks("/health", new HealthCheckOptions
+            {
+                ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+            });
+            app.MapHealthChecks("/health/ready", new HealthCheckOptions
+            {
+                Predicate = check => check.Tags.Contains(HealthChecksSetup.ReadyTag),
+                ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+            });
+            app.MapHealthChecks("/health/live", new HealthCheckOptions
+            {
+                Predicate = _ => false
+            });
+
+            // Dashboard UI runs a background poller; not wired under Testing.
+            if (!app.Environment.IsEnvironment("Testing"))
+            {
+                app.MapHealthChecksUI(options => options.UIPath = "/health-ui");
+            }
 
             return app;
         }
