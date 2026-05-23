@@ -78,7 +78,10 @@ try
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Error durante el seed inicial");
+    // Re-throw: without the roles/admin seed the Admin-only endpoints are
+    // unusable, so fail fast with a clear log instead of starting broken.
+    Log.Fatal(ex, "Error durante el seed inicial. La aplicacion no arrancara.");
+    throw;
 }
 
 try

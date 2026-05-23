@@ -1,12 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <Compile Remove="BusinessSchedule\**" />
-    <EmbeddedResource Remove="BusinessSchedule\**" />
-    <None Remove="BusinessSchedule\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\MRC.Agendia.Domain\MRC.Agendia.Domain.csproj" />
   </ItemGroup>
 

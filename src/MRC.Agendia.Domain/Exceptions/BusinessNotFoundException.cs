@@ -4,7 +4,7 @@ namespace MRC.Agendia.Domain.Exceptions
     {
         public override string Code => "BUSINESS_NOT_FOUND";
 
-        public BusinessNotFoundException(int id) : base($"Business with Id {id} not found.")
+        public BusinessNotFoundException(int id) : base($"Negocio con Id {id} no encontrado.")
         {
         }
     }

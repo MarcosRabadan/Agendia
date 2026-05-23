@@ -28,7 +28,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             var key = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key not configured");
             var issuer = jwtSection["Issuer"];
             var audience = jwtSection["Audience"];
-            var minutes = int.Parse(jwtSection["AccessTokenMinutes"] ?? "15");
+            var minutes = int.TryParse(jwtSection["AccessTokenMinutes"], out var parsedMinutes) ? parsedMinutes : 15;
 
             var claims = new List<Claim>
             {

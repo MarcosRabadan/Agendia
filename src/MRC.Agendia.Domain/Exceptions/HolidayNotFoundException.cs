@@ -4,7 +4,7 @@ namespace MRC.Agendia.Domain.Exceptions
     {
         public override string Code => "HOLIDAY_NOT_FOUND";
 
-        public HolidayNotFoundException(int id) : base($"Holiday with Id {id} not found.")
+        public HolidayNotFoundException(int id) : base($"Festivo con Id {id} no encontrado.")
         {
         }
     }

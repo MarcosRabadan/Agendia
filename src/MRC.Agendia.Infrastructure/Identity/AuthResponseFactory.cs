@@ -31,7 +31,7 @@ namespace MRC.Agendia.Infrastructure.Identity
                 user.Id, user.Email!, user.FullName, roles);
 
             string refreshTokenValue = existingRefreshToken ?? _jwtTokenService.GenerateRefreshToken();
-            var refreshDays = int.Parse(_configuration["Jwt:RefreshTokenDays"] ?? "7");
+            var refreshDays = int.TryParse(_configuration["Jwt:RefreshTokenDays"], out var parsedDays) ? parsedDays : 7;
             var refreshExpires = DateTime.UtcNow.AddDays(refreshDays);
 
             var refreshToken = new RefreshToken
