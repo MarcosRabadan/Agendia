@@ -6,7 +6,6 @@ namespace MRC.Agendia.Domain.Interfaces
     {
         Task<Service?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<Service?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default);
-        Task<IEnumerable<Service>> GetAllAsync(CancellationToken cancellationToken = default);
         Task<(IReadOnlyList<Service> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default);
         Task AddAsync(Service service, CancellationToken cancellationToken = default);
         void Update(Service service);

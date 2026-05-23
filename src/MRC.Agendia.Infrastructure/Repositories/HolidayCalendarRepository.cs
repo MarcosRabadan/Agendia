@@ -10,7 +10,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         {
         }
 
-        public override async Task<IEnumerable<HolidayCalendar>> GetAllAsync(CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<HolidayCalendar>> GetAllAsync(CancellationToken cancellationToken = default)
             => await Set.OrderBy(h => h.Date).ToListAsync(cancellationToken);
 
         public async Task<IEnumerable<HolidayCalendar>> GetByYearAsync(int year, CancellationToken cancellationToken = default)

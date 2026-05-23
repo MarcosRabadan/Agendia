@@ -13,6 +13,5 @@ namespace MRC.Agendia.Domain.Interfaces
         Task AddRangeAsync(IEnumerable<ScheduleOverride> overrides, CancellationToken cancellationToken = default);
         void Update(ScheduleOverride scheduleOverride);
         void Delete(ScheduleOverride scheduleOverride);
-        void DeleteRange(IEnumerable<ScheduleOverride> overrides);
     }
 }
