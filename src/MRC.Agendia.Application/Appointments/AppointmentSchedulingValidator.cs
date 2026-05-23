@@ -1,3 +1,4 @@
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Domain.Services;
@@ -15,6 +16,7 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IServiceRepository _serviceRepository;
         private readonly IAppointmentRepository _appointmentRepository;
         private readonly IScheduleResolver _scheduleResolver;
+        private readonly IClock _clock;
 
         public AppointmentSchedulingValidator(
             IBusinessRepository businessRepository,
@@ -22,7 +24,8 @@ namespace MRC.Agendia.Application.Appointments
             IEmployeeRepository employeeRepository,
             IServiceRepository serviceRepository,
             IAppointmentRepository appointmentRepository,
-            IScheduleResolver scheduleResolver)
+            IScheduleResolver scheduleResolver,
+            IClock clock)
         {
             _businessRepository = businessRepository;
             _clientRepository = clientRepository;
@@ -30,6 +33,7 @@ namespace MRC.Agendia.Application.Appointments
             _serviceRepository = serviceRepository;
             _appointmentRepository = appointmentRepository;
             _scheduleResolver = scheduleResolver;
+            _clock = clock;
         }
 
         public async Task EnsureValidAsync(
@@ -48,7 +52,7 @@ namespace MRC.Agendia.Application.Appointments
             if (endDate <= startDate)
                 throw new InvalidAppointmentTimeException("EndDate debe ser posterior a StartDate.");
 
-            if (startDate < DateTime.UtcNow)
+            if (startDate < _clock.BusinessNow)
                 throw new InvalidAppointmentTimeException("No se pueden crear ni mover citas al pasado.");
 
             // ---------- Existence + activity ----------
