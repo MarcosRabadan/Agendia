@@ -16,7 +16,7 @@ namespace MRC.Agendia.Application.Schedules
         /// Same input and validations as <see cref="GenerateScheduleAsync"/> but
         /// persists nothing: builds the templates/overrides in memory, merges
         /// them with the business's existing schedule and returns the resulting
-        /// calendar for the whole year so the front can show "así te quedará".
+        /// calendar for the whole year so the front can preview the result.
         /// </summary>
         Task<IEnumerable<CalendarDayDto>> PreviewScheduleAsync(GenerateScheduleRequestDto dto, CancellationToken cancellationToken = default);
     }

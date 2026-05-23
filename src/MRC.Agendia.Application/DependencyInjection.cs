@@ -15,8 +15,8 @@ using MRC.Agendia.Application.Services;
 namespace MRC.Agendia.Application
 {
     /// <summary>
-    /// Punto de entrada unico para registrar todos los servicios de la capa Application
-    /// (MediatR, AutoMapper, servicios de aplicacion).
+    /// Single entry point to register every Application-layer service
+    /// (MediatR, AutoMapper, application services).
     /// </summary>
     public static class DependencyInjection
     {

@@ -8,8 +8,8 @@ namespace MRC.Agendia.Application.Mappings
     {
         public EffectiveScheduleProfile()
         {
-            // EffectiveSchedule -> EffectiveScheduleDto se construye manualmente
-            // en ScheduleService porque necesita anadir ActiveTemplate y Templates.
+            // EffectiveSchedule -> EffectiveScheduleDto is built manually in
+            // ScheduleService because it also needs ActiveTemplate and Templates.
             CreateMap<EffectiveTimeSlot, EffectiveTimeSlotDto>();
         }
     }

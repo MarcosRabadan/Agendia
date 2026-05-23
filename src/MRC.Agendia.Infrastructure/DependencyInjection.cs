@@ -13,19 +13,19 @@ using MRC.Agendia.Infrastructure.Services;
 namespace MRC.Agendia.Infrastructure
 {
     /// <summary>
-    /// Punto de entrada unico para registrar la capa Infrastructure:
-    /// DbContext, repositorios, servicios de dominio, identity helpers,
-    /// JWT y resource-based authorization.
+    /// Single entry point to register the Infrastructure layer:
+    /// DbContext, repositories, domain services, identity helpers,
+    /// JWT and resource-based authorization.
     /// </summary>
     public static class DependencyInjection
     {
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
-            // Persistencia (EF Core)
+            // Persistence (EF Core)
             services.AddDbContext<AgendiaDbContext>(options =>
                 options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
-            // Repositorios
+            // Repositories
             services.AddScoped<IAppointmentRepository, AppointmentRepository>();
             services.AddScoped<IBusinessRepository, BusinessRepository>();
             services.AddScoped<IClientRepository, ClientRepository>();
@@ -41,7 +41,7 @@ namespace MRC.Agendia.Infrastructure
             // Domain services
             services.AddScoped<IScheduleResolver, ScheduleResolver>();
 
-            // Identity helpers (JWT y refresh tokens)
+            // Identity helpers (JWT and refresh tokens)
             services.AddScoped<IJwtTokenService, JwtTokenService>();
             services.AddScoped<IRefreshTokenStore, RefreshTokenStore>();
             services.AddScoped<IAuthResponseFactory, AuthResponseFactory>();
@@ -49,8 +49,8 @@ namespace MRC.Agendia.Infrastructure
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserRegistrationService, UserRegistrationService>();
 
-            // Resource-based authorization (mas configuracion en API porque
-            // depende de IHttpContextAccessor; aqui solo el servicio infraestructural)
+            // Resource-based authorization (more setup in the API project because
+            // it depends on IHttpContextAccessor; here just the infrastructural service)
             services.AddScoped<IResourceAuthorizationService, ResourceAuthorizationService>();
 
             // Hosted services
