@@ -7,8 +7,13 @@ namespace MRC.Agendia.Application.Notifications
     /// </summary>
     public interface INotificationService
     {
-        Task SendAppointmentConfirmationAsync(int appointmentId, CancellationToken cancellationToken = default);
-        Task SendAppointmentReminderAsync(int appointmentId, CancellationToken cancellationToken = default);
-        Task SendAppointmentCancellationAsync(int appointmentId, CancellationToken cancellationToken = default);
+        /// <summary>
+        /// Returns true if the notification was handled (sent, or nothing to do
+        /// such as a missing recipient), and false on an unexpected failure so the
+        /// caller can decide whether to retry (e.g. the reminder job).
+        /// </summary>
+        Task<bool> SendAppointmentConfirmationAsync(int appointmentId, CancellationToken cancellationToken = default);
+        Task<bool> SendAppointmentReminderAsync(int appointmentId, CancellationToken cancellationToken = default);
+        Task<bool> SendAppointmentCancellationAsync(int appointmentId, CancellationToken cancellationToken = default);
     }
 }

@@ -12,17 +12,20 @@ namespace MRC.Agendia.Application.Availability
         private const int MinStepMinutes = 5;
         private const int MaxStepMinutes = 120;
 
+        private readonly IBusinessRepository _businessRepository;
         private readonly IServiceRepository _serviceRepository;
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IAppointmentRepository _appointmentRepository;
         private readonly IScheduleResolver _scheduleResolver;
 
         public AvailabilityService(
+            IBusinessRepository businessRepository,
             IServiceRepository serviceRepository,
             IEmployeeRepository employeeRepository,
             IAppointmentRepository appointmentRepository,
             IScheduleResolver scheduleResolver)
         {
+            _businessRepository = businessRepository;
             _serviceRepository = serviceRepository;
             _employeeRepository = employeeRepository;
             _appointmentRepository = appointmentRepository;
@@ -41,6 +44,11 @@ namespace MRC.Agendia.Application.Availability
             if (stepMinutes < MinStepMinutes || stepMinutes > MaxStepMinutes)
                 throw new ArgumentException(
                     $"stepMinutes debe estar entre {MinStepMinutes} y {MaxStepMinutes}.");
+
+            // A soft-deleted business is filtered out here (GetByIdAsync honours the
+            // query filter), so it is not bookable and does not resolve schedules.
+            _ = await _businessRepository.GetByIdAsync(businessId, cancellationToken)
+                ?? throw new BusinessNotFoundException(businessId);
 
             var service = await _serviceRepository.GetByIdAsync(serviceId, cancellationToken)
                 ?? throw new ServiceNotFoundException(serviceId);

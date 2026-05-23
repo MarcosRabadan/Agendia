@@ -162,5 +162,13 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<Employee>().Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
         modelBuilder.Entity<Service>().Property(s => s.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
         modelBuilder.Entity<Appointment>().Property(a => a.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+
+        // Index IsDeleted: every query now carries "WHERE IsDeleted = 0" from the
+        // global filter above.
+        modelBuilder.Entity<Business>().HasIndex(b => b.IsDeleted);
+        modelBuilder.Entity<Client>().HasIndex(c => c.IsDeleted);
+        modelBuilder.Entity<Employee>().HasIndex(e => e.IsDeleted);
+        modelBuilder.Entity<Service>().HasIndex(s => s.IsDeleted);
+        modelBuilder.Entity<Appointment>().HasIndex(a => a.IsDeleted);
     }
 }

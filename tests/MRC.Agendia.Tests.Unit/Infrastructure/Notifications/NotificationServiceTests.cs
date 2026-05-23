@@ -4,6 +4,7 @@ using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Infrastructure.Notifications;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 
 namespace MRC.Agendia.Tests.Unit.Infrastructure.Notifications
 {
@@ -72,6 +73,40 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Notifications
             await _sut.SendAppointmentConfirmationAsync(99);
 
             await _emailSender.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+        }
+
+        [Fact]
+        public async Task Reminder_CuandoEnvia_DevuelveTrue()
+        {
+            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>()).Returns(BuildAppointment());
+
+            var handled = await _sut.SendAppointmentReminderAsync(5);
+
+            Assert.True(handled);
+        }
+
+        [Fact]
+        public async Task Reminder_SinEmail_DevuelveTrue_ParaNoReintentar()
+        {
+            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>()).Returns(BuildAppointment(clientEmail: null));
+
+            var handled = await _sut.SendAppointmentReminderAsync(5);
+
+            // Nothing to send and nothing to retry: the reminder is considered handled.
+            Assert.True(handled);
+        }
+
+        [Fact]
+        public async Task Reminder_CuandoElEnvioFalla_DevuelveFalse_ParaPermitirReintento()
+        {
+            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>()).Returns(BuildAppointment());
+            _emailSender
+                .SendAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+                .ThrowsAsync(new InvalidOperationException("smtp down"));
+
+            var handled = await _sut.SendAppointmentReminderAsync(5);
+
+            Assert.False(handled);
         }
     }
 }
