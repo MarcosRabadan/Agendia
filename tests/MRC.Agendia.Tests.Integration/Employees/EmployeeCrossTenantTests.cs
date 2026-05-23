@@ -95,7 +95,63 @@ namespace MRC.Agendia.Tests.Integration.Employees
             Assert.DoesNotContain(paged.Items, e => e.BusinessId == ownerB.Business.Id);
         }
 
+        [Fact]
+        public async Task UpdateEmployee_ConBusinessIdAjenoEnElBody_NoMueveDeTenant()
+        {
+            var ownerA = await RegisterOwnerAsync("emp-stay-a");
+            var ownerB = await RegisterOwnerAsync("emp-stay-b");
+
+            var employee = await CreateEmployeeAsAsync(ownerA, "Stylist A");
+
+            // Crafted PUT: a raw "businessId" field pointing at business B. The DTO
+            // no longer exposes BusinessId and the mapping ignores it, so the
+            // employee must stay in business A (issue #125).
+            var crafted = new
+            {
+                id = employee.Id,
+                businessId = ownerB.Business.Id,
+                fullName = "Stylist A",
+                email = (string?)null,
+                phone = "600000111",
+                isActive = true,
+                maxConcurrentAppointments = 1
+            };
+
+            using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/Employee/{employee.Id}")
+            {
+                Content = JsonContent.Create(crafted)
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerA.Token);
+
+            var response = await _client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var updated = await response.Content.ReadFromJsonAsync<EmployeeDto>();
+            Assert.NotNull(updated);
+            Assert.Equal(ownerA.Business.Id, updated!.BusinessId);
+        }
+
         // ----- Helpers -----
+
+        private async Task<EmployeeDto> CreateEmployeeAsAsync(RegisteredOwner owner, string fullName)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Employee")
+            {
+                Content = JsonContent.Create(new CreateEmployeeDto(
+                    BusinessId: owner.Business.Id,
+                    FullName: fullName,
+                    Email: null,
+                    Phone: "600000111",
+                    MaxConcurrentAppointments: 1))
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
+
+            var response = await _client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var created = await response.Content.ReadFromJsonAsync<EmployeeDto>();
+            Assert.NotNull(created);
+            return created!;
+        }
 
         private async Task<RegisteredOwner> RegisterOwnerAsync(string slug)
         {

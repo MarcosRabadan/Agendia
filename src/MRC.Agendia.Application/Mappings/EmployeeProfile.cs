@@ -11,7 +11,12 @@ namespace MRC.Agendia.Application.Mappings
             CreateMap<Employee, EmployeeDto>();
             CreateMap<CreateEmployeeDto, Employee>()
                 .ForMember(dest => dest.IsActive, opt => opt.MapFrom(_ => true));
-            CreateMap<UpdateEmployeeDto, Employee>();
+
+            // Update does NOT allow changing the BusinessId. Mapping it would let an
+            // Employee (or Owner) move an employee to another tenant via a crafted
+            // DTO (cross-tenant takeover, same vector as #91/#92). See issue #125.
+            CreateMap<UpdateEmployeeDto, Employee>()
+                .ForMember(dest => dest.BusinessId, opt => opt.Ignore());
         }
     }
 }
