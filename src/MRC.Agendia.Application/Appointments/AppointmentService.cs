@@ -218,7 +218,6 @@ namespace MRC.Agendia.Application.Appointments
 
         public async Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
         {
-            ValidateRangeQuery(startDate, endDate);
             var entities = await _repository.GetByBusinessIdAndDateRangeAsync(businessId, startDate, endDate, cancellationToken);
             return _mapper.Map<IEnumerable<AppointmentDto>>(entities);
         }
@@ -227,24 +226,5 @@ namespace MRC.Agendia.Application.Appointments
             => _currentUser.IsInRole(Roles.Admin)
                || _currentUser.IsInRole(Roles.BusinessOwner)
                || _currentUser.IsInRole(Roles.Employee);
-
-        /// <summary>
-        /// Validates the parameters of a read query (date range lookup). This is
-        /// independent of <see cref="IAppointmentSchedulingValidator"/>, which
-        /// only validates appointment creation/update.
-        /// </summary>
-        private static void ValidateRangeQuery(DateTime startDate, DateTime endDate)
-        {
-            if (startDate == DateTime.MinValue || endDate == DateTime.MinValue
-                || startDate == DateTime.MaxValue || endDate == DateTime.MaxValue)
-            {
-                throw new ArgumentException("StartDate and EndDate must be valid dates");
-            }
-
-            if (startDate > endDate)
-            {
-                throw new ArgumentException("StartDate must be earlier than or equal to EndDate.");
-            }
-        }
     }
 }
