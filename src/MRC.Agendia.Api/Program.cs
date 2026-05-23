@@ -13,7 +13,7 @@ builder.ConfigureSerilog();
 // MVC + utilidades
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.Services.AddAppHealthChecks(builder.Configuration, builder.Environment);
 
 // Cross-cutting (CORS, rate limiting, Swagger)
 builder.Services
