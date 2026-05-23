@@ -92,6 +92,17 @@ namespace MRC.Agendia.Infrastructure.Identity
             var stored = await _refreshTokenStore.GetByTokenAsync(refreshToken, cancellationToken)
                 ?? throw new AuthenticationException("Refresh token invalido.");
 
+            // Reuse detection: a token that was already rotated (revoked AND
+            // replaced) is being presented again - the signature of a replayed or
+            // stolen token. Revoke the whole family of sessions for the user.
+            // Plain revoked tokens (e.g. from logout) have no ReplacedByToken and
+            // fall through to the normal "revoked" path below.
+            if (stored.RevokedAt is not null && stored.ReplacedByToken is not null)
+            {
+                await RevokeAllSessionsAsync(stored.UserId, cancellationToken);
+                throw new AuthenticationException("Refresh token expirado o revocado.");
+            }
+
             if (!stored.IsActive)
                 throw new AuthenticationException("Refresh token expirado o revocado.");
 

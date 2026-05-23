@@ -145,8 +145,10 @@ namespace MRC.Agendia.Api.Controllers
         /// <summary>Restablece la contrasena con el token recibido por email.</summary>
         [HttpPost("reset-password")]
         [AllowAnonymous]
+        [EnableRateLimiting("auth-login")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
         {
             await _mediator.Send(new ResetPasswordCommand(dto));
@@ -156,8 +158,10 @@ namespace MRC.Agendia.Api.Controllers
         /// <summary>Confirma el email de un usuario con el token enviado al registrarse.</summary>
         [HttpPost("confirm-email")]
         [AllowAnonymous]
+        [EnableRateLimiting("auth-login")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
         public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto dto)
         {
             await _mediator.Send(new ConfirmEmailCommand(dto));

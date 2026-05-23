@@ -19,8 +19,8 @@ namespace MRC.Agendia.Tests.Integration.Services
     ///     of A into B by sending a crafted DTO.
     /// After the fix:
     ///   - Auth is now resolved against the EXISTING service (EnsureCanManageServiceAsync).
-    ///   - ServiceProfile ignores BusinessId in the Update mapping, so even a caller
-    ///     with permission cannot relocate the service.
+    ///   - UpdateServiceDto no longer carries BusinessId, so a service cannot be
+    ///     relocated to another tenant on update at all.
     /// </summary>
     public class ServiceCrossTenantTests : IClassFixture<CustomWebApplicationFactory>
     {
@@ -44,11 +44,9 @@ namespace MRC.Agendia.Tests.Integration.Services
             // Owner A creates a service in his own business (legitimate).
             var serviceOfA = await CreateServiceAsAsync(ownerA, "Corte A", price: 20m, duration: 30);
 
-            // Owner B crafts a PUT that targets the service of A and tries to
-            // reassign it to his own business.
+            // Owner B crafts a PUT that targets the service of A (which he does not own).
             var hijackDto = new UpdateServiceDto(
                 Id: serviceOfA.Id,
-                BusinessId: ownerB.Business.Id,
                 Name: "Hijacked",
                 Description: null,
                 DurationMinutes: 60,
@@ -74,47 +72,6 @@ namespace MRC.Agendia.Tests.Integration.Services
         }
 
         [Fact]
-        public async Task UpdateService_OwnerA_ConBusinessIdDistintoEnElDto_NoMueveDeBusiness()
-        {
-            var ownerA = await RegisterOwnerAsync("svc-stay-a");
-            var ownerB = await RegisterOwnerAsync("svc-stay-b");
-
-            var service = await CreateServiceAsAsync(ownerA, "Tinte", price: 50m, duration: 90);
-
-            // Owner A updates his own service but the DTO says BusinessId = B.
-            // The handler accepts the request (Owner A can manage his service),
-            // but AutoMapper ignores BusinessId, so the entity stays in A.
-            var dto = new UpdateServiceDto(
-                Id: service.Id,
-                BusinessId: ownerB.Business.Id,
-                Name: "Tinte premium",
-                Description: "Con tratamiento",
-                DurationMinutes: 120,
-                Price: 75m);
-
-            using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/Service/{service.Id}")
-            {
-                Content = JsonContent.Create(dto)
-            };
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerA.Token);
-
-            var response = await _client.SendAsync(request);
-
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var updated = await response.Content.ReadFromJsonAsync<ServiceDto>();
-            Assert.NotNull(updated);
-            // The Name change went through; BusinessId did NOT.
-            Assert.Equal("Tinte premium", updated!.Name);
-            Assert.Equal(ownerA.Business.Id, updated.BusinessId);
-
-            using var scope = _factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
-            var stored = await db.Services.FindAsync(service.Id);
-            Assert.NotNull(stored);
-            Assert.Equal(ownerA.Business.Id, stored!.BusinessId);
-        }
-
-        [Fact]
         public async Task UpdateService_OwnerA_EnSuPropioBusiness_AplicaCambios()
         {
             var ownerA = await RegisterOwnerAsync("svc-happy");
@@ -122,7 +79,6 @@ namespace MRC.Agendia.Tests.Integration.Services
 
             var dto = new UpdateServiceDto(
                 Id: service.Id,
-                BusinessId: ownerA.Business.Id,
                 Name: "Renombrado",
                 Description: "Cambiado",
                 DurationMinutes: 45,
@@ -142,6 +98,8 @@ namespace MRC.Agendia.Tests.Integration.Services
             Assert.Equal("Renombrado", updated!.Name);
             Assert.Equal(45, updated.DurationMinutes);
             Assert.Equal(22m, updated.Price);
+            // The service stays in its owner's business.
+            Assert.Equal(ownerA.Business.Id, updated.BusinessId);
         }
 
         // ----- Helpers -----
