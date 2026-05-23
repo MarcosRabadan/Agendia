@@ -92,8 +92,18 @@ namespace MRC.Agendia.Infrastructure.Notifications
             var now = DateTime.UtcNow;
             var until = now + _window;
 
+            // IgnoreQueryFilters + explicit conditions so a soft-deleted parent
+            // (client/employee/business) does not silently drop rows via an INNER
+            // JOIN, while still excluding appointments whose participants are gone
+            // or whose employee is inactive (those must not get reminders).
             var due = await context.Appointments
-                .Where(a => a.ReminderSentAt == null
+                .IgnoreQueryFilters()
+                .Where(a => !a.IsDeleted
+                    && !a.Client.IsDeleted
+                    && !a.Employee.IsDeleted
+                    && a.Employee.IsActive
+                    && !a.Employee.Business.IsDeleted
+                    && a.ReminderSentAt == null
                     && a.StartDate > now
                     && a.StartDate <= until
                     && (a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Confirmed))

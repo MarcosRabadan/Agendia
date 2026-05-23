@@ -128,6 +128,11 @@ namespace MRC.Agendia.Application.Schedules
             var entity = _mapper.Map<ScheduleOverride>(dto);
             entity.CreatedAt = DateTime.UtcNow;
 
+            // One override per (business, date): pre-check for a clean 400 instead
+            // of the raw 500 the unique index would otherwise surface.
+            if (await _overrideRepository.GetByBusinessIdAndDateAsync(entity.BusinessId, entity.Date, cancellationToken) is not null)
+                throw new ScheduleOverrideConflictException("Ya existe una excepcion de horario para esa fecha en este negocio.");
+
             await _overrideRepository.AddAsync(entity, cancellationToken);
             await _unitOfWork.Save(cancellationToken);
 
@@ -139,6 +144,15 @@ namespace MRC.Agendia.Application.Schedules
         {
             var entity = await _overrideRepository.GetByIdWithSlotsAsync(dto.Id, cancellationToken)
                 ?? throw new ScheduleOverrideNotFoundException(dto.Id);
+
+            // Moving the override to another date must not collide with an existing
+            // one for that (business, date).
+            if (dto.Date != entity.Date)
+            {
+                var conflicting = await _overrideRepository.GetByBusinessIdAndDateAsync(entity.BusinessId, dto.Date, cancellationToken);
+                if (conflicting is not null && conflicting.Id != entity.Id)
+                    throw new ScheduleOverrideConflictException("Ya existe una excepcion de horario para esa fecha en este negocio.");
+            }
 
             entity.Date = dto.Date;
             entity.OverrideType = dto.OverrideType;
