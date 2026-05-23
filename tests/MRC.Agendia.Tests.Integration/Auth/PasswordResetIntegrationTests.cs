@@ -32,7 +32,7 @@ namespace MRC.Agendia.Tests.Integration.Auth
                 new ForgotPasswordDto(email));
             Assert.Equal(HttpStatusCode.NoContent, forgot.StatusCode);
 
-            var resetEmail = _factory.EmailSender.LastTo(email);
+            var resetEmail = await _factory.EmailSender.WaitForAsync(email, e => e.Subject.Contains("Restablecer"));
             Assert.NotNull(resetEmail);
             Assert.Contains("Restablecer", resetEmail!.Subject);
             var token = resetEmail.QueryValue("token");
