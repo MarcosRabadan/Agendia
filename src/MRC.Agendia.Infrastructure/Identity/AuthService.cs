@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Auth;
 using MRC.Agendia.Application.Auth.DTO;
+using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Exceptions;
 
 namespace MRC.Agendia.Infrastructure.Identity
@@ -21,6 +23,7 @@ namespace MRC.Agendia.Infrastructure.Identity
         private readonly IConfiguration _configuration;
         private readonly IAuthResponseFactory _authResponseFactory;
         private readonly IAuthEmailService _authEmailService;
+        private readonly IAuditLogger _auditLogger;
 
         public AuthService(
             UserManager<ApplicationUser> userManager,
@@ -28,7 +31,8 @@ namespace MRC.Agendia.Infrastructure.Identity
             IRefreshTokenStore refreshTokenStore,
             IConfiguration configuration,
             IAuthResponseFactory authResponseFactory,
-            IAuthEmailService authEmailService)
+            IAuthEmailService authEmailService,
+            IAuditLogger auditLogger)
         {
             _userManager = userManager;
             _jwtTokenService = jwtTokenService;
@@ -36,23 +40,35 @@ namespace MRC.Agendia.Infrastructure.Identity
             _configuration = configuration;
             _authResponseFactory = authResponseFactory;
             _authEmailService = authEmailService;
+            _auditLogger = auditLogger;
         }
 
         public async Task<AuthResponseDto> LoginAsync(LoginDto dto, CancellationToken cancellationToken = default)
         {
-            var user = await _userManager.FindByEmailAsync(dto.Email)
-                ?? throw new AuthenticationException("Credenciales invalidas.");
+            var user = await _userManager.FindByEmailAsync(dto.Email);
+            if (user is null)
+            {
+                await _auditLogger.LogAsync(AuditActions.LoginFailed, "User", null, new { dto.Email, reason = "not_found" }, cancellationToken);
+                throw new AuthenticationException("Credenciales invalidas.");
+            }
 
             if (!user.IsActive)
+            {
+                await _auditLogger.LogAsync(AuditActions.LoginFailed, "User", user.Id, new { dto.Email, reason = "inactive" }, cancellationToken);
                 throw new AuthenticationException("La cuenta esta desactivada.");
+            }
 
             if (await _userManager.IsLockedOutAsync(user))
+            {
+                await _auditLogger.LogAsync(AuditActions.LoginFailed, "User", user.Id, new { dto.Email, reason = "locked" }, cancellationToken);
                 throw new AuthenticationException("Cuenta bloqueada temporalmente por demasiados intentos fallidos.");
+            }
 
             var valid = await _userManager.CheckPasswordAsync(user, dto.Password);
             if (!valid)
             {
                 await _userManager.AccessFailedAsync(user);
+                await _auditLogger.LogAsync(AuditActions.LoginFailed, "User", user.Id, new { dto.Email, reason = "bad_password" }, cancellationToken);
                 throw new AuthenticationException("Credenciales invalidas.");
             }
 
@@ -62,8 +78,12 @@ namespace MRC.Agendia.Infrastructure.Identity
             // and tests are unaffected). When enabled, unconfirmed users cannot
             // log in until they follow the confirmation link sent at registration.
             if (_configuration.GetValue<bool>("Auth:RequireConfirmedEmail") && !user.EmailConfirmed)
+            {
+                await _auditLogger.LogAsync(AuditActions.LoginFailed, "User", user.Id, new { dto.Email, reason = "email_not_confirmed" }, cancellationToken);
                 throw new AuthenticationException("Debes confirmar tu email antes de iniciar sesion.");
+            }
 
+            await _auditLogger.LogAsync(AuditActions.LoginSuccess, "User", user.Id, new { dto.Email }, cancellationToken);
             return await _authResponseFactory.CreateAsync(user, cancellationToken: cancellationToken);
         }
 
@@ -116,6 +136,8 @@ namespace MRC.Agendia.Infrastructure.Identity
 
             // Changing the password invalidates every other session.
             await RevokeAllSessionsAsync(userId, cancellationToken);
+
+            await _auditLogger.LogAsync(AuditActions.PasswordChanged, "User", userId, cancellationToken: cancellationToken);
         }
 
         public async Task ForgotPasswordAsync(ForgotPasswordDto dto, CancellationToken cancellationToken = default)
@@ -154,6 +176,8 @@ namespace MRC.Agendia.Infrastructure.Identity
 
             // A reset is a compromise-recovery signal: invalidate every session.
             await RevokeAllSessionsAsync(user.Id, cancellationToken);
+
+            await _auditLogger.LogAsync(AuditActions.PasswordReset, "User", user.Id, new { dto.Email }, cancellationToken);
         }
 
         public async Task ConfirmEmailAsync(ConfirmEmailDto dto, CancellationToken cancellationToken = default)

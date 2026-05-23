@@ -1,5 +1,7 @@
 using AutoMapper;
+using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Schedules.DTO;
+using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
@@ -15,6 +17,7 @@ namespace MRC.Agendia.Application.Schedules
         private readonly IScheduleResolver _scheduleResolver;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IAuditLogger _auditLogger;
 
         public ScheduleService(
             IScheduleTemplateRepository templateRepository,
@@ -22,7 +25,8 @@ namespace MRC.Agendia.Application.Schedules
             IHolidayCalendarRepository holidayRepository,
             IScheduleResolver scheduleResolver,
             IUnitOfWork unitOfWork,
-            IMapper mapper)
+            IMapper mapper,
+            IAuditLogger auditLogger)
         {
             _templateRepository = templateRepository;
             _overrideRepository = overrideRepository;
@@ -30,6 +34,7 @@ namespace MRC.Agendia.Application.Schedules
             _scheduleResolver = scheduleResolver;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _auditLogger = auditLogger;
         }
 
         #region Templates
@@ -55,6 +60,8 @@ namespace MRC.Agendia.Application.Schedules
 
             await _templateRepository.AddAsync(entity, cancellationToken);
             await _unitOfWork.Save(cancellationToken);
+
+            await _auditLogger.LogAsync(AuditActions.ScheduleTemplateCreated, "ScheduleTemplate", entity.Id.ToString(), new { entity.BusinessId }, cancellationToken);
             return _mapper.Map<ScheduleTemplateDto>(entity);
         }
 
@@ -79,6 +86,8 @@ namespace MRC.Agendia.Application.Schedules
 
             _templateRepository.Update(entity);
             await _unitOfWork.Save(cancellationToken);
+
+            await _auditLogger.LogAsync(AuditActions.ScheduleTemplateUpdated, "ScheduleTemplate", entity.Id.ToString(), new { entity.BusinessId }, cancellationToken);
             return _mapper.Map<ScheduleTemplateDto>(entity);
         }
 
@@ -89,6 +98,8 @@ namespace MRC.Agendia.Application.Schedules
 
             _templateRepository.Delete(entity);
             await _unitOfWork.Save(cancellationToken);
+
+            await _auditLogger.LogAsync(AuditActions.ScheduleTemplateDeleted, "ScheduleTemplate", id.ToString(), cancellationToken: cancellationToken);
             return true;
         }
         #endregion
@@ -119,6 +130,8 @@ namespace MRC.Agendia.Application.Schedules
 
             await _overrideRepository.AddAsync(entity, cancellationToken);
             await _unitOfWork.Save(cancellationToken);
+
+            await _auditLogger.LogAsync(AuditActions.ScheduleOverrideCreated, "ScheduleOverride", entity.Id.ToString(), new { entity.BusinessId }, cancellationToken);
             return _mapper.Map<ScheduleOverrideDto>(entity);
         }
 
@@ -142,6 +155,8 @@ namespace MRC.Agendia.Application.Schedules
 
             _overrideRepository.Update(entity);
             await _unitOfWork.Save(cancellationToken);
+
+            await _auditLogger.LogAsync(AuditActions.ScheduleOverrideUpdated, "ScheduleOverride", entity.Id.ToString(), new { entity.BusinessId }, cancellationToken);
             return _mapper.Map<ScheduleOverrideDto>(entity);
         }
 
@@ -152,6 +167,8 @@ namespace MRC.Agendia.Application.Schedules
 
             _overrideRepository.Delete(entity);
             await _unitOfWork.Save(cancellationToken);
+
+            await _auditLogger.LogAsync(AuditActions.ScheduleOverrideDeleted, "ScheduleOverride", id.ToString(), cancellationToken: cancellationToken);
             return true;
         }
         #endregion

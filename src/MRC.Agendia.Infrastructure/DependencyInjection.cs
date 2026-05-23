@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Auth;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Application.Notifications;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Domain.Services;
+using MRC.Agendia.Infrastructure.Auditing;
 using MRC.Agendia.Infrastructure.Authorization;
 using MRC.Agendia.Infrastructure.Identity;
 using MRC.Agendia.Infrastructure.Notifications;
@@ -36,6 +38,7 @@ namespace MRC.Agendia.Infrastructure
             services.AddScoped<IScheduleTemplateRepository, ScheduleTemplateRepository>();
             services.AddScoped<IScheduleOverrideRepository, ScheduleOverrideRepository>();
             services.AddScoped<IHolidayCalendarRepository, HolidayCalendarRepository>();
+            services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 
             // Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -57,6 +60,9 @@ namespace MRC.Agendia.Infrastructure
 
             // Notifications (email; push/FCM tracked separately)
             services.AddScoped<INotificationService, NotificationService>();
+
+            // Audit log
+            services.AddScoped<IAuditLogger, AuditLogger>();
 
             // Hosted services
             services.AddHostedService<RefreshTokenCleanupService>();
