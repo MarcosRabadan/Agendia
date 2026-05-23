@@ -22,9 +22,6 @@ namespace MRC.Agendia.Infrastructure.Repositories
         public virtual async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
             => await Set.FindAsync(new object?[] { id }, cancellationToken);
 
-        public virtual async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken = default)
-            => await Set.ToListAsync(cancellationToken);
-
         public virtual async Task AddAsync(T entity, CancellationToken cancellationToken = default)
             => await Set.AddAsync(entity, cancellationToken);
 

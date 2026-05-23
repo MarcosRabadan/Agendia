@@ -38,8 +38,5 @@ namespace MRC.Agendia.Infrastructure.Repositories
 
         public async Task AddRangeAsync(IEnumerable<ScheduleOverride> overrides, CancellationToken cancellationToken = default)
             => await Set.AddRangeAsync(overrides, cancellationToken);
-
-        public void DeleteRange(IEnumerable<ScheduleOverride> overrides)
-            => Set.RemoveRange(overrides);
     }
 }
