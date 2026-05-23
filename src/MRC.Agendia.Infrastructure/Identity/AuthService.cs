@@ -121,10 +121,12 @@ namespace MRC.Agendia.Infrastructure.Identity
             return await _authResponseFactory.CreateAsync(user, newRefreshToken, cancellationToken);
         }
 
-        public async Task LogoutAsync(string refreshToken, CancellationToken cancellationToken = default)
+        public async Task LogoutAsync(string refreshToken, string userId, CancellationToken cancellationToken = default)
         {
             var stored = await _refreshTokenStore.GetByTokenAsync(refreshToken, cancellationToken);
-            if (stored is null || !stored.IsActive) return; // idempotent
+            // Idempotent, and a caller may only revoke their OWN token: ignore
+            // unknown/inactive tokens and tokens that belong to another user.
+            if (stored is null || !stored.IsActive || stored.UserId != userId) return;
 
             stored.RevokedAt = DateTime.UtcNow;
             _refreshTokenStore.Update(stored);
