@@ -13,11 +13,11 @@ namespace MRC.Agendia.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<Employee?> GetByIdAsync(int id)
-            => await _context.Employees.FindAsync(id);
+        public async Task<Employee?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+            => await _context.Employees.FindAsync(new object?[] { id }, cancellationToken);
 
-        public async Task<IEnumerable<Employee>> GetAllAsync()
-            => await _context.Employees.ToListAsync();
+        public async Task<IEnumerable<Employee>> GetAllAsync(CancellationToken cancellationToken = default)
+            => await _context.Employees.ToListAsync(cancellationToken);
 
         public Task<(IReadOnlyList<Employee> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
             => _context.Employees
@@ -32,7 +32,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderBy(e => e.Id)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
-        public async Task<IEnumerable<Employee>> GetByBusinessIdAsync(int businessId, bool onlyActive = true)
+        public async Task<IEnumerable<Employee>> GetByBusinessIdAsync(int businessId, bool onlyActive = true, CancellationToken cancellationToken = default)
         {
             var query = _context.Employees.AsNoTracking()
                 .Where(e => e.BusinessId == businessId);
@@ -40,11 +40,11 @@ namespace MRC.Agendia.Infrastructure.Repositories
             if (onlyActive)
                 query = query.Where(e => e.IsActive);
 
-            return await query.OrderBy(e => e.Id).ToListAsync();
+            return await query.OrderBy(e => e.Id).ToListAsync(cancellationToken);
         }
 
-        public async Task AddAsync(Employee employee)
-            => await _context.Employees.AddAsync(employee);
+        public async Task AddAsync(Employee employee, CancellationToken cancellationToken = default)
+            => await _context.Employees.AddAsync(employee, cancellationToken);
 
         public void Update(Employee employee)
             => _context.Employees.Update(employee);

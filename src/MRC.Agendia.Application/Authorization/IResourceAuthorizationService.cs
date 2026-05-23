@@ -9,32 +9,32 @@ namespace MRC.Agendia.Application.Authorization
     public interface IResourceAuthorizationService
     {
         /// <summary>Admin o dueno de este negocio.</summary>
-        Task EnsureCanManageBusinessAsync(int businessId);
+        Task EnsureCanManageBusinessAsync(int businessId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Admin, dueno del negocio, o empleado del negocio.
         /// Para crear/editar/borrar recursos del negocio
         /// (servicios, plantillas, overrides, etc.).
         /// </summary>
-        Task EnsureCanManageBusinessResourcesAsync(int businessId);
+        Task EnsureCanManageBusinessResourcesAsync(int businessId, CancellationToken cancellationToken = default);
 
         /// <summary>Admin, dueno del negocio del empleado, o el propio empleado.</summary>
-        Task EnsureCanViewEmployeeAsync(int employeeId);
+        Task EnsureCanViewEmployeeAsync(int employeeId, CancellationToken cancellationToken = default);
 
         /// <summary>Admin, dueno del negocio del empleado, o el propio empleado.</summary>
-        Task EnsureCanUpdateEmployeeAsync(int employeeId);
+        Task EnsureCanUpdateEmployeeAsync(int employeeId, CancellationToken cancellationToken = default);
 
         /// <summary>Admin o dueno del negocio del empleado.</summary>
-        Task EnsureCanDeleteEmployeeAsync(int employeeId);
+        Task EnsureCanDeleteEmployeeAsync(int employeeId, CancellationToken cancellationToken = default);
 
         /// <summary>Admin o el propio cliente.</summary>
-        Task EnsureCanManageClientAsync(int clientId);
+        Task EnsureCanManageClientAsync(int clientId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Admin, owner/empleado del negocio de la cita,
         /// o cliente de la cita.
         /// </summary>
-        Task EnsureCanManageAppointmentAsync(int appointmentId);
+        Task EnsureCanManageAppointmentAsync(int appointmentId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Al crear una cita:
@@ -42,15 +42,15 @@ namespace MRC.Agendia.Application.Authorization
         /// - Owner/Employee del negocio del empleado de la cita: permitido.
         /// - Client: solo si la cita es para su propio Client.Id.
         /// </summary>
-        Task EnsureCanCreateAppointmentAsync(int clientId, int employeeId);
+        Task EnsureCanCreateAppointmentAsync(int clientId, int employeeId, CancellationToken cancellationToken = default);
 
         /// <summary>Admin o owner/empleado del negocio del servicio.</summary>
-        Task EnsureCanManageServiceAsync(int serviceId);
+        Task EnsureCanManageServiceAsync(int serviceId, CancellationToken cancellationToken = default);
 
         /// <summary>Admin o owner/empleado del negocio de la plantilla.</summary>
-        Task EnsureCanManageScheduleTemplateAsync(int templateId);
+        Task EnsureCanManageScheduleTemplateAsync(int templateId, CancellationToken cancellationToken = default);
 
         /// <summary>Admin o owner/empleado del negocio del override.</summary>
-        Task EnsureCanManageScheduleOverrideAsync(int overrideId);
+        Task EnsureCanManageScheduleOverrideAsync(int overrideId, CancellationToken cancellationToken = default);
     }
 }

@@ -14,6 +14,6 @@ namespace MRC.Agendia.Application.Business.Queries
         }
 
         public Task<PagedResult<BusinessPublicDto>> Handle(GetAllBusinessesQuery request, CancellationToken cancellationToken)
-            => _service.GetPagedPublicAsync(request.Page, request.PageSize);
+            => _service.GetPagedPublicAsync(request.Page, request.PageSize, cancellationToken);
     }
 }

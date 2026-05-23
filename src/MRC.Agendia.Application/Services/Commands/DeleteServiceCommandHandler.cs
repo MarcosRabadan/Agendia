@@ -16,8 +16,8 @@ namespace MRC.Agendia.Application.Services.Commands
 
         public async Task<bool> Handle(DeleteServiceCommand request, CancellationToken cancellationToken)
         {
-            await _auth.EnsureCanManageServiceAsync(request.Id);
-            return await _service.DeleteAsync(request.Id);
+            await _auth.EnsureCanManageServiceAsync(request.Id, cancellationToken);
+            return await _service.DeleteAsync(request.Id, cancellationToken);
         }
     }
 }

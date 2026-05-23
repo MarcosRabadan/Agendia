@@ -17,8 +17,8 @@ namespace MRC.Agendia.Application.Appointments.Queries
 
         public async Task<AppointmentDto?> Handle(GetAppointmentByIdQuery request, CancellationToken cancellationToken)
         {
-            await _auth.EnsureCanManageAppointmentAsync(request.Id);
-            return await _service.GetByIdAsync(request.Id);
+            await _auth.EnsureCanManageAppointmentAsync(request.Id, cancellationToken);
+            return await _service.GetByIdAsync(request.Id, cancellationToken);
         }
     }
 }

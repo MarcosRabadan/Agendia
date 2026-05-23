@@ -14,6 +14,6 @@ namespace MRC.Agendia.Application.Services.Queries
         }
 
         public Task<PagedResult<ServiceDto>> Handle(GetAllServicesQuery request, CancellationToken cancellationToken)
-            => _service.GetPagedAsync(request.Page, request.PageSize);
+            => _service.GetPagedAsync(request.Page, request.PageSize, cancellationToken);
     }
 }

@@ -8,14 +8,14 @@ namespace MRC.Agendia.Application.Auth
     /// </summary>
     public interface IAuthService
     {
-        Task<AuthResponseDto> LoginAsync(LoginDto dto);
-        Task<AuthResponseDto> RefreshAsync(string refreshToken);
-        Task LogoutAsync(string refreshToken);
-        Task LogoutAllAsync(string userId);
-        Task ChangePasswordAsync(string userId, ChangePasswordDto dto);
-        Task ForgotPasswordAsync(ForgotPasswordDto dto);
-        Task ResetPasswordAsync(ResetPasswordDto dto);
-        Task ConfirmEmailAsync(ConfirmEmailDto dto);
-        Task<UserDto> GetCurrentUserAsync(string userId);
+        Task<AuthResponseDto> LoginAsync(LoginDto dto, CancellationToken cancellationToken = default);
+        Task<AuthResponseDto> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default);
+        Task LogoutAsync(string refreshToken, CancellationToken cancellationToken = default);
+        Task LogoutAllAsync(string userId, CancellationToken cancellationToken = default);
+        Task ChangePasswordAsync(string userId, ChangePasswordDto dto, CancellationToken cancellationToken = default);
+        Task ForgotPasswordAsync(ForgotPasswordDto dto, CancellationToken cancellationToken = default);
+        Task ResetPasswordAsync(ResetPasswordDto dto, CancellationToken cancellationToken = default);
+        Task ConfirmEmailAsync(ConfirmEmailDto dto, CancellationToken cancellationToken = default);
+        Task<UserDto> GetCurrentUserAsync(string userId, CancellationToken cancellationToken = default);
     }
 }

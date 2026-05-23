@@ -17,8 +17,8 @@ namespace MRC.Agendia.Application.Schedules.Queries
 
         public async Task<IEnumerable<CalendarDayDto>> Handle(PreviewScheduleQuery request, CancellationToken cancellationToken)
         {
-            await _auth.EnsureCanManageBusinessResourcesAsync(request.Dto.BusinessId);
-            return await _service.PreviewScheduleAsync(request.Dto);
+            await _auth.EnsureCanManageBusinessResourcesAsync(request.Dto.BusinessId, cancellationToken);
+            return await _service.PreviewScheduleAsync(request.Dto, cancellationToken);
         }
     }
 }

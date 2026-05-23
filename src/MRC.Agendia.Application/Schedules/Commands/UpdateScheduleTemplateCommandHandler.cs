@@ -17,8 +17,8 @@ namespace MRC.Agendia.Application.Schedules.Commands
 
         public async Task<ScheduleTemplateDto> Handle(UpdateScheduleTemplateCommand request, CancellationToken cancellationToken)
         {
-            await _auth.EnsureCanManageScheduleTemplateAsync(request.Dto.Id);
-            return await _service.UpdateTemplateAsync(request.Dto);
+            await _auth.EnsureCanManageScheduleTemplateAsync(request.Dto.Id, cancellationToken);
+            return await _service.UpdateTemplateAsync(request.Dto, cancellationToken);
         }
     }
 }

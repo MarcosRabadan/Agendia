@@ -14,7 +14,7 @@ namespace MRC.Agendia.Application.Holidays.Commands
 
         public async Task<HolidayCalendarDto> Handle(UpdateHolidayCommand request, CancellationToken cancellationToken)
         {
-            return await _service.UpdateAsync(request.Dto);
+            return await _service.UpdateAsync(request.Dto, cancellationToken);
         }
     }
 }

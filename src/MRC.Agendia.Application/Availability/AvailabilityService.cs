@@ -34,14 +34,15 @@ namespace MRC.Agendia.Application.Availability
             DateOnly date,
             int serviceId,
             int? employeeId,
-            int stepMinutes = 15)
+            int stepMinutes = 15,
+            CancellationToken cancellationToken = default)
         {
             // ---------- Validate inputs ----------
             if (stepMinutes < MinStepMinutes || stepMinutes > MaxStepMinutes)
                 throw new ArgumentException(
                     $"stepMinutes debe estar entre {MinStepMinutes} y {MaxStepMinutes}.");
 
-            var service = await _serviceRepository.GetByIdAsync(serviceId)
+            var service = await _serviceRepository.GetByIdAsync(serviceId, cancellationToken)
                 ?? throw new ServiceNotFoundException(serviceId);
 
             if (service.BusinessId != businessId)
@@ -56,7 +57,7 @@ namespace MRC.Agendia.Application.Availability
             List<Employee> employees;
             if (employeeId is int empId)
             {
-                var employee = await _employeeRepository.GetByIdAsync(empId)
+                var employee = await _employeeRepository.GetByIdAsync(empId, cancellationToken)
                     ?? throw new EmployeeNotFoundException(empId);
 
                 if (employee.BusinessId != businessId)
@@ -74,7 +75,7 @@ namespace MRC.Agendia.Application.Availability
             else
             {
                 employees = (await _employeeRepository
-                    .GetByBusinessIdAsync(businessId, onlyActive: true))
+                    .GetByBusinessIdAsync(businessId, onlyActive: true, cancellationToken))
                     .ToList();
             }
 
@@ -87,7 +88,7 @@ namespace MRC.Agendia.Application.Availability
             }
 
             // ---------- Resolve the day's effective schedule ----------
-            var effective = await _scheduleResolver.GetEffectiveScheduleAsync(businessId, date);
+            var effective = await _scheduleResolver.GetEffectiveScheduleAsync(businessId, date, cancellationToken);
             if (!effective.IsOpen || effective.TimeSlots.Count == 0)
             {
                 return EmptyAvailability(
@@ -101,7 +102,7 @@ namespace MRC.Agendia.Application.Availability
             var dayEnd = date.ToDateTime(new TimeOnly(23, 59, 59));
 
             var appointments = (await _appointmentRepository
-                    .GetByBusinessIdAndDateRangeAsync(businessId, dayStart, dayEnd))
+                    .GetByBusinessIdAndDateRangeAsync(businessId, dayStart, dayEnd, cancellationToken))
                 .Where(a => a.Status == AppointmentStatus.Pending
                          || a.Status == AppointmentStatus.Confirmed)
                 .GroupBy(a => a.EmployeeId)

@@ -38,7 +38,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             _authEmailService = authEmailService;
         }
 
-        public async Task<AuthResponseDto> LoginAsync(LoginDto dto)
+        public async Task<AuthResponseDto> LoginAsync(LoginDto dto, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByEmailAsync(dto.Email)
                 ?? throw new AuthenticationException("Credenciales invalidas.");
@@ -64,12 +64,12 @@ namespace MRC.Agendia.Infrastructure.Identity
             if (_configuration.GetValue<bool>("Auth:RequireConfirmedEmail") && !user.EmailConfirmed)
                 throw new AuthenticationException("Debes confirmar tu email antes de iniciar sesion.");
 
-            return await _authResponseFactory.CreateAsync(user);
+            return await _authResponseFactory.CreateAsync(user, cancellationToken: cancellationToken);
         }
 
-        public async Task<AuthResponseDto> RefreshAsync(string refreshToken)
+        public async Task<AuthResponseDto> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
         {
-            var stored = await _refreshTokenStore.GetByTokenAsync(refreshToken)
+            var stored = await _refreshTokenStore.GetByTokenAsync(refreshToken, cancellationToken)
                 ?? throw new AuthenticationException("Refresh token invalido.");
 
             if (!stored.IsActive)
@@ -87,25 +87,25 @@ namespace MRC.Agendia.Infrastructure.Identity
             stored.ReplacedByToken = newRefreshToken;
             _refreshTokenStore.Update(stored);
 
-            return await _authResponseFactory.CreateAsync(user, newRefreshToken);
+            return await _authResponseFactory.CreateAsync(user, newRefreshToken, cancellationToken);
         }
 
-        public async Task LogoutAsync(string refreshToken)
+        public async Task LogoutAsync(string refreshToken, CancellationToken cancellationToken = default)
         {
-            var stored = await _refreshTokenStore.GetByTokenAsync(refreshToken);
+            var stored = await _refreshTokenStore.GetByTokenAsync(refreshToken, cancellationToken);
             if (stored is null || !stored.IsActive) return; // idempotent
 
             stored.RevokedAt = DateTime.UtcNow;
             _refreshTokenStore.Update(stored);
-            await _refreshTokenStore.SaveChangesAsync();
+            await _refreshTokenStore.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task LogoutAllAsync(string userId)
+        public async Task LogoutAllAsync(string userId, CancellationToken cancellationToken = default)
         {
-            await RevokeAllSessionsAsync(userId);
+            await RevokeAllSessionsAsync(userId, cancellationToken);
         }
 
-        public async Task ChangePasswordAsync(string userId, ChangePasswordDto dto)
+        public async Task ChangePasswordAsync(string userId, ChangePasswordDto dto, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByIdAsync(userId)
                 ?? throw new KeyNotFoundException("Usuario no encontrado.");
@@ -115,10 +115,10 @@ namespace MRC.Agendia.Infrastructure.Identity
                 throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
 
             // Changing the password invalidates every other session.
-            await RevokeAllSessionsAsync(userId);
+            await RevokeAllSessionsAsync(userId, cancellationToken);
         }
 
-        public async Task ForgotPasswordAsync(ForgotPasswordDto dto)
+        public async Task ForgotPasswordAsync(ForgotPasswordDto dto, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByEmailAsync(dto.Email);
 
@@ -128,10 +128,10 @@ namespace MRC.Agendia.Infrastructure.Identity
             if (user is null || !user.IsActive)
                 return;
 
-            await _authEmailService.SendPasswordResetAsync(user);
+            await _authEmailService.SendPasswordResetAsync(user, cancellationToken);
         }
 
-        public async Task ResetPasswordAsync(ResetPasswordDto dto)
+        public async Task ResetPasswordAsync(ResetPasswordDto dto, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByEmailAsync(dto.Email);
             // Uniform message so a missing user is indistinguishable from a bad token.
@@ -153,10 +153,10 @@ namespace MRC.Agendia.Infrastructure.Identity
             await _userManager.ResetAccessFailedCountAsync(user);
 
             // A reset is a compromise-recovery signal: invalidate every session.
-            await RevokeAllSessionsAsync(user.Id);
+            await RevokeAllSessionsAsync(user.Id, cancellationToken);
         }
 
-        public async Task ConfirmEmailAsync(ConfirmEmailDto dto)
+        public async Task ConfirmEmailAsync(ConfirmEmailDto dto, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByIdAsync(dto.UserId);
             if (user is null)
@@ -167,7 +167,7 @@ namespace MRC.Agendia.Infrastructure.Identity
                 throw new InvalidOperationException("Token de confirmacion invalido o expirado.");
         }
 
-        public async Task<UserDto> GetCurrentUserAsync(string userId)
+        public async Task<UserDto> GetCurrentUserAsync(string userId, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByIdAsync(userId)
                 ?? throw new KeyNotFoundException("Usuario no encontrado.");
@@ -177,9 +177,9 @@ namespace MRC.Agendia.Infrastructure.Identity
         }
 
         /// <summary>Revokes every active refresh token for the user. Idempotent.</summary>
-        private async Task RevokeAllSessionsAsync(string userId)
+        private async Task RevokeAllSessionsAsync(string userId, CancellationToken cancellationToken = default)
         {
-            var tokens = await _refreshTokenStore.GetActiveByUserIdAsync(userId);
+            var tokens = await _refreshTokenStore.GetActiveByUserIdAsync(userId, cancellationToken);
             if (tokens.Count == 0) return;
 
             var now = DateTime.UtcNow;
@@ -188,7 +188,7 @@ namespace MRC.Agendia.Infrastructure.Identity
                 token.RevokedAt = now;
                 _refreshTokenStore.Update(token);
             }
-            await _refreshTokenStore.SaveChangesAsync();
+            await _refreshTokenStore.SaveChangesAsync(cancellationToken);
         }
     }
 }

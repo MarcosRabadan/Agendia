@@ -8,6 +8,6 @@ namespace MRC.Agendia.Application.Auth.Commands
         private readonly IUserRegistrationService _service;
         public RegisterOwnerCommandHandler(IUserRegistrationService service) { _service = service; }
         public Task<AuthResponseDto> Handle(RegisterOwnerCommand request, CancellationToken cancellationToken)
-            => _service.RegisterOwnerAsync(request.Dto);
+            => _service.RegisterOwnerAsync(request.Dto, cancellationToken);
     }
 }

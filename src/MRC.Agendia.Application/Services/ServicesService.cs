@@ -21,45 +21,45 @@ namespace MRC.Agendia.Application.Services
         }
 
         #region CRUD
-        public async Task<PagedResult<ServiceDto>> GetPagedAsync(int page, int pageSize)
+        public async Task<PagedResult<ServiceDto>> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
         {
-            var (items, totalCount) = await _repository.GetPagedAsync(page, pageSize);
+            var (items, totalCount) = await _repository.GetPagedAsync(page, pageSize, cancellationToken);
             var dtos = _mapper.Map<List<ServiceDto>>(items);
             return PagedResult<ServiceDto>.Create(dtos, totalCount, page, pageSize);
         }
 
-        public async Task<ServiceDto?> GetByIdAsync(int id)
+        public async Task<ServiceDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            var entity = await _repository.GetByIdAsync(id);
+            var entity = await _repository.GetByIdAsync(id, cancellationToken);
             return entity is null ? null : _mapper.Map<ServiceDto>(entity);
         }
 
-        public async Task<ServiceDto> CreateAsync(CreateServiceDto dto)
+        public async Task<ServiceDto> CreateAsync(CreateServiceDto dto, CancellationToken cancellationToken = default)
         {
             var entity = _mapper.Map<Service>(dto);
-            await _repository.AddAsync(entity);
-            await _unitOfWork.Save();
+            await _repository.AddAsync(entity, cancellationToken);
+            await _unitOfWork.Save(cancellationToken);
             return _mapper.Map<ServiceDto>(entity);
         }
 
-        public async Task<ServiceDto> UpdateAsync(UpdateServiceDto dto)
+        public async Task<ServiceDto> UpdateAsync(UpdateServiceDto dto, CancellationToken cancellationToken = default)
         {
-            var entity = await _repository.GetByIdAsync(dto.Id)
+            var entity = await _repository.GetByIdAsync(dto.Id, cancellationToken)
                 ?? throw new ServiceNotFoundException(dto.Id);
 
             _mapper.Map(dto, entity);
             _repository.Update(entity);
-            await _unitOfWork.Save();
+            await _unitOfWork.Save(cancellationToken);
             return _mapper.Map<ServiceDto>(entity);
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
-            var entity = await _repository.GetByIdAsync(id)
+            var entity = await _repository.GetByIdAsync(id, cancellationToken)
                 ?? throw new ServiceNotFoundException(id);
 
             _repository.Delete(entity);
-            await _unitOfWork.Save();
+            await _unitOfWork.Save(cancellationToken);
             return true;
         }
 

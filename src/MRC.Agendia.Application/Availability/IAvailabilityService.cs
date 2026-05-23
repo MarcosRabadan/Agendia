@@ -21,6 +21,7 @@ namespace MRC.Agendia.Application.Availability
             DateOnly date,
             int serviceId,
             int? employeeId,
-            int stepMinutes = 15);
+            int stepMinutes = 15,
+            CancellationToken cancellationToken = default);
     }
 }

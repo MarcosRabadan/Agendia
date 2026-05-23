@@ -14,7 +14,7 @@ namespace MRC.Agendia.Application.Schedules.Queries
 
         public async Task<IEnumerable<CalendarDayDto>> Handle(GetCalendarQuery request, CancellationToken cancellationToken)
         {
-            return await _service.GetCalendarAsync(request.BusinessId, request.From, request.To);
+            return await _service.GetCalendarAsync(request.BusinessId, request.From, request.To, cancellationToken);
         }
     }
 }

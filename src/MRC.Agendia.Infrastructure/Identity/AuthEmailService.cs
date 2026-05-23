@@ -21,7 +21,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             _configuration = configuration;
         }
 
-        public async Task SendEmailConfirmationAsync(ApplicationUser user)
+        public async Task SendEmailConfirmationAsync(ApplicationUser user, CancellationToken cancellationToken = default)
         {
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             var link = BuildFrontendLink("confirm-email",
@@ -32,10 +32,10 @@ namespace MRC.Agendia.Infrastructure.Identity
                 "<p>Confirma tu direccion de email para activar tu cuenta:</p>" +
                 $"<p><a href=\"{link}\">Confirmar email</a></p>";
 
-            await _emailSender.SendAsync(user.Email!, "Confirma tu email - Agendia", body);
+            await _emailSender.SendAsync(user.Email!, "Confirma tu email - Agendia", body, cancellationToken);
         }
 
-        public async Task SendPasswordResetAsync(ApplicationUser user)
+        public async Task SendPasswordResetAsync(ApplicationUser user, CancellationToken cancellationToken = default)
         {
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             var link = BuildFrontendLink("reset-password",
@@ -47,7 +47,7 @@ namespace MRC.Agendia.Infrastructure.Identity
                 $"<p><a href=\"{link}\">Restablecer contrasena</a></p>" +
                 "<p>Si no has sido tu, ignora este correo.</p>";
 
-            await _emailSender.SendAsync(user.Email!, "Restablecer contrasena - Agendia", body);
+            await _emailSender.SendAsync(user.Email!, "Restablecer contrasena - Agendia", body, cancellationToken);
         }
 
         private string BuildFrontendLink(string path, string query)

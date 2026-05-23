@@ -16,8 +16,8 @@ namespace MRC.Agendia.Application.Employees.Commands
 
         public async Task<bool> Handle(DeleteEmployeeCommand request, CancellationToken cancellationToken)
         {
-            await _auth.EnsureCanDeleteEmployeeAsync(request.Id);
-            return await _service.DeleteAsync(request.Id);
+            await _auth.EnsureCanDeleteEmployeeAsync(request.Id, cancellationToken);
+            return await _service.DeleteAsync(request.Id, cancellationToken);
         }
     }
 }

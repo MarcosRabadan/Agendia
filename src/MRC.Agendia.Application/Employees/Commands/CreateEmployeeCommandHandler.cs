@@ -19,8 +19,8 @@ namespace MRC.Agendia.Application.Employees.Commands
         {
             // Without this check a BusinessOwner of business A could create an
             // employee inside business B just by passing BusinessId = B.
-            await _auth.EnsureCanManageBusinessResourcesAsync(request.Dto.BusinessId);
-            return await _service.CreateAsync(request.Dto);
+            await _auth.EnsureCanManageBusinessResourcesAsync(request.Dto.BusinessId, cancellationToken);
+            return await _service.CreateAsync(request.Dto, cancellationToken);
         }
     }
 }

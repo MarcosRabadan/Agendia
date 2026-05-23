@@ -17,8 +17,8 @@ namespace MRC.Agendia.Application.Services.Commands
 
         public async Task<ServiceDto> Handle(CreateServiceCommand request, CancellationToken cancellationToken)
         {
-            await _auth.EnsureCanManageBusinessResourcesAsync(request.Dto.BusinessId);
-            return await _service.CreateAsync(request.Dto);
+            await _auth.EnsureCanManageBusinessResourcesAsync(request.Dto.BusinessId, cancellationToken);
+            return await _service.CreateAsync(request.Dto, cancellationToken);
         }
     }
 }

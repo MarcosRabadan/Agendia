@@ -8,7 +8,7 @@ namespace MRC.Agendia.Application.Auth.Commands
         public ConfirmEmailCommandHandler(IAuthService service) { _service = service; }
         public async Task<Unit> Handle(ConfirmEmailCommand request, CancellationToken cancellationToken)
         {
-            await _service.ConfirmEmailAsync(request.Dto);
+            await _service.ConfirmEmailAsync(request.Dto, cancellationToken);
             return Unit.Value;
         }
     }

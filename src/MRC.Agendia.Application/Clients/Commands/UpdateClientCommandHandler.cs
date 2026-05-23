@@ -17,8 +17,8 @@ namespace MRC.Agendia.Application.Clients.Commands
 
         public async Task<ClientDto> Handle(UpdateClientCommand request, CancellationToken cancellationToken)
         {
-            await _auth.EnsureCanManageClientAsync(request.Dto.Id);
-            return await _service.UpdateAsync(request.Dto);
+            await _auth.EnsureCanManageClientAsync(request.Dto.Id, cancellationToken);
+            return await _service.UpdateAsync(request.Dto, cancellationToken);
         }
     }
 }

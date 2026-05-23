@@ -13,6 +13,6 @@ namespace MRC.Agendia.Application.Business.Queries
         }
 
         public Task<BusinessPublicDto?> Handle(GetBusinessByIdQuery request, CancellationToken cancellationToken)
-            => _service.GetPublicByIdAsync(request.Id);
+            => _service.GetPublicByIdAsync(request.Id, cancellationToken);
     }
 }

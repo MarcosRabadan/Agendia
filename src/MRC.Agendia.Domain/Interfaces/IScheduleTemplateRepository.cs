@@ -4,12 +4,12 @@ namespace MRC.Agendia.Domain.Interfaces
 {
     public interface IScheduleTemplateRepository
     {
-        Task<ScheduleTemplate?> GetByIdAsync(int id);
-        Task<ScheduleTemplate?> GetByIdWithSlotsAsync(int id);
-        Task<IEnumerable<ScheduleTemplate>> GetByBusinessIdAsync(int businessId);
-        Task<ScheduleTemplate?> GetEffectiveTemplateAsync(int businessId, DateOnly date);
-        Task<bool> HasOverlappingTemplateAsync(int businessId, DateOnly from, DateOnly to, int? excludeId = null);
-        Task AddAsync(ScheduleTemplate template);
+        Task<ScheduleTemplate?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<ScheduleTemplate?> GetByIdWithSlotsAsync(int id, CancellationToken cancellationToken = default);
+        Task<IEnumerable<ScheduleTemplate>> GetByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default);
+        Task<ScheduleTemplate?> GetEffectiveTemplateAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default);
+        Task<bool> HasOverlappingTemplateAsync(int businessId, DateOnly from, DateOnly to, int? excludeId = null, CancellationToken cancellationToken = default);
+        Task AddAsync(ScheduleTemplate template, CancellationToken cancellationToken = default);
         void Update(ScheduleTemplate template);
         void Delete(ScheduleTemplate template);
     }

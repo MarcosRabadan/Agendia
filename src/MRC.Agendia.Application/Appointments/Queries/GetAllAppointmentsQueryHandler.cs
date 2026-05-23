@@ -14,6 +14,6 @@ namespace MRC.Agendia.Application.Appointments.Queries
         }
 
         public Task<PagedResult<AppointmentDto>> Handle(GetAllAppointmentsQuery request, CancellationToken cancellationToken)
-            => _service.GetPagedAsync(request.Page, request.PageSize);
+            => _service.GetPagedAsync(request.Page, request.PageSize, cancellationToken);
     }
 }

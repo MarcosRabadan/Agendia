@@ -13,11 +13,11 @@ namespace MRC.Agendia.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<Appointment?> GetByIdAsync(int id)
-            => await _context.Appointments.FindAsync(id);
+        public async Task<Appointment?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+            => await _context.Appointments.FindAsync(new object?[] { id }, cancellationToken);
 
-        public async Task<IEnumerable<Appointment>> GetAllAsync()
-            => await _context.Appointments.ToListAsync();
+        public async Task<IEnumerable<Appointment>> GetAllAsync(CancellationToken cancellationToken = default)
+            => await _context.Appointments.ToListAsync(cancellationToken);
 
         public Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
             => _context.Appointments
@@ -37,8 +37,8 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderByDescending(a => a.StartDate)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
-        public async Task AddAsync(Appointment appointment)
-            => await _context.Appointments.AddAsync(appointment);
+        public async Task AddAsync(Appointment appointment, CancellationToken cancellationToken = default)
+            => await _context.Appointments.AddAsync(appointment, cancellationToken);
 
         public void Update(Appointment appointment)
             => _context.Appointments.Update(appointment);
@@ -46,14 +46,14 @@ namespace MRC.Agendia.Infrastructure.Repositories
         public void Delete(Appointment appointment)
             => _context.Appointments.Remove(appointment);
 
-        public async Task<IEnumerable<Appointment>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate)
+        public async Task<IEnumerable<Appointment>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
         {
             var appointments = await _context.Appointments
                  .Include(a => a.Employee)
                  .Where(a => a.Employee.BusinessId == businessId &&
                              a.StartDate >= startDate &&
                              a.EndDate <= endDate)
-                 .ToListAsync();
+                 .ToListAsync(cancellationToken);
             return appointments;
         }
     }

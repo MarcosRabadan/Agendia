@@ -13,29 +13,29 @@ namespace MRC.Agendia.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<HolidayCalendar?> GetByIdAsync(int id)
-            => await _context.HolidayCalendars.FindAsync(id);
+        public async Task<HolidayCalendar?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+            => await _context.HolidayCalendars.FindAsync(new object?[] { id }, cancellationToken);
 
-        public async Task<IEnumerable<HolidayCalendar>> GetAllAsync()
-            => await _context.HolidayCalendars.OrderBy(h => h.Date).ToListAsync();
+        public async Task<IEnumerable<HolidayCalendar>> GetAllAsync(CancellationToken cancellationToken = default)
+            => await _context.HolidayCalendars.OrderBy(h => h.Date).ToListAsync(cancellationToken);
 
-        public async Task<IEnumerable<HolidayCalendar>> GetByYearAsync(int year)
+        public async Task<IEnumerable<HolidayCalendar>> GetByYearAsync(int year, CancellationToken cancellationToken = default)
             => await _context.HolidayCalendars
                 .Where(h => h.Year == year)
                 .OrderBy(h => h.Date)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
-        public async Task<IEnumerable<HolidayCalendar>> GetByDateRangeAsync(DateOnly from, DateOnly to)
+        public async Task<IEnumerable<HolidayCalendar>> GetByDateRangeAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
             => await _context.HolidayCalendars
                 .Where(h => h.Date >= from && h.Date <= to)
                 .OrderBy(h => h.Date)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
-        public async Task AddAsync(HolidayCalendar holiday)
-            => await _context.HolidayCalendars.AddAsync(holiday);
+        public async Task AddAsync(HolidayCalendar holiday, CancellationToken cancellationToken = default)
+            => await _context.HolidayCalendars.AddAsync(holiday, cancellationToken);
 
-        public async Task AddRangeAsync(IEnumerable<HolidayCalendar> holidays)
-            => await _context.HolidayCalendars.AddRangeAsync(holidays);
+        public async Task AddRangeAsync(IEnumerable<HolidayCalendar> holidays, CancellationToken cancellationToken = default)
+            => await _context.HolidayCalendars.AddRangeAsync(holidays, cancellationToken);
 
         public void Update(HolidayCalendar holiday)
             => _context.HolidayCalendars.Update(holiday);

@@ -16,8 +16,8 @@ namespace MRC.Agendia.Application.Appointments.Commands
 
         public async Task<bool> Handle(DeleteAppointmentCommand request, CancellationToken cancellationToken)
         {
-            await _auth.EnsureCanManageAppointmentAsync(request.Id);
-            return await _service.DeleteAsync(request.Id);
+            await _auth.EnsureCanManageAppointmentAsync(request.Id, cancellationToken);
+            return await _service.DeleteAsync(request.Id, cancellationToken);
         }
     }
 }
