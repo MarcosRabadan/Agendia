@@ -100,16 +100,30 @@ namespace MRC.Agendia.Application.Appointments
             var previousStatus = entity.Status;
             var previousStartDate = entity.StartDate;
 
-            // Validate the new state against the schedule and other
-            // appointments, excluding the current one from the conflict check.
-            await _schedulingValidator.EnsureValidAsync(
-                appointmentId: dto.Id,
-                clientId: dto.ClientId,
-                employeeId: dto.EmployeeId,
-                serviceId: dto.ServiceId,
-                startDate: dto.StartDate,
-                endDate: dto.EndDate,
-                cancellationToken: cancellationToken);
+            // Only re-validate scheduling when a booking field actually changes.
+            // A pure status/notes change (e.g. marking a past appointment Completed
+            // or NoShow) must not be rejected for being in the past, and must keep
+            // working even if a participant was soft-deleted afterwards (the
+            // appointment keeps its history). The handler already authorizes both
+            // the existing appointment and the destination, so this opens no hole.
+            var bookingChanged =
+                dto.StartDate != entity.StartDate ||
+                dto.EndDate != entity.EndDate ||
+                dto.ClientId != entity.ClientId ||
+                dto.EmployeeId != entity.EmployeeId ||
+                dto.ServiceId != entity.ServiceId;
+
+            if (bookingChanged)
+            {
+                await _schedulingValidator.EnsureValidAsync(
+                    appointmentId: dto.Id,
+                    clientId: dto.ClientId,
+                    employeeId: dto.EmployeeId,
+                    serviceId: dto.ServiceId,
+                    startDate: dto.StartDate,
+                    endDate: dto.EndDate,
+                    cancellationToken: cancellationToken);
+            }
 
             _mapper.Map(dto, entity);
 
