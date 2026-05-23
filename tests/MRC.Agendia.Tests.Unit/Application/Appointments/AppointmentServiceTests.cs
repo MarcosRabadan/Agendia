@@ -2,7 +2,9 @@ using AutoMapper;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Auditing;
+using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Application.Notifications;
+using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Interfaces;
@@ -24,6 +26,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         private readonly IBookingConcurrencyGuard _bookingGuard = Substitute.For<IBookingConcurrencyGuard>();
         private readonly INotificationService _notificationService = Substitute.For<INotificationService>();
         private readonly IAuditLogger _auditLogger = Substitute.For<IAuditLogger>();
+        private readonly ICurrentUserContext _currentUser = Substitute.For<ICurrentUserContext>();
         private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
         private readonly IMapper _mapper = Substitute.For<IMapper>();
         private readonly AppointmentService _sut;
@@ -38,9 +41,12 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                     Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
                 .Returns(ci => ci.Arg<Func<Task>>()());
 
+            // Default to a staff caller so status changes (e.g. Completed) are allowed.
+            _currentUser.IsInRole(Roles.Employee).Returns(true);
+
             _sut = new AppointmentService(
                 _repository, _clientRepository, _validator, _bookingGuard,
-                _notificationService, _auditLogger, _unitOfWork, _mapper);
+                _notificationService, _auditLogger, _currentUser, _unitOfWork, _mapper);
         }
 
         [Fact]
@@ -101,6 +107,37 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             await _validator.Received(1).EnsureValidAsync(
                 entity.Id, dto.ClientId, dto.EmployeeId, dto.ServiceId,
                 dto.StartDate, dto.EndDate, Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task UpdateAsync_ClienteIntentaMarcarCompleted_Lanza()
+        {
+            var entity = PastAppointment(); // Status = Confirmed
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a Client, not staff
+
+            var dto = new UpdateAppointmentDto(
+                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.StartDate, entity.EndDate, AppointmentStatus.Completed, Notes: null);
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.UpdateAsync(dto));
+        }
+
+        [Fact]
+        public async Task UpdateAsync_ClienteCancelaSuCita_Permitido()
+        {
+            var entity = PastAppointment(); // Status = Confirmed
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
+            _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a Client
+
+            var dto = new UpdateAppointmentDto(
+                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.StartDate, entity.EndDate, AppointmentStatus.Cancelled, Notes: null);
+
+            var result = await _sut.UpdateAsync(dto);
+
+            Assert.NotNull(result);
         }
 
         private static Appointment PastAppointment() => new()

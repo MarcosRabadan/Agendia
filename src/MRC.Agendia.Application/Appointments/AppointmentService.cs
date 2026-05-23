@@ -1,6 +1,7 @@
 using AutoMapper;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Auditing;
+using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Notifications;
 using MRC.Agendia.Domain.Constants;
@@ -19,6 +20,7 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IBookingConcurrencyGuard _bookingGuard;
         private readonly INotificationService _notificationService;
         private readonly IAuditLogger _auditLogger;
+        private readonly ICurrentUserContext _currentUser;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
@@ -29,6 +31,7 @@ namespace MRC.Agendia.Application.Appointments
             IBookingConcurrencyGuard bookingGuard,
             INotificationService notificationService,
             IAuditLogger auditLogger,
+            ICurrentUserContext currentUser,
             IUnitOfWork unitOfWork,
             IMapper mapper)
         {
@@ -38,6 +41,7 @@ namespace MRC.Agendia.Application.Appointments
             _bookingGuard = bookingGuard;
             _notificationService = notificationService;
             _auditLogger = auditLogger;
+            _currentUser = currentUser;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
@@ -110,6 +114,13 @@ namespace MRC.Agendia.Application.Appointments
 
             var previousStatus = entity.Status;
             var previousStartDate = entity.StartDate;
+
+            // A Client may only cancel their own appointment; Confirmed/Completed/
+            // NoShow are staff-only transitions, so a Client cannot falsify the
+            // status history. Notes/reschedule (status unchanged) stay allowed.
+            if (dto.Status != previousStatus && dto.Status != AppointmentStatus.Cancelled && !IsStaff())
+                throw new UnauthorizedAccessException(
+                    "Un cliente solo puede cancelar su cita; el resto de cambios de estado son del personal.");
 
             // Only re-validate scheduling when a booking field actually changes.
             // A pure status/notes change (e.g. marking a past appointment Completed
@@ -211,6 +222,11 @@ namespace MRC.Agendia.Application.Appointments
             var entities = await _repository.GetByBusinessIdAndDateRangeAsync(businessId, startDate, endDate, cancellationToken);
             return _mapper.Map<IEnumerable<AppointmentDto>>(entities);
         }
+
+        private bool IsStaff()
+            => _currentUser.IsInRole(Roles.Admin)
+               || _currentUser.IsInRole(Roles.BusinessOwner)
+               || _currentUser.IsInRole(Roles.Employee);
 
         /// <summary>
         /// Validates the parameters of a read query (date range lookup). This is
