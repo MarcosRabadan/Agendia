@@ -16,6 +16,7 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IAppointmentRepository _repository;
         private readonly IClientRepository _clientRepository;
         private readonly IAppointmentSchedulingValidator _schedulingValidator;
+        private readonly IBookingConcurrencyGuard _bookingGuard;
         private readonly INotificationService _notificationService;
         private readonly IAuditLogger _auditLogger;
         private readonly IUnitOfWork _unitOfWork;
@@ -25,6 +26,7 @@ namespace MRC.Agendia.Application.Appointments
             IAppointmentRepository repository,
             IClientRepository clientRepository,
             IAppointmentSchedulingValidator schedulingValidator,
+            IBookingConcurrencyGuard bookingGuard,
             INotificationService notificationService,
             IAuditLogger auditLogger,
             IUnitOfWork unitOfWork,
@@ -33,6 +35,7 @@ namespace MRC.Agendia.Application.Appointments
             _repository = repository;
             _clientRepository = clientRepository;
             _schedulingValidator = schedulingValidator;
+            _bookingGuard = bookingGuard;
             _notificationService = notificationService;
             _auditLogger = auditLogger;
             _unitOfWork = unitOfWork;
@@ -71,22 +74,30 @@ namespace MRC.Agendia.Application.Appointments
 
         public async Task<AppointmentDto> CreateAsync(CreateAppointmentDto dto, CancellationToken cancellationToken = default)
         {
-            // Validate the appointment against the business schedule and
-            // existing appointments BEFORE persisting it.
-            await _schedulingValidator.EnsureValidAsync(
-                appointmentId: null,
-                clientId: dto.ClientId,
-                employeeId: dto.EmployeeId,
-                serviceId: dto.ServiceId,
-                startDate: dto.StartDate,
-                endDate: dto.EndDate,
-                cancellationToken: cancellationToken);
+            // Validate + insert inside a per-employee/day lock so two concurrent
+            // bookings cannot both pass the capacity check and over-book the slot.
+            var entity = await _bookingGuard.ExecuteSerializedAsync(
+                dto.EmployeeId,
+                DateOnly.FromDateTime(dto.StartDate),
+                async () =>
+                {
+                    await _schedulingValidator.EnsureValidAsync(
+                        appointmentId: null,
+                        clientId: dto.ClientId,
+                        employeeId: dto.EmployeeId,
+                        serviceId: dto.ServiceId,
+                        startDate: dto.StartDate,
+                        endDate: dto.EndDate,
+                        cancellationToken: cancellationToken);
 
-            var entity = _mapper.Map<Appointment>(dto);
-            await _repository.AddAsync(entity, cancellationToken);
-            await _unitOfWork.Save(cancellationToken);
+                    var created = _mapper.Map<Appointment>(dto);
+                    await _repository.AddAsync(created, cancellationToken);
+                    await _unitOfWork.Save(cancellationToken);
+                    return created;
+                },
+                cancellationToken);
 
-            // Best-effort confirmation email (never breaks the booking).
+            // Best-effort confirmation email, outside the lock (never breaks the booking).
             await _notificationService.SendAppointmentConfirmationAsync(entity.Id, cancellationToken);
 
             return _mapper.Map<AppointmentDto>(entity);
@@ -113,27 +124,44 @@ namespace MRC.Agendia.Application.Appointments
                 dto.EmployeeId != entity.EmployeeId ||
                 dto.ServiceId != entity.ServiceId;
 
-            if (bookingChanged)
+            async Task ApplyAsync()
             {
-                await _schedulingValidator.EnsureValidAsync(
-                    appointmentId: dto.Id,
-                    clientId: dto.ClientId,
-                    employeeId: dto.EmployeeId,
-                    serviceId: dto.ServiceId,
-                    startDate: dto.StartDate,
-                    endDate: dto.EndDate,
-                    cancellationToken: cancellationToken);
+                _mapper.Map(dto, entity);
+
+                // Rescheduling to a different time re-arms the 24h reminder so it
+                // is sent again for the new date.
+                if (entity.StartDate != previousStartDate)
+                    entity.ReminderSentAt = null;
+
+                _repository.Update(entity);
+                await _unitOfWork.Save(cancellationToken);
             }
 
-            _mapper.Map(dto, entity);
-
-            // Rescheduling to a different time re-arms the 24h reminder so it is
-            // sent again for the new date.
-            if (entity.StartDate != previousStartDate)
-                entity.ReminderSentAt = null;
-
-            _repository.Update(entity);
-            await _unitOfWork.Save(cancellationToken);
+            if (bookingChanged)
+            {
+                // Re-validate + persist inside the per-employee/day lock (same as
+                // Create) so a reschedule cannot over-book the destination slot.
+                await _bookingGuard.ExecuteSerializedAsync(
+                    dto.EmployeeId,
+                    DateOnly.FromDateTime(dto.StartDate),
+                    async () =>
+                    {
+                        await _schedulingValidator.EnsureValidAsync(
+                            appointmentId: dto.Id,
+                            clientId: dto.ClientId,
+                            employeeId: dto.EmployeeId,
+                            serviceId: dto.ServiceId,
+                            startDate: dto.StartDate,
+                            endDate: dto.EndDate,
+                            cancellationToken: cancellationToken);
+                        await ApplyAsync();
+                    },
+                    cancellationToken);
+            }
+            else
+            {
+                await ApplyAsync();
+            }
 
             if (previousStatus != entity.Status)
             {
