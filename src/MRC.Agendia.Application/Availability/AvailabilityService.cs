@@ -1,4 +1,5 @@
 using MRC.Agendia.Application.Availability.DTO;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Exceptions;
@@ -17,19 +18,22 @@ namespace MRC.Agendia.Application.Availability
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IAppointmentRepository _appointmentRepository;
         private readonly IScheduleResolver _scheduleResolver;
+        private readonly IClock _clock;
 
         public AvailabilityService(
             IBusinessRepository businessRepository,
             IServiceRepository serviceRepository,
             IEmployeeRepository employeeRepository,
             IAppointmentRepository appointmentRepository,
-            IScheduleResolver scheduleResolver)
+            IScheduleResolver scheduleResolver,
+            IClock clock)
         {
             _businessRepository = businessRepository;
             _serviceRepository = serviceRepository;
             _employeeRepository = employeeRepository;
             _appointmentRepository = appointmentRepository;
             _scheduleResolver = scheduleResolver;
+            _clock = clock;
         }
 
         public async Task<AvailabilityDto> GetAvailabilityAsync(
@@ -124,6 +128,10 @@ namespace MRC.Agendia.Application.Availability
             var step = TimeSpan.FromMinutes(stepMinutes);
             var slots = new List<AvailableSlotDto>();
 
+            // Wall-clock "now" in the business timezone: slots that already started
+            // are not bookable (the scheduling validator rejects past times).
+            var nowLocal = _clock.BusinessNow;
+
             foreach (var window in effective.TimeSlots.OrderBy(ts => ts.StartTime))
             {
                 var current = window.StartTime;
@@ -131,6 +139,13 @@ namespace MRC.Agendia.Application.Availability
                 while (current.Add(duration) <= window.EndTime)
                 {
                     var slotEnd = current.Add(duration);
+
+                    if (date.ToDateTime(current) < nowLocal)
+                    {
+                        current = current.Add(step);
+                        continue;
+                    }
+
                     var availableEmployeeIds = new List<int>();
                     var totalCapacity = 0;
 
