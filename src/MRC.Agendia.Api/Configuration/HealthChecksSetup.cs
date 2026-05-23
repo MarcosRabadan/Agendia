@@ -34,9 +34,10 @@ namespace MRC.Agendia.Api.Configuration
                     failureStatus: HealthStatus.Degraded,
                     tags: new[] { ReadyTag });
 
-            // The dashboard UI spins up a background poller; skip it under Testing
-            // so the integration host (TestServer) does not start polling.
-            if (!environment.IsEnvironment("Testing"))
+            // The dashboard UI polls /health/ready for the detailed report, which is
+            // only exposed in Development (elsewhere the health body is minimal), so
+            // register it only there (this also keeps the poller off the test host).
+            if (environment.IsDevelopment())
             {
                 services
                     .AddHealthChecksUI(setup =>
