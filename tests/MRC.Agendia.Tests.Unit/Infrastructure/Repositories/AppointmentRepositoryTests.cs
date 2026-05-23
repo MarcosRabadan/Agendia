@@ -118,6 +118,30 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Repositories
         }
 
         [Fact]
+        public async Task GetByBusinessIdAndDateRangeAsync_DevuelveCitaQueSolapaElBorde()
+        {
+            // Appointment 09:00-09:30; a range starting AFTER 09:00 but before its
+            // end must still return it (overlap, not containment) - issue BIZ-04.
+            var dbName = $"appt-repo-{Guid.NewGuid()}";
+            Seeded seeded;
+            using (var ctx = NewContext(dbName))
+            {
+                seeded = await SeedAsync(ctx);
+            }
+
+            using (var ctx = NewContext(dbName))
+            {
+                var from = new DateTime(2027, 1, 4, 9, 15, 0, DateTimeKind.Utc);
+                var to = new DateTime(2027, 1, 4, 12, 0, 0, DateTimeKind.Utc);
+
+                var result = await new AppointmentRepository(ctx)
+                    .GetByBusinessIdAndDateRangeAsync(seeded.BusinessId, from, to);
+
+                Assert.Single(result);
+            }
+        }
+
+        [Fact]
         public async Task GetByBusinessIdAndDateRangeAsync_ExcluyeCitaSoftDeleted()
         {
             // The appointment's OWN soft-delete still hides it.

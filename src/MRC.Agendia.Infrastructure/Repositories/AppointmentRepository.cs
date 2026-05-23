@@ -56,8 +56,8 @@ namespace MRC.Agendia.Infrastructure.Repositories
                  .IgnoreQueryFilters()
                  .Where(a => !a.IsDeleted &&
                              a.Employee.BusinessId == businessId &&
-                             a.StartDate >= startDate &&
-                             a.EndDate <= endDate)
+                             a.StartDate < endDate &&
+                             a.EndDate > startDate)
                  .ToListAsync(cancellationToken);
             return appointments;
         }
