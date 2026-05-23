@@ -91,7 +91,7 @@ namespace MRC.Agendia.Api.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> Logout([FromBody] LogoutRequestDto dto)
         {
-            await _mediator.Send(new LogoutCommand(dto.RefreshToken));
+            await _mediator.Send(new LogoutCommand(dto.RefreshToken, User.GetUserId()));
             return NoContent();
         }
 

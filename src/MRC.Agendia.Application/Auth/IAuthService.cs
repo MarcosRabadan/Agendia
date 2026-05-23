@@ -10,7 +10,7 @@ namespace MRC.Agendia.Application.Auth
     {
         Task<AuthResponseDto> LoginAsync(LoginDto dto, CancellationToken cancellationToken = default);
         Task<AuthResponseDto> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default);
-        Task LogoutAsync(string refreshToken, CancellationToken cancellationToken = default);
+        Task LogoutAsync(string refreshToken, string userId, CancellationToken cancellationToken = default);
         Task LogoutAllAsync(string userId, CancellationToken cancellationToken = default);
         Task ChangePasswordAsync(string userId, ChangePasswordDto dto, CancellationToken cancellationToken = default);
         Task ForgotPasswordAsync(ForgotPasswordDto dto, CancellationToken cancellationToken = default);

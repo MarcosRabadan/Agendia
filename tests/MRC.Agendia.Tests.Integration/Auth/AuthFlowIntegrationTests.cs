@@ -229,6 +229,28 @@ namespace MRC.Agendia.Tests.Integration.Auth
             Assert.Equal(HttpStatusCode.Unauthorized, afterLogout.StatusCode);
         }
 
+        [Fact]
+        public async Task Logout_NoRevocaElRefreshTokenDeOtroUsuario()
+        {
+            var (_, victim) = await RegisterUserAsync();
+            var (_, attacker) = await RegisterUserAsync();
+
+            // The attacker (authenticated) tries to log out the victim's token.
+            using var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/api/auth/logout")
+            {
+                Content = JsonContent.Create(new LogoutRequestDto(victim.RefreshToken))
+            };
+            logoutRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", attacker.AccessToken);
+            var logoutResponse = await _client.SendAsync(logoutRequest);
+
+            Assert.Equal(HttpStatusCode.NoContent, logoutResponse.StatusCode); // idempotent
+
+            // The victim's refresh token still works: it was not revoked.
+            var refresh = await _client.PostAsJsonAsync("/api/auth/refresh",
+                new RefreshTokenRequestDto(victim.RefreshToken));
+            Assert.Equal(HttpStatusCode.OK, refresh.StatusCode);
+        }
+
         // ===================================================================
         //  Helpers
         // ===================================================================
