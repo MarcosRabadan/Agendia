@@ -1,7 +1,9 @@
 using AutoMapper;
 using MRC.Agendia.Application.Appointments.DTO;
+using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Notifications;
+using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Exceptions;
@@ -15,6 +17,7 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IClientRepository _clientRepository;
         private readonly IAppointmentSchedulingValidator _schedulingValidator;
         private readonly INotificationService _notificationService;
+        private readonly IAuditLogger _auditLogger;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
@@ -23,6 +26,7 @@ namespace MRC.Agendia.Application.Appointments
             IClientRepository clientRepository,
             IAppointmentSchedulingValidator schedulingValidator,
             INotificationService notificationService,
+            IAuditLogger auditLogger,
             IUnitOfWork unitOfWork,
             IMapper mapper)
         {
@@ -30,6 +34,7 @@ namespace MRC.Agendia.Application.Appointments
             _clientRepository = clientRepository;
             _schedulingValidator = schedulingValidator;
             _notificationService = notificationService;
+            _auditLogger = auditLogger;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
@@ -92,7 +97,7 @@ namespace MRC.Agendia.Application.Appointments
             var entity = await _repository.GetByIdAsync(dto.Id, cancellationToken)
                 ?? throw new AppointmentNotFoundException(dto.Id);
 
-            var wasCancelled = entity.Status == AppointmentStatus.Cancelled;
+            var previousStatus = entity.Status;
 
             // Validate the new state against the schedule and other
             // appointments, excluding the current one from the conflict check.
@@ -109,8 +114,18 @@ namespace MRC.Agendia.Application.Appointments
             _repository.Update(entity);
             await _unitOfWork.Save(cancellationToken);
 
+            if (previousStatus != entity.Status)
+            {
+                await _auditLogger.LogAsync(
+                    AuditActions.AppointmentStatusChanged,
+                    "Appointment",
+                    entity.Id.ToString(),
+                    new { from = previousStatus.ToString(), to = entity.Status.ToString() },
+                    cancellationToken);
+            }
+
             // Best-effort cancellation email when the appointment is cancelled.
-            if (!wasCancelled && entity.Status == AppointmentStatus.Cancelled)
+            if (previousStatus != AppointmentStatus.Cancelled && entity.Status == AppointmentStatus.Cancelled)
                 await _notificationService.SendAppointmentCancellationAsync(entity.Id, cancellationToken);
 
             return _mapper.Map<AppointmentDto>(entity);

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Auth;
 using MRC.Agendia.Application.Auth.DTO;
 using MRC.Agendia.Domain.Constants;
@@ -17,6 +18,7 @@ namespace MRC.Agendia.Infrastructure.Identity
         private readonly IUnitOfWork _unitOfWork;
         private readonly IAuthEmailService _authEmailService;
         private readonly IAuthResponseFactory _authResponseFactory;
+        private readonly IAuditLogger _auditLogger;
 
         public UserRegistrationService(
             UserManager<ApplicationUser> userManager,
@@ -25,7 +27,8 @@ namespace MRC.Agendia.Infrastructure.Identity
             IEmployeeRepository employeeRepository,
             IUnitOfWork unitOfWork,
             IAuthEmailService authEmailService,
-            IAuthResponseFactory authResponseFactory)
+            IAuthResponseFactory authResponseFactory,
+            IAuditLogger auditLogger)
         {
             _userManager = userManager;
             _clientRepository = clientRepository;
@@ -34,6 +37,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             _unitOfWork = unitOfWork;
             _authEmailService = authEmailService;
             _authResponseFactory = authResponseFactory;
+            _auditLogger = auditLogger;
         }
 
         public async Task<AuthResponseDto> RegisterClientAsync(RegisterClientDto dto, CancellationToken cancellationToken = default)
@@ -68,6 +72,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             await _clientRepository.AddAsync(client, cancellationToken);
             await _unitOfWork.Save(cancellationToken);
 
+            await _auditLogger.LogAsync(AuditActions.UserCreated, "User", user.Id, new { user.Email, role = Roles.Client }, cancellationToken);
             await _authEmailService.SendEmailConfirmationAsync(user, cancellationToken);
             return await _authResponseFactory.CreateAsync(user, cancellationToken: cancellationToken);
         }
@@ -124,6 +129,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             await _employeeRepository.AddAsync(ownerEmployee, cancellationToken);
             await _unitOfWork.Save(cancellationToken);
 
+            await _auditLogger.LogAsync(AuditActions.UserCreated, "User", user.Id, new { user.Email, role = Roles.BusinessOwner }, cancellationToken);
             await _authEmailService.SendEmailConfirmationAsync(user, cancellationToken);
             return await _authResponseFactory.CreateAsync(user, cancellationToken: cancellationToken);
         }
@@ -168,6 +174,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             await _employeeRepository.AddAsync(employee, cancellationToken);
             await _unitOfWork.Save(cancellationToken);
 
+            await _auditLogger.LogAsync(AuditActions.UserCreated, "User", user.Id, new { user.Email, role = Roles.Employee }, cancellationToken);
             await _authEmailService.SendEmailConfirmationAsync(user, cancellationToken);
 
             var roles = await _userManager.GetRolesAsync(user);

@@ -7,6 +7,7 @@ namespace MRC.Agendia.Application.Authorization
     public interface ICurrentUserContext
     {
         string? UserId { get; }
+        string? IpAddress { get; }
         bool IsAuthenticated { get; }
         bool IsInRole(string role);
     }

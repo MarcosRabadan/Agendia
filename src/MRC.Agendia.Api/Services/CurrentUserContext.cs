@@ -14,6 +14,8 @@ namespace MRC.Agendia.Api.Services
 
         public string? UserId => _accessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
+        public string? IpAddress => _accessor.HttpContext?.Connection?.RemoteIpAddress?.ToString();
+
         public bool IsAuthenticated => _accessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
 
         public bool IsInRole(string role) => _accessor.HttpContext?.User?.IsInRole(role) ?? false;

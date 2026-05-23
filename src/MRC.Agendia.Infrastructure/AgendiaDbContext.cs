@@ -27,6 +27,9 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
     // Auth
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+    // Audit
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -125,5 +128,23 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<Client>()
             .HasIndex(c => c.UserId)
             .HasDatabaseName("IX_Client_UserId");
+
+        // AuditLog
+        modelBuilder.Entity<AuditLog>()
+            .Property(a => a.Action)
+            .HasMaxLength(100)
+            .IsRequired();
+
+        modelBuilder.Entity<AuditLog>()
+            .HasIndex(a => a.Timestamp)
+            .HasDatabaseName("IX_AuditLog_Timestamp");
+
+        modelBuilder.Entity<AuditLog>()
+            .HasIndex(a => a.UserId)
+            .HasDatabaseName("IX_AuditLog_UserId");
+
+        modelBuilder.Entity<AuditLog>()
+            .HasIndex(a => a.Action)
+            .HasDatabaseName("IX_AuditLog_Action");
     }
 }

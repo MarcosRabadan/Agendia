@@ -11,6 +11,7 @@ namespace MRC.Agendia.Tests.Unit.TestDoubles
         private readonly HashSet<string> _roles = new(StringComparer.OrdinalIgnoreCase);
 
         public string? UserId { get; set; }
+        public string? IpAddress { get; set; }
         public bool IsAuthenticated { get; set; }
 
         public bool IsInRole(string role) => _roles.Contains(role);
