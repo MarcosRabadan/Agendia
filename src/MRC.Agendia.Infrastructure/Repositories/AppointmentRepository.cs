@@ -15,12 +15,14 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
+        // The reads below IgnoreQueryFilters and re-apply !a.IsDeleted explicitly:
+        // Client/Employee/Service are required navigations with a soft-delete filter,
+        // so an Include without IgnoreQueryFilters turns into an INNER JOIN that drops
+        // any appointment whose parent was soft-deleted. That would hide live bookings
+        // from listings AND from the capacity/conflict count (enabling double-booking).
+        // Appointments keep their own history; only soft-deleted appointments are hidden.
+
         public Task<Appointment?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default)
-            // IgnoreQueryFilters so the appointment still loads its related
-            // Client/Employee/Service/Business even when one of them was
-            // soft-deleted afterwards. Otherwise the soft-delete query filter
-            // applies to the Includes and the required navigations come back null,
-            // breaking notifications. Appointments keep their history (no cascade).
             => Set
                 .AsNoTracking()
                 .IgnoreQueryFilters()
@@ -33,6 +35,8 @@ namespace MRC.Agendia.Infrastructure.Repositories
         public Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Where(a => !a.IsDeleted)
                 .Include(a => a.Client)
                 .Include(a => a.Employee)
                 .Include(a => a.Service)
@@ -42,17 +46,21 @@ namespace MRC.Agendia.Infrastructure.Repositories
         public Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedByClientIdAsync(int clientId, int page, int pageSize, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
+                .IgnoreQueryFilters()
                 .Include(a => a.Employee)
                 .Include(a => a.Service)
-                .Where(a => a.ClientId == clientId)
+                .Where(a => a.ClientId == clientId && !a.IsDeleted)
                 .OrderByDescending(a => a.StartDate)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
         public async Task<IEnumerable<Appointment>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
         {
             var appointments = await Set
+                 .AsNoTracking()
+                 .IgnoreQueryFilters()
                  .Include(a => a.Employee)
-                 .Where(a => a.Employee.BusinessId == businessId &&
+                 .Where(a => !a.IsDeleted &&
+                             a.Employee.BusinessId == businessId &&
                              a.StartDate >= startDate &&
                              a.EndDate <= endDate)
                  .ToListAsync(cancellationToken);

@@ -98,6 +98,7 @@ namespace MRC.Agendia.Application.Appointments
                 ?? throw new AppointmentNotFoundException(dto.Id);
 
             var previousStatus = entity.Status;
+            var previousStartDate = entity.StartDate;
 
             // Validate the new state against the schedule and other
             // appointments, excluding the current one from the conflict check.
@@ -111,6 +112,12 @@ namespace MRC.Agendia.Application.Appointments
                 cancellationToken: cancellationToken);
 
             _mapper.Map(dto, entity);
+
+            // Rescheduling to a different time re-arms the 24h reminder so it is
+            // sent again for the new date.
+            if (entity.StartDate != previousStartDate)
+                entity.ReminderSentAt = null;
+
             _repository.Update(entity);
             await _unitOfWork.Save(cancellationToken);
 
