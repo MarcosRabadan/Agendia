@@ -20,24 +20,11 @@ namespace MRC.Agendia.Application.Business
         }
 
         #region CRUD
-        public async Task<PagedResult<BusinessDto>> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
-        {
-            var (items, totalCount) = await _repository.GetPagedAsync(page, pageSize, cancellationToken);
-            var dtos = _mapper.Map<List<BusinessDto>>(items);
-            return PagedResult<BusinessDto>.Create(dtos, totalCount, page, pageSize);
-        }
-
         public async Task<PagedResult<BusinessPublicDto>> GetPagedPublicAsync(int page, int pageSize, CancellationToken cancellationToken = default)
         {
             var (items, totalCount) = await _repository.GetPagedActiveAsync(page, pageSize, cancellationToken);
             var dtos = _mapper.Map<List<BusinessPublicDto>>(items);
             return PagedResult<BusinessPublicDto>.Create(dtos, totalCount, page, pageSize);
-        }
-
-        public async Task<BusinessDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
-        {
-            var entity = await _repository.GetByIdAsync(id, cancellationToken);
-            return entity is null ? null : _mapper.Map<BusinessDto>(entity);
         }
 
         public async Task<BusinessPublicDto?> GetPublicByIdAsync(int id, CancellationToken cancellationToken = default)

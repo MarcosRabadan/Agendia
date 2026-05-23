@@ -167,7 +167,7 @@ namespace MRC.Agendia.Application.Appointments
         {
             ValidateRangeQuery(startDate, endDate);
             var entities = await _repository.GetByBusinessIdAndDateRangeAsync(businessId, startDate, endDate, cancellationToken);
-            return entities is null ? Enumerable.Empty<AppointmentDto>() : _mapper.Map<IEnumerable<AppointmentDto>>(entities);
+            return _mapper.Map<IEnumerable<AppointmentDto>>(entities);
         }
 
         /// <summary>

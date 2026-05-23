@@ -83,7 +83,7 @@ namespace MRC.Agendia.Application.Availability
             else
             {
                 employees = (await _employeeRepository
-                    .GetByBusinessIdAsync(businessId, onlyActive: true, cancellationToken))
+                    .GetActiveByBusinessIdAsync(businessId, cancellationToken))
                     .ToList();
             }
 
