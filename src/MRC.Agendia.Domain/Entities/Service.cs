@@ -1,6 +1,8 @@
+using MRC.Agendia.Domain.Common;
+
 namespace MRC.Agendia.Domain.Entities
 {
-    public class Service
+    public class Service : IAuditable, ISoftDelete
     {
         public int Id { get; set; }
         public int BusinessId { get; set; }
@@ -11,5 +13,12 @@ namespace MRC.Agendia.Domain.Entities
 
         public Business Business { get; set; } = null!;
         public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public string? CreatedBy { get; set; }
+        public string? UpdatedBy { get; set; }
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
     }
 }

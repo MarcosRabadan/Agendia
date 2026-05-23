@@ -10,5 +10,6 @@ namespace MRC.Agendia.Application.Clients
         Task<ClientDto> CreateAsync(CreateClientDto dto, CancellationToken cancellationToken = default);
         Task<ClientDto> UpdateAsync(UpdateClientDto dto, CancellationToken cancellationToken = default);
         Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
+        Task<bool> RestoreAsync(int id, CancellationToken cancellationToken = default);
     }
 }

@@ -75,5 +75,18 @@ namespace MRC.Agendia.Api.Controllers
             await _mediator.Send(new DeleteBusinessCommand(id));
             return NoContent();
         }
+
+        /// <summary>
+        /// Restaura un negocio previamente eliminado (soft delete). Solo Admin.
+        /// </summary>
+        [Authorize(Roles = Roles.Admin)]
+        [HttpPost("{id}/restore")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Restore(int id)
+        {
+            await _mediator.Send(new RestoreBusinessCommand(id));
+            return NoContent();
+        }
     }
 }

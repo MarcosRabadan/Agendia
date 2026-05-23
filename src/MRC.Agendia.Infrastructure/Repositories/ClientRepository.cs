@@ -16,6 +16,11 @@ namespace MRC.Agendia.Infrastructure.Repositories
         public async Task<Client?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
             => await _context.Clients.FindAsync(new object?[] { id }, cancellationToken);
 
+        public Task<Client?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default)
+            => _context.Clients
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+
         public Task<Client?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default)
             => _context.Clients
                 .AsNoTracking()
