@@ -101,6 +101,26 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
         }
 
         [Fact]
+        public async Task Availability_DeNegocioBorrado_Devuelve404()
+        {
+            var owner = await RegisterOwnerAsync("sd-avail");
+            var service = await CreateServiceAsAsync(owner, "Corte");
+
+            var adminToken = await SeedAdminAndGetTokenAsync();
+            using (var del = new HttpRequestMessage(HttpMethod.Delete, $"/api/Business/{owner.Business.Id}"))
+            {
+                del.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+                (await _client.SendAsync(del)).EnsureSuccessStatusCode();
+            }
+
+            var date = DateTime.UtcNow.Date.AddDays(1).ToString("yyyy-MM-dd");
+            var get = await _client.GetAsync(
+                $"/api/businesses/{owner.Business.Id}/availability?date={date}&serviceId={service.Id}");
+
+            Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
+        }
+
+        [Fact]
         public async Task CreateService_RellenaAuditFields()
         {
             var owner = await RegisterOwnerAsync("sd-audit");

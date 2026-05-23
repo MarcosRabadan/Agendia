@@ -22,8 +22,14 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
         public Task<Appointment?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default)
+            // IgnoreQueryFilters so the appointment still loads its related
+            // Client/Employee/Service/Business even when one of them was
+            // soft-deleted afterwards. Otherwise the soft-delete query filter
+            // applies to the Includes and the required navigations come back null,
+            // breaking notifications. Appointments keep their history (no cascade).
             => _context.Appointments
                 .AsNoTracking()
+                .IgnoreQueryFilters()
                 .Include(a => a.Client)
                 .Include(a => a.Service)
                 .Include(a => a.Employee)

@@ -30,16 +30,16 @@ namespace MRC.Agendia.Infrastructure.Notifications
             _logger = logger;
         }
 
-        public Task SendAppointmentConfirmationAsync(int appointmentId, CancellationToken cancellationToken = default)
+        public Task<bool> SendAppointmentConfirmationAsync(int appointmentId, CancellationToken cancellationToken = default)
             => SendAsync(appointmentId, "confirmation", BuildConfirmation, cancellationToken);
 
-        public Task SendAppointmentReminderAsync(int appointmentId, CancellationToken cancellationToken = default)
+        public Task<bool> SendAppointmentReminderAsync(int appointmentId, CancellationToken cancellationToken = default)
             => SendAsync(appointmentId, "reminder", BuildReminder, cancellationToken);
 
-        public Task SendAppointmentCancellationAsync(int appointmentId, CancellationToken cancellationToken = default)
+        public Task<bool> SendAppointmentCancellationAsync(int appointmentId, CancellationToken cancellationToken = default)
             => SendAsync(appointmentId, "cancellation", BuildCancellation, cancellationToken);
 
-        private async Task SendAsync(
+        private async Task<bool> SendAsync(
             int appointmentId,
             string kind,
             Func<Appointment, (string Subject, string Body)> compose,
@@ -51,7 +51,7 @@ namespace MRC.Agendia.Infrastructure.Notifications
                 if (appointment is null)
                 {
                     _logger.LogWarning("Notification {Kind}: appointment {Id} not found.", kind, appointmentId);
-                    return;
+                    return true;
                 }
 
                 var email = appointment.Client?.Email;
@@ -59,7 +59,7 @@ namespace MRC.Agendia.Infrastructure.Notifications
                 {
                     _logger.LogWarning(
                         "Notification {Kind}: appointment {Id} client has no email; skipping.", kind, appointmentId);
-                    return;
+                    return true;
                 }
 
                 var (subject, body) = compose(appointment);
@@ -67,11 +67,15 @@ namespace MRC.Agendia.Infrastructure.Notifications
 
                 _logger.LogInformation(
                     "Notification {Kind} sent for appointment {Id} to {Email}.", kind, appointmentId, email);
+                return true;
             }
             catch (Exception ex)
             {
+                // Unexpected/transient failure: report it so callers (e.g. the
+                // reminder job) can avoid marking the notification as delivered.
                 _logger.LogError(
                     ex, "Notification {Kind} failed for appointment {Id}.", kind, appointmentId);
+                return false;
             }
         }
 

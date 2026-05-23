@@ -105,14 +105,21 @@ namespace MRC.Agendia.Infrastructure.Notifications
                 return;
             }
 
+            var sent = 0;
             foreach (var appointment in due)
             {
-                await notifications.SendAppointmentReminderAsync(appointment.Id, cancellationToken);
-                appointment.ReminderSentAt = now;
+                // Only mark as reminded when the send actually succeeded, so a
+                // transient failure is retried on the next run instead of being
+                // silently lost.
+                if (await notifications.SendAppointmentReminderAsync(appointment.Id, cancellationToken))
+                {
+                    appointment.ReminderSentAt = now;
+                    sent++;
+                }
             }
 
             await context.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Enviados {Count} recordatorio(s) de cita.", due.Count);
+            _logger.LogInformation("Enviados {Sent} de {Total} recordatorio(s) de cita.", sent, due.Count);
         }
     }
 }
