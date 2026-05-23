@@ -1,6 +1,7 @@
 using AutoMapper;
 using MRC.Agendia.Application.Business.DTO;
 using MRC.Agendia.Application.Common;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Application.Business
@@ -56,7 +57,7 @@ namespace MRC.Agendia.Application.Business
         public async Task<BusinessDto> UpdateAsync(UpdateBusinessDto dto)
         {
             var entity = await _repository.GetByIdAsync(dto.Id)
-                ?? throw new KeyNotFoundException($"Business with Id {dto.Id} not found.");
+                ?? throw new BusinessNotFoundException(dto.Id);
 
             _mapper.Map(dto, entity);
             _repository.Update(entity);
@@ -67,7 +68,7 @@ namespace MRC.Agendia.Application.Business
         public async Task<bool> DeleteAsync(int id)
         {
             var entity = await _repository.GetByIdAsync(id)
-                ?? throw new KeyNotFoundException($"Business with Id {id} not found.");
+                ?? throw new BusinessNotFoundException(id);
 
             _repository.Delete(entity);
             await _unitOfWork.Save();

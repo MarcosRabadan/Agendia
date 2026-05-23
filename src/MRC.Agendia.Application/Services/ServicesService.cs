@@ -2,6 +2,7 @@ using AutoMapper;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Services.DTO;
 using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Application.Services
@@ -44,7 +45,7 @@ namespace MRC.Agendia.Application.Services
         public async Task<ServiceDto> UpdateAsync(UpdateServiceDto dto)
         {
             var entity = await _repository.GetByIdAsync(dto.Id)
-                ?? throw new KeyNotFoundException($"Service with Id {dto.Id} not found.");
+                ?? throw new ServiceNotFoundException(dto.Id);
 
             _mapper.Map(dto, entity);
             _repository.Update(entity);
@@ -55,7 +56,7 @@ namespace MRC.Agendia.Application.Services
         public async Task<bool> DeleteAsync(int id)
         {
             var entity = await _repository.GetByIdAsync(id)
-                ?? throw new KeyNotFoundException($"Service with Id {id} not found.");
+                ?? throw new ServiceNotFoundException(id);
 
             _repository.Delete(entity);
             await _unitOfWork.Save();

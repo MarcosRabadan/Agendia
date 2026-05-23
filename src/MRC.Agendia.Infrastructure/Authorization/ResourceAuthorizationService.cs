@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Domain.Exceptions;
 
 namespace MRC.Agendia.Infrastructure.Authorization
 {
@@ -74,7 +75,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .Where(e => e.Id == employeeId)
                 .Select(e => new { e.UserId, e.BusinessId })
                 .FirstOrDefaultAsync()
-                ?? throw new KeyNotFoundException($"Employee {employeeId} not found.");
+                ?? throw new EmployeeNotFoundException(employeeId);
 
             // El propio empleado
             if (employee.UserId == userId) return;
@@ -106,7 +107,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .FirstOrDefaultAsync();
 
             if (businessId is null)
-                throw new KeyNotFoundException($"Employee {employeeId} not found.");
+                throw new EmployeeNotFoundException(employeeId);
 
             var isOwner = await _context.Businesses
                 .AsNoTracking()
@@ -151,7 +152,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                     EmployeeUserId = a.Employee.UserId
                 })
                 .FirstOrDefaultAsync()
-                ?? throw new KeyNotFoundException($"Appointment {appointmentId} not found.");
+                ?? throw new AppointmentNotFoundException(appointmentId);
 
             // Owner del negocio
             if (appointment.OwnerUserId == userId) return;
@@ -179,7 +180,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .Where(e => e.Id == employeeId)
                 .Select(e => new { e.BusinessId, BusinessOwnerUserId = e.Business.OwnerUserId })
                 .FirstOrDefaultAsync()
-                ?? throw new KeyNotFoundException($"Employee {employeeId} not found.");
+                ?? throw new EmployeeNotFoundException(employeeId);
 
             // Owner del negocio del empleado
             if (employee.BusinessOwnerUserId == userId) return;
@@ -218,7 +219,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .FirstOrDefaultAsync();
 
             if (businessId is null)
-                throw new KeyNotFoundException($"Service {serviceId} not found.");
+                throw new ServiceNotFoundException(serviceId);
 
             await EnsureCanManageBusinessResourcesAsync(businessId.Value);
         }
@@ -232,7 +233,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .FirstOrDefaultAsync();
 
             if (businessId is null)
-                throw new KeyNotFoundException($"ScheduleTemplate {templateId} not found.");
+                throw new ScheduleTemplateNotFoundException(templateId);
 
             await EnsureCanManageBusinessResourcesAsync(businessId.Value);
         }
@@ -246,7 +247,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .FirstOrDefaultAsync();
 
             if (businessId is null)
-                throw new KeyNotFoundException($"ScheduleOverride {overrideId} not found.");
+                throw new ScheduleOverrideNotFoundException(overrideId);
 
             await EnsureCanManageBusinessResourcesAsync(businessId.Value);
         }

@@ -3,6 +3,7 @@ using MRC.Agendia.Application.Auth;
 using MRC.Agendia.Application.Auth.DTO;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Infrastructure.Identity
@@ -39,7 +40,7 @@ namespace MRC.Agendia.Infrastructure.Identity
         {
             var existing = await _userManager.FindByEmailAsync(dto.Email);
             if (existing != null)
-                throw new InvalidOperationException("Ya existe un usuario con ese email.");
+                throw new DuplicateEmailException();
 
             var user = new ApplicationUser
             {
@@ -75,7 +76,7 @@ namespace MRC.Agendia.Infrastructure.Identity
         {
             var existing = await _userManager.FindByEmailAsync(dto.Email);
             if (existing != null)
-                throw new InvalidOperationException("Ya existe un usuario con ese email.");
+                throw new DuplicateEmailException();
 
             var user = new ApplicationUser
             {
@@ -131,14 +132,14 @@ namespace MRC.Agendia.Infrastructure.Identity
         {
             // Validate the business exists and the caller owns it.
             var business = await _businessRepository.GetByIdAsync(dto.BusinessId)
-                ?? throw new KeyNotFoundException($"Business with Id {dto.BusinessId} not found.");
+                ?? throw new BusinessNotFoundException(dto.BusinessId);
 
             if (business.OwnerUserId != currentOwnerUserId)
                 throw new UnauthorizedAccessException("Solo el dueno del negocio puede crear empleados.");
 
             var existing = await _userManager.FindByEmailAsync(dto.Email);
             if (existing != null)
-                throw new InvalidOperationException("Ya existe un usuario con ese email.");
+                throw new DuplicateEmailException();
 
             var user = new ApplicationUser
             {

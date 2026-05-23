@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Infrastructure.Authorization;
 using MRC.Agendia.Tests.Unit.TestDoubles;
@@ -190,7 +191,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             // Admin would normally short-circuit, but only when the resource exists is the
             // KeyNotFoundException meaningful, so we use a non-admin to hit the lookup path.
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
-            await Assert.ThrowsAsync<KeyNotFoundException>(
+            await Assert.ThrowsAnyAsync<NotFoundException>(
                 () => sut.EnsureCanViewEmployeeAsync(999_999));
         }
 
@@ -265,7 +266,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         public async Task DeleteEmployee_NotFound_ThrowsKeyNotFound()
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
-            await Assert.ThrowsAsync<KeyNotFoundException>(
+            await Assert.ThrowsAnyAsync<NotFoundException>(
                 () => sut.EnsureCanDeleteEmployeeAsync(999_999));
         }
 
@@ -350,7 +351,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         public async Task ManageAppointment_NotFound_ThrowsKeyNotFound()
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
-            await Assert.ThrowsAsync<KeyNotFoundException>(
+            await Assert.ThrowsAnyAsync<NotFoundException>(
                 () => sut.EnsureCanManageAppointmentAsync(999_999));
         }
 
@@ -420,7 +421,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         public async Task CreateAppointment_EmployeeNotFound_ThrowsKeyNotFound()
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
-            await Assert.ThrowsAsync<KeyNotFoundException>(
+            await Assert.ThrowsAnyAsync<NotFoundException>(
                 () => sut.EnsureCanCreateAppointmentAsync(Client1Id, 999_999));
         }
 
@@ -474,7 +475,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         public async Task ManageService_NotFound_ThrowsKeyNotFound()
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
-            await Assert.ThrowsAsync<KeyNotFoundException>(
+            await Assert.ThrowsAnyAsync<NotFoundException>(
                 () => sut.EnsureCanManageServiceAsync(999_999));
         }
 
@@ -500,7 +501,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         public async Task ManageScheduleTemplate_NotFound_ThrowsKeyNotFound()
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
-            await Assert.ThrowsAsync<KeyNotFoundException>(
+            await Assert.ThrowsAnyAsync<NotFoundException>(
                 () => sut.EnsureCanManageScheduleTemplateAsync(999_999));
         }
 
@@ -526,7 +527,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         public async Task ManageScheduleOverride_NotFound_ThrowsKeyNotFound()
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
-            await Assert.ThrowsAsync<KeyNotFoundException>(
+            await Assert.ThrowsAnyAsync<NotFoundException>(
                 () => sut.EnsureCanManageScheduleOverrideAsync(999_999));
         }
 

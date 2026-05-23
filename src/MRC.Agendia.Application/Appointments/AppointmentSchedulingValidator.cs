@@ -1,4 +1,5 @@
 using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Domain.Services;
 
@@ -50,15 +51,15 @@ namespace MRC.Agendia.Application.Appointments
 
             // ---------- Existence + activity ----------
             _ = await _clientRepository.GetByIdAsync(clientId)
-                ?? throw new KeyNotFoundException($"Client {clientId} not found.");
+                ?? throw new ClientNotFoundException(clientId);
 
             var employee = await _employeeRepository.GetByIdAsync(employeeId)
-                ?? throw new KeyNotFoundException($"Employee {employeeId} not found.");
+                ?? throw new EmployeeNotFoundException(employeeId);
             if (!employee.IsActive)
                 throw new InvalidOperationException("El empleado indicado esta inactivo.");
 
             var service = await _serviceRepository.GetByIdAsync(serviceId)
-                ?? throw new KeyNotFoundException($"Service {serviceId} not found.");
+                ?? throw new ServiceNotFoundException(serviceId);
 
             if (service.BusinessId != employee.BusinessId)
                 throw new InvalidOperationException(
@@ -78,7 +79,7 @@ namespace MRC.Agendia.Application.Appointments
 
             if (!effective.IsOpen || effective.TimeSlots.Count == 0)
             {
-                throw new InvalidOperationException(
+                throw new AppointmentOutsideScheduleException(
                     $"El negocio esta cerrado el {date:yyyy-MM-dd}: {effective.ClosedReason ?? "sin horario"}.");
             }
 
@@ -92,7 +93,7 @@ namespace MRC.Agendia.Application.Appointments
 
             if (!fitsInsideSomeSlot)
             {
-                throw new InvalidOperationException(
+                throw new AppointmentOutsideScheduleException(
                     "La cita esta fuera del horario laboral o cruza un descanso entre turnos.");
             }
 
@@ -112,7 +113,7 @@ namespace MRC.Agendia.Application.Appointments
 
             if (overlappingCount >= employee.MaxConcurrentAppointments)
             {
-                throw new InvalidOperationException(
+                throw new AppointmentConflictException(
                     employee.MaxConcurrentAppointments == 1
                         ? "El empleado ya tiene otra cita que se solapa con este horario."
                         : $"El empleado ya tiene {overlappingCount} citas en este horario (capacidad maxima: {employee.MaxConcurrentAppointments}).");

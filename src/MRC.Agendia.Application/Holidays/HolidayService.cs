@@ -1,6 +1,7 @@
 using AutoMapper;
 using MRC.Agendia.Application.Holidays.DTO;
 using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Application.Holidays
@@ -47,7 +48,7 @@ namespace MRC.Agendia.Application.Holidays
         public async Task<HolidayCalendarDto> UpdateAsync(UpdateHolidayCalendarDto dto)
         {
             var entity = await _repository.GetByIdAsync(dto.Id)
-                ?? throw new KeyNotFoundException($"Holiday with Id {dto.Id} not found.");
+                ?? throw new HolidayNotFoundException(dto.Id);
 
             _mapper.Map(dto, entity);
             _repository.Update(entity);
@@ -58,7 +59,7 @@ namespace MRC.Agendia.Application.Holidays
         public async Task<bool> DeleteAsync(int id)
         {
             var entity = await _repository.GetByIdAsync(id)
-                ?? throw new KeyNotFoundException($"Holiday with Id {id} not found.");
+                ?? throw new HolidayNotFoundException(id);
 
             _repository.Delete(entity);
             await _unitOfWork.Save();

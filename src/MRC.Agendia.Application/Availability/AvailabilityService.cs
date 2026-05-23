@@ -1,6 +1,7 @@
 using MRC.Agendia.Application.Availability.DTO;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Domain.Services;
 
@@ -41,7 +42,7 @@ namespace MRC.Agendia.Application.Availability
                     $"stepMinutes debe estar entre {MinStepMinutes} y {MaxStepMinutes}.");
 
             var service = await _serviceRepository.GetByIdAsync(serviceId)
-                ?? throw new KeyNotFoundException($"Service {serviceId} not found.");
+                ?? throw new ServiceNotFoundException(serviceId);
 
             if (service.BusinessId != businessId)
                 throw new InvalidOperationException(
@@ -56,7 +57,7 @@ namespace MRC.Agendia.Application.Availability
             if (employeeId is int empId)
             {
                 var employee = await _employeeRepository.GetByIdAsync(empId)
-                    ?? throw new KeyNotFoundException($"Employee {empId} not found.");
+                    ?? throw new EmployeeNotFoundException(empId);
 
                 if (employee.BusinessId != businessId)
                     throw new InvalidOperationException(

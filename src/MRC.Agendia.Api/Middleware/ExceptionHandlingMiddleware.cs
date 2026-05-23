@@ -50,6 +50,11 @@ namespace MRC.Agendia.Api.Middleware
             var (statusCode, code, message) = ex switch
             {
                 AuthenticationException => (HttpStatusCode.Unauthorized, "UNAUTHENTICATED", ex.Message),
+                // Typed domain exceptions carry their own descriptive Code.
+                // NotFoundException is a DomainException, so match it first.
+                NotFoundException notFound => (HttpStatusCode.NotFound, notFound.Code, ex.Message),
+                DomainException domain => (HttpStatusCode.BadRequest, domain.Code, ex.Message),
+                // Legacy fallbacks for throw sites not yet migrated to typed exceptions.
                 KeyNotFoundException => (HttpStatusCode.NotFound, "NOT_FOUND", ex.Message),
                 UnauthorizedAccessException => (HttpStatusCode.Forbidden, "FORBIDDEN", ex.Message),
                 InvalidOperationException => (HttpStatusCode.BadRequest, "BAD_REQUEST", ex.Message),
