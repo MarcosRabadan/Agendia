@@ -6,9 +6,9 @@ using MRC.Agendia.Domain.Exceptions;
 namespace MRC.Agendia.Infrastructure.Authorization
 {
     /// <summary>
-    /// Implementacion de las reglas de autorizacion basadas en recursos.
-    /// Lanza UnauthorizedAccessException si el usuario no puede operar
-    /// sobre el recurso solicitado.
+    /// Implementation of the resource-based authorization rules. Throws
+    /// UnauthorizedAccessException when the user cannot operate on the
+    /// requested resource.
     /// </summary>
     public class ResourceAuthorizationService : IResourceAuthorizationService
     {
@@ -48,13 +48,13 @@ namespace MRC.Agendia.Infrastructure.Authorization
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
 
-            // Owner del negocio?
+            // Business owner?
             var isOwner = await _context.Businesses
                 .AsNoTracking()
                 .AnyAsync(b => b.Id == businessId && b.OwnerUserId == userId, cancellationToken);
             if (isOwner) return;
 
-            // Empleado del negocio?
+            // Business employee?
             var isEmployee = await _context.Employees
                 .AsNoTracking()
                 .AnyAsync(e => e.BusinessId == businessId && e.UserId == userId && e.IsActive, cancellationToken);
@@ -77,10 +77,10 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .FirstOrDefaultAsync(cancellationToken)
                 ?? throw new EmployeeNotFoundException(employeeId);
 
-            // El propio empleado
+            // The employee themselves
             if (employee.UserId == userId) return;
 
-            // Dueno del negocio del empleado
+            // Owner of the employee's business
             var isOwner = await _context.Businesses
                 .AsNoTracking()
                 .AnyAsync(b => b.Id == employee.BusinessId && b.OwnerUserId == userId, cancellationToken);
@@ -91,7 +91,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
         public async Task EnsureCanUpdateEmployeeAsync(int employeeId, CancellationToken cancellationToken = default)
         {
-            // Mismas reglas que ver: admin, dueno, o el propio empleado
+            // Same rules as view: admin, owner, or the employee themselves
             await EnsureCanViewEmployeeAsync(employeeId, cancellationToken);
         }
 
@@ -154,16 +154,16 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .FirstOrDefaultAsync(cancellationToken)
                 ?? throw new AppointmentNotFoundException(appointmentId);
 
-            // Owner del negocio
+            // Business owner
             if (appointment.OwnerUserId == userId) return;
 
-            // Empleado del negocio (cualquiera, no solo el de la cita)
+            // Employee of the business (any, not only the appointment's)
             var isEmployeeOfBusiness = await _context.Employees
                 .AsNoTracking()
                 .AnyAsync(e => e.BusinessId == appointment.BusinessId && e.UserId == userId && e.IsActive, cancellationToken);
             if (isEmployeeOfBusiness) return;
 
-            // Cliente de la cita
+            // The appointment's client
             if (appointment.ClientUserId == userId) return;
 
             throw new UnauthorizedAccessException("No tienes permiso para gestionar esta cita.");
@@ -174,7 +174,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
 
-            // Empleado destino y su negocio
+            // Target employee and their business
             var employee = await _context.Employees
                 .AsNoTracking()
                 .Where(e => e.Id == employeeId)
@@ -182,16 +182,16 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .FirstOrDefaultAsync(cancellationToken)
                 ?? throw new EmployeeNotFoundException(employeeId);
 
-            // Owner del negocio del empleado
+            // Owner of the employee's business
             if (employee.BusinessOwnerUserId == userId) return;
 
-            // Empleado del mismo negocio
+            // Employee of the same business
             var isEmployeeOfBusiness = await _context.Employees
                 .AsNoTracking()
                 .AnyAsync(e => e.BusinessId == employee.BusinessId && e.UserId == userId && e.IsActive, cancellationToken);
             if (isEmployeeOfBusiness) return;
 
-            // Si es Client, solo puede crear cita para si mismo
+            // If Client, can only create an appointment for themselves
             if (_currentUser.IsInRole(Roles.Client))
             {
                 var clientUserId = await _context.Clients

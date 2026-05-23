@@ -1,8 +1,8 @@
 namespace MRC.Agendia.Application.Authorization
 {
     /// <summary>
-    /// Abstraccion del usuario autenticado para que la capa Application
-    /// no dependa de ASP.NET (HttpContext, ClaimsPrincipal).
+    /// Abstraction of the authenticated user so the Application layer does not
+    /// depend on ASP.NET (HttpContext, ClaimsPrincipal).
     /// </summary>
     public interface ICurrentUserContext
     {
