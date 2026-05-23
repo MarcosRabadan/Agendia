@@ -31,6 +31,12 @@ namespace MRC.Agendia.Tests.Integration.Auth
                 new RegisterClientDto(email, ValidPassword, "Pending User", "600000000"));
             register.EnsureSuccessStatusCode();
 
+            // With confirmation required, registration must NOT grant a session.
+            var registerBody = await register.Content.ReadFromJsonAsync<AuthResponseDto>();
+            Assert.NotNull(registerBody);
+            Assert.True(string.IsNullOrEmpty(registerBody!.AccessToken));
+            Assert.True(string.IsNullOrEmpty(registerBody.RefreshToken));
+
             // Login is blocked while the email is unconfirmed.
             var blocked = await _client.PostAsJsonAsync("/api/auth/login",
                 new LoginDto(email, ValidPassword));

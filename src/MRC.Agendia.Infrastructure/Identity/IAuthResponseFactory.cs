@@ -12,5 +12,12 @@ namespace MRC.Agendia.Infrastructure.Identity
     public interface IAuthResponseFactory
     {
         Task<AuthResponseDto> CreateAsync(ApplicationUser user, string? existingRefreshToken = null, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Builds a response with the user but WITHOUT a session (empty tokens, no
+        /// refresh token persisted). Used when email confirmation is required: no
+        /// session is granted until the user confirms and logs in.
+        /// </summary>
+        Task<AuthResponseDto> CreateWithoutSessionAsync(ApplicationUser user);
     }
 }

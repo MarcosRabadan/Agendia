@@ -46,5 +46,12 @@ namespace MRC.Agendia.Infrastructure.Identity
             var userDto = new UserDto(user.Id, user.Email!, user.FullName, user.PhoneNumber, user.IsActive, roles);
             return new AuthResponseDto(accessToken, accessExpires, refreshTokenValue, refreshExpires, userDto);
         }
+
+        public async Task<AuthResponseDto> CreateWithoutSessionAsync(ApplicationUser user)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            var userDto = new UserDto(user.Id, user.Email!, user.FullName, user.PhoneNumber, user.IsActive, roles);
+            return new AuthResponseDto(string.Empty, default, string.Empty, default, userDto);
+        }
     }
 }
