@@ -10,6 +10,7 @@ namespace MRC.Agendia.Application.Appointments
         // Small tolerance for rounding when comparing minute counts.
         private const double DurationToleranceMinutes = 0.5;
 
+        private readonly IBusinessRepository _businessRepository;
         private readonly IClientRepository _clientRepository;
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IServiceRepository _serviceRepository;
@@ -17,12 +18,14 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IScheduleResolver _scheduleResolver;
 
         public AppointmentSchedulingValidator(
+            IBusinessRepository businessRepository,
             IClientRepository clientRepository,
             IEmployeeRepository employeeRepository,
             IServiceRepository serviceRepository,
             IAppointmentRepository appointmentRepository,
             IScheduleResolver scheduleResolver)
         {
+            _businessRepository = businessRepository;
             _clientRepository = clientRepository;
             _employeeRepository = employeeRepository;
             _serviceRepository = serviceRepository;
@@ -57,6 +60,11 @@ namespace MRC.Agendia.Application.Appointments
                 ?? throw new EmployeeNotFoundException(employeeId);
             if (!employee.IsActive)
                 throw new EmployeeInactiveException();
+
+            // A soft-deleted business is filtered out here, so its still-alive
+            // employees/services cannot be booked (consistent with AvailabilityService).
+            _ = await _businessRepository.GetByIdAsync(employee.BusinessId, cancellationToken)
+                ?? throw new BusinessNotFoundException(employee.BusinessId);
 
             var service = await _serviceRepository.GetByIdAsync(serviceId, cancellationToken)
                 ?? throw new ServiceNotFoundException(serviceId);
@@ -106,7 +114,7 @@ namespace MRC.Agendia.Application.Appointments
             var overlappingCount = (await _appointmentRepository
                     .GetByBusinessIdAndDateRangeAsync(employee.BusinessId, dayStart, dayEnd, cancellationToken))
                 .Where(a => a.EmployeeId == employeeId)
-                .Where(a => a.Status != AppointmentStatus.Cancelled && a.Status != AppointmentStatus.NoShow)
+                .Where(a => a.Status.OccupiesCapacity())
                 .Where(a => appointmentId is null || a.Id != appointmentId.Value)
                 .Count(a => a.StartDate < endDate && a.EndDate > startDate);
 

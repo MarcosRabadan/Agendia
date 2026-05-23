@@ -111,8 +111,7 @@ namespace MRC.Agendia.Application.Availability
 
             var appointments = (await _appointmentRepository
                     .GetByBusinessIdAndDateRangeAsync(businessId, dayStart, dayEnd, cancellationToken))
-                .Where(a => a.Status == AppointmentStatus.Pending
-                         || a.Status == AppointmentStatus.Confirmed)
+                .Where(a => a.Status.OccupiesCapacity())
                 .GroupBy(a => a.EmployeeId)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
