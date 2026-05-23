@@ -91,7 +91,10 @@ try
 }
 catch (Exception ex)
 {
+    // Re-throw so the process exits with a non-zero code. A silent exit 0
+    // would hide the crash from orchestrators and health probes.
     Log.Fatal(ex, "Application terminated unexpectedly");
+    throw;
 }
 finally
 {
