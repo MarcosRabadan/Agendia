@@ -2,6 +2,7 @@ using AutoMapper;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Application.Appointments
@@ -79,7 +80,7 @@ namespace MRC.Agendia.Application.Appointments
         public async Task<AppointmentDto> UpdateAsync(UpdateAppointmentDto dto)
         {
             var entity = await _repository.GetByIdAsync(dto.Id)
-                ?? throw new KeyNotFoundException($"Appointment with Id {dto.Id} not found.");
+                ?? throw new AppointmentNotFoundException(dto.Id);
 
             // Validate the new state against the schedule and other
             // appointments, excluding the current one from the conflict check.
@@ -100,7 +101,7 @@ namespace MRC.Agendia.Application.Appointments
         public async Task<bool> DeleteAsync(int id)
         {
             var entity = await _repository.GetByIdAsync(id)
-                ?? throw new KeyNotFoundException($"Appointment with Id {id} not found.");
+                ?? throw new AppointmentNotFoundException(id);
 
             _repository.Delete(entity);
             await _unitOfWork.Save();

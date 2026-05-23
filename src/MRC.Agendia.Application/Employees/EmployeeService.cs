@@ -2,6 +2,7 @@ using AutoMapper;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Employees.DTO;
 using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 
 namespace MRC.Agendia.Application.Employees
@@ -51,7 +52,7 @@ namespace MRC.Agendia.Application.Employees
         public async Task<EmployeeDto> UpdateAsync(UpdateEmployeeDto dto)
         {
             var entity = await _repository.GetByIdAsync(dto.Id)
-                ?? throw new KeyNotFoundException($"Employee with Id {dto.Id} not found.");
+                ?? throw new EmployeeNotFoundException(dto.Id);
 
             _mapper.Map(dto, entity);
             _repository.Update(entity);
@@ -62,7 +63,7 @@ namespace MRC.Agendia.Application.Employees
         public async Task<bool> DeleteAsync(int id)
         {
             var entity = await _repository.GetByIdAsync(id)
-                ?? throw new KeyNotFoundException($"Employee with Id {id} not found.");
+                ?? throw new EmployeeNotFoundException(id);
 
             _repository.Delete(entity);
             await _unitOfWork.Save();

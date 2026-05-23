@@ -1,6 +1,7 @@
 using AutoMapper;
 using MRC.Agendia.Application.Schedules.DTO;
 using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Domain.Services;
 
@@ -47,7 +48,7 @@ namespace MRC.Agendia.Application.Schedules
         public async Task<ScheduleTemplateDto> CreateTemplateAsync(CreateScheduleTemplateDto dto)
         {
             if (await _templateRepository.HasOverlappingTemplateAsync(dto.BusinessId, dto.EffectiveFrom, dto.EffectiveTo))
-                throw new InvalidOperationException("Ya existe una plantilla de horario que se solapa con las fechas indicadas.");
+                throw new TemplatesOverlapException("Ya existe una plantilla de horario que se solapa con las fechas indicadas.");
 
             var entity = _mapper.Map<ScheduleTemplate>(dto);
             entity.CreatedAt = DateTime.UtcNow;
@@ -60,10 +61,10 @@ namespace MRC.Agendia.Application.Schedules
         public async Task<ScheduleTemplateDto> UpdateTemplateAsync(UpdateScheduleTemplateDto dto)
         {
             var entity = await _templateRepository.GetByIdWithSlotsAsync(dto.Id)
-                ?? throw new KeyNotFoundException($"ScheduleTemplate with Id {dto.Id} not found.");
+                ?? throw new ScheduleTemplateNotFoundException(dto.Id);
 
             if (await _templateRepository.HasOverlappingTemplateAsync(entity.BusinessId, dto.EffectiveFrom, dto.EffectiveTo, dto.Id))
-                throw new InvalidOperationException("Ya existe una plantilla de horario que se solapa con las fechas indicadas.");
+                throw new TemplatesOverlapException("Ya existe una plantilla de horario que se solapa con las fechas indicadas.");
 
             entity.Name = dto.Name;
             entity.EffectiveFrom = dto.EffectiveFrom;
@@ -84,7 +85,7 @@ namespace MRC.Agendia.Application.Schedules
         public async Task<bool> DeleteTemplateAsync(int id)
         {
             var entity = await _templateRepository.GetByIdAsync(id)
-                ?? throw new KeyNotFoundException($"ScheduleTemplate with Id {id} not found.");
+                ?? throw new ScheduleTemplateNotFoundException(id);
 
             _templateRepository.Delete(entity);
             await _unitOfWork.Save();
@@ -124,7 +125,7 @@ namespace MRC.Agendia.Application.Schedules
         public async Task<ScheduleOverrideDto> UpdateOverrideAsync(UpdateScheduleOverrideDto dto)
         {
             var entity = await _overrideRepository.GetByIdWithSlotsAsync(dto.Id)
-                ?? throw new KeyNotFoundException($"ScheduleOverride with Id {dto.Id} not found.");
+                ?? throw new ScheduleOverrideNotFoundException(dto.Id);
 
             entity.Date = dto.Date;
             entity.OverrideType = dto.OverrideType;
@@ -147,7 +148,7 @@ namespace MRC.Agendia.Application.Schedules
         public async Task<bool> DeleteOverrideAsync(int id)
         {
             var entity = await _overrideRepository.GetByIdAsync(id)
-                ?? throw new KeyNotFoundException($"ScheduleOverride with Id {id} not found.");
+                ?? throw new ScheduleOverrideNotFoundException(id);
 
             _overrideRepository.Delete(entity);
             await _unitOfWork.Save();

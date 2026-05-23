@@ -2,6 +2,7 @@ using AutoMapper;
 using MRC.Agendia.Application.Schedules.DTO;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Domain.Services;
 
@@ -101,7 +102,7 @@ namespace MRC.Agendia.Application.Schedules
             foreach (var templateInput in dto.Templates)
             {
                 if (await _templateRepository.HasOverlappingTemplateAsync(dto.BusinessId, templateInput.EffectiveFrom, templateInput.EffectiveTo))
-                    throw new InvalidOperationException($"La plantilla '{templateInput.Name}' se solapa con una plantilla existente del negocio.");
+                    throw new TemplatesOverlapException($"La plantilla '{templateInput.Name}' se solapa con una plantilla existente del negocio.");
             }
 
             var warnings = new List<string>();
@@ -234,7 +235,7 @@ namespace MRC.Agendia.Application.Schedules
                     if (templates[i].EffectiveFrom <= templates[j].EffectiveTo
                         && templates[i].EffectiveTo >= templates[j].EffectiveFrom)
                     {
-                        throw new InvalidOperationException(
+                        throw new TemplatesOverlapException(
                             $"Las plantillas '{templates[i].Name}' y '{templates[j].Name}' tienen fechas que se solapan.");
                     }
                 }
