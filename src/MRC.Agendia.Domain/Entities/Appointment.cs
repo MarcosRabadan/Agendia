@@ -20,6 +20,13 @@ namespace MRC.Agendia.Domain.Entities
         /// </summary>
         public DateTime? ReminderSentAt { get; set; }
 
+        /// <summary>
+        /// Groups appointments generated together as a recurring series (e.g.
+        /// "every Friday at 16h"). Null for one-off appointments. Lets a whole
+        /// series be cancelled, moved or deleted as a unit.
+        /// </summary>
+        public Guid? SeriesId { get; set; }
+
         public Client Client { get; set; } = null!;
         public Employee Employee { get; set; } = null!;
         public Service Service { get; set; } = null!;

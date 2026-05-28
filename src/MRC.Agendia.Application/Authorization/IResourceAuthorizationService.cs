@@ -43,6 +43,12 @@ namespace MRC.Agendia.Application.Authorization
         /// </summary>
         Task EnsureCanCreateAppointmentAsync(int clientId, int employeeId, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// Admin or owner/employee of the business that owns the series. Resolves
+        /// the business from any appointment of the series.
+        /// </summary>
+        Task EnsureCanManageAppointmentSeriesAsync(Guid seriesId, CancellationToken cancellationToken = default);
+
         /// <summary>Admin or owner/employee of the service's business.</summary>
         Task EnsureCanManageServiceAsync(int serviceId, CancellationToken cancellationToken = default);
 

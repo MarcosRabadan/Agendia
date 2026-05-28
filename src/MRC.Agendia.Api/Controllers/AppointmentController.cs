@@ -91,6 +91,62 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         /// <summary>
+        /// Crea en masa una serie de citas recurrentes (p. ej. todos los viernes a
+        /// las 16h hasta una fecha). Devuelve las citas creadas y las omitidas (con
+        /// su motivo) cuando una ocurrencia cae en dia cerrado, choca o esta llena.
+        /// </summary>
+        [Authorize(Roles = RolePolicies.Staff)]
+        [HttpPost("series")]
+        [ProducesResponseType(typeof(AppointmentSeriesResultDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<AppointmentSeriesResultDto>> CreateSeries([FromBody] CreateAppointmentSeriesDto dto)
+        {
+            var result = await _mediator.Send(new CreateAppointmentSeriesCommand(dto));
+            return Ok(result);
+        }
+
+        /// <summary>Cancela las citas futuras y activas de una serie recurrente.</summary>
+        [Authorize(Roles = RolePolicies.Staff)]
+        [HttpPost("series/{seriesId:guid}/cancel")]
+        [ProducesResponseType(typeof(AppointmentSeriesCountResultDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<AppointmentSeriesCountResultDto>> CancelSeries(Guid seriesId)
+        {
+            var result = await _mediator.Send(new CancelAppointmentSeriesCommand(seriesId));
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Reprograma (desplaza) las citas futuras de una serie: nueva hora y/o
+        /// desplazamiento de dias. Las ocurrencias que choquen se omiten y se informan.
+        /// </summary>
+        [Authorize(Roles = RolePolicies.Staff)]
+        [HttpPost("series/{seriesId:guid}/move")]
+        [ProducesResponseType(typeof(MoveAppointmentSeriesResultDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<MoveAppointmentSeriesResultDto>> MoveSeries(Guid seriesId, [FromBody] MoveAppointmentSeriesDto dto)
+        {
+            var result = await _mediator.Send(new MoveAppointmentSeriesCommand(seriesId, dto));
+            return Ok(result);
+        }
+
+        /// <summary>Elimina (soft delete) todas las citas de una serie recurrente.</summary>
+        [Authorize(Roles = RolePolicies.Staff)]
+        [HttpDelete("series/{seriesId:guid}")]
+        [ProducesResponseType(typeof(AppointmentSeriesCountResultDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<AppointmentSeriesCountResultDto>> DeleteSeries(Guid seriesId)
+        {
+            var result = await _mediator.Send(new DeleteAppointmentSeriesCommand(seriesId));
+            return Ok(result);
+        }
+
+        /// <summary>
         /// Restaura una cita previamente eliminada (soft delete). Solo Admin.
         /// </summary>
         [Authorize(Roles = Roles.Admin)]

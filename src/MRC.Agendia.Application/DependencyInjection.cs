@@ -40,6 +40,7 @@ namespace MRC.Agendia.Application
 
             // Servicios de aplicacion (uno por agregado)
             services.AddScoped<IAppointmentService, AppointmentService>();
+            services.AddScoped<IRecurringAppointmentService, RecurringAppointmentService>();
             services.AddScoped<IAppointmentSchedulingValidator, AppointmentSchedulingValidator>();
             services.AddScoped<IBusinessService, BusinessService>();
             services.AddScoped<IClientService, ClientService>();

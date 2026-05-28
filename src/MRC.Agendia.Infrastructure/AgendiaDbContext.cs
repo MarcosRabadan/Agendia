@@ -175,5 +175,12 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<Appointment>()
             .HasIndex(a => a.StartDate)
             .HasDatabaseName("IX_Appointment_StartDate");
+
+        // Series operations (cancel/move/delete) look up all appointments of a
+        // recurring series by SeriesId. Filtered index: one-off appointments are null.
+        modelBuilder.Entity<Appointment>()
+            .HasIndex(a => a.SeriesId)
+            .HasDatabaseName("IX_Appointment_SeriesId")
+            .HasFilter("[SeriesId] IS NOT NULL");
     }
 }
