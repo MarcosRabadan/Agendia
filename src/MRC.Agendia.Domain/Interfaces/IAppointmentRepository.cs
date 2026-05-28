@@ -29,5 +29,17 @@ namespace MRC.Agendia.Domain.Interfaces
         /// ordered by StartDate. Tracked because callers mutate them (cancel/move).
         /// </summary>
         Task<IReadOnlyList<Appointment>> GetBySeriesIdAsync(Guid seriesId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Upcoming, capacity-occupying appointments of a business (optionally a
+        /// single employee) in [fromInclusive, toExclusive), excluding soft-deleted
+        /// participants and inactive employees. Used by the delay-notification flow.
+        /// </summary>
+        Task<IReadOnlyList<Appointment>> GetUpcomingForDelayAsync(
+            int businessId,
+            int? employeeId,
+            DateTime fromInclusive,
+            DateTime toExclusive,
+            CancellationToken cancellationToken = default);
     }
 }

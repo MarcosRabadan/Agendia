@@ -91,5 +91,30 @@ namespace MRC.Agendia.Infrastructure.Repositories
                     && a.StartDate < endDate
                     && a.EndDate > startDate,
                     cancellationToken);
+
+        public async Task<IReadOnlyList<Appointment>> GetUpcomingForDelayAsync(
+            int businessId,
+            int? employeeId,
+            DateTime fromInclusive,
+            DateTime toExclusive,
+            CancellationToken cancellationToken = default)
+            // IgnoreQueryFilters + explicit liveness checks: only notify clients of
+            // live appointments whose client/employee/business are not soft-deleted
+            // and whose employee is active (BIZ-03). AsNoTracking: read-only.
+            => await Set
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Where(a => !a.IsDeleted
+                    && a.Employee.BusinessId == businessId
+                    && (employeeId == null || a.EmployeeId == employeeId)
+                    && a.StartDate >= fromInclusive
+                    && a.StartDate < toExclusive
+                    && (a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Confirmed)
+                    && !a.Client.IsDeleted
+                    && !a.Employee.IsDeleted
+                    && a.Employee.IsActive
+                    && !a.Employee.Business.IsDeleted)
+                .OrderBy(a => a.StartDate)
+                .ToListAsync(cancellationToken);
     }
 }

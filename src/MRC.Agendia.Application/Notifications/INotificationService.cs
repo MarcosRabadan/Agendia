@@ -15,5 +15,8 @@ namespace MRC.Agendia.Application.Notifications
         Task<bool> SendAppointmentConfirmationAsync(int appointmentId, CancellationToken cancellationToken = default);
         Task<bool> SendAppointmentReminderAsync(int appointmentId, CancellationToken cancellationToken = default);
         Task<bool> SendAppointmentCancellationAsync(int appointmentId, CancellationToken cancellationToken = default);
+
+        /// <summary>Tells the client the business is running ~<paramref name="delayMinutes"/> minutes late.</summary>
+        Task<bool> SendDelayNotificationAsync(int appointmentId, int delayMinutes, CancellationToken cancellationToken = default);
     }
 }

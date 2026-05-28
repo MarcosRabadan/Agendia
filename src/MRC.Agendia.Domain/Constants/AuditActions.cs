@@ -19,5 +19,6 @@ namespace MRC.Agendia.Domain.Constants
         public const string AppointmentSeriesCancelled = "APPOINTMENT_SERIES_CANCELLED";
         public const string AppointmentSeriesDeleted = "APPOINTMENT_SERIES_DELETED";
         public const string AppointmentSeriesMoved = "APPOINTMENT_SERIES_MOVED";
+        public const string AppointmentDelayNotified = "APPOINTMENT_DELAY_NOTIFIED";
     }
 }
