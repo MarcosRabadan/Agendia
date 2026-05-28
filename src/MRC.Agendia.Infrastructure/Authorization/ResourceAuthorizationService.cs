@@ -208,6 +208,22 @@ namespace MRC.Agendia.Infrastructure.Authorization
             throw new UnauthorizedAccessException("No tienes permiso para crear esta cita.");
         }
 
+        public async Task EnsureCanManageAppointmentSeriesAsync(Guid seriesId, CancellationToken cancellationToken = default)
+        {
+            // Resolve the owning business from any (live) appointment of the series.
+            // Doubles as an existence check: an empty series is a 404.
+            var businessId = await _context.Appointments
+                .AsNoTracking()
+                .Where(a => a.SeriesId == seriesId)
+                .Select(a => (int?)a.Employee.BusinessId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (businessId is null)
+                throw new AppointmentSeriesNotFoundException(seriesId);
+
+            await EnsureCanManageBusinessResourcesAsync(businessId.Value, cancellationToken);
+        }
+
         // ---------- BUSINESS-SCOPED RESOURCES (with id lookup) ----------
 
         public async Task EnsureCanManageServiceAsync(int serviceId, CancellationToken cancellationToken = default)

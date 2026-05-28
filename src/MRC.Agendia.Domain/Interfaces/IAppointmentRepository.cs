@@ -23,5 +23,11 @@ namespace MRC.Agendia.Domain.Interfaces
             DateTime endDate,
             int? excludeAppointmentId,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Tracked appointments of a recurring series (excluding soft-deleted),
+        /// ordered by StartDate. Tracked because callers mutate them (cancel/move).
+        /// </summary>
+        Task<IReadOnlyList<Appointment>> GetBySeriesIdAsync(Guid seriesId, CancellationToken cancellationToken = default);
     }
 }

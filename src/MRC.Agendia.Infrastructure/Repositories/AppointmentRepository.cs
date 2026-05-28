@@ -62,6 +62,16 @@ namespace MRC.Agendia.Infrastructure.Repositories
             return appointments;
         }
 
+        public async Task<IReadOnlyList<Appointment>> GetBySeriesIdAsync(Guid seriesId, CancellationToken cancellationToken = default)
+            // Tracked (no AsNoTracking) because cancel/move/delete mutate the rows.
+            // IgnoreQueryFilters + !IsDeleted keeps live appointments whose parent
+            // was soft-deleted (consistent with the other reads above).
+            => await Set
+                .IgnoreQueryFilters()
+                .Where(a => a.SeriesId == seriesId && !a.IsDeleted)
+                .OrderBy(a => a.StartDate)
+                .ToListAsync(cancellationToken);
+
         public Task<int> CountOverlappingForEmployeeAsync(
             int employeeId,
             DateTime startDate,

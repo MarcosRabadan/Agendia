@@ -15,5 +15,9 @@ namespace MRC.Agendia.Domain.Constants
         public const string ScheduleOverrideUpdated = "SCHEDULE_OVERRIDE_UPDATED";
         public const string ScheduleOverrideDeleted = "SCHEDULE_OVERRIDE_DELETED";
         public const string AppointmentStatusChanged = "APPOINTMENT_STATUS_CHANGED";
+        public const string AppointmentSeriesCreated = "APPOINTMENT_SERIES_CREATED";
+        public const string AppointmentSeriesCancelled = "APPOINTMENT_SERIES_CANCELLED";
+        public const string AppointmentSeriesDeleted = "APPOINTMENT_SERIES_DELETED";
+        public const string AppointmentSeriesMoved = "APPOINTMENT_SERIES_MOVED";
     }
 }

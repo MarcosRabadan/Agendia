@@ -34,6 +34,7 @@ El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan 
 | `EMPLOYEE_NOT_FOUND` | `EmployeeNotFoundException` |
 | `SERVICE_NOT_FOUND` | `ServiceNotFoundException` |
 | `APPOINTMENT_NOT_FOUND` | `AppointmentNotFoundException` |
+| `APPOINTMENT_SERIES_NOT_FOUND` | `AppointmentSeriesNotFoundException` |
 | `SCHEDULE_TEMPLATE_NOT_FOUND` | `ScheduleTemplateNotFoundException` |
 | `SCHEDULE_OVERRIDE_NOT_FOUND` | `ScheduleOverrideNotFoundException` |
 | `HOLIDAY_NOT_FOUND` | `HolidayNotFoundException` |

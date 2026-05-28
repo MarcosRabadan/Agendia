@@ -10,5 +10,6 @@ namespace MRC.Agendia.Application.Appointments.DTO
         DateTime StartDate,
         DateTime EndDate,
         AppointmentStatus Status,
-        string? Notes);
+        string? Notes,
+        Guid? SeriesId = null);
 }
