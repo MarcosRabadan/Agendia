@@ -39,6 +39,9 @@ namespace MRC.Agendia.Infrastructure.Notifications
         public Task<bool> SendAppointmentCancellationAsync(int appointmentId, CancellationToken cancellationToken = default)
             => SendAsync(appointmentId, "cancellation", BuildCancellation, cancellationToken);
 
+        public Task<bool> SendDelayNotificationAsync(int appointmentId, int delayMinutes, CancellationToken cancellationToken = default)
+            => SendAsync(appointmentId, "delay", a => BuildDelay(a, delayMinutes), cancellationToken);
+
         private async Task<bool> SendAsync(
             int appointmentId,
             string kind,
@@ -109,6 +112,17 @@ namespace MRC.Agendia.Infrastructure.Notifications
                 "<p>Tu cita ha sido cancelada:</p>" +
                 Details(a) +
                 "<p>Puedes reservar una nueva cuando quieras desde la app.</p>";
+            return (subject, body);
+        }
+
+        private static (string Subject, string Body) BuildDelay(Appointment a, int delayMinutes)
+        {
+            var subject = "Tu cita va con retraso - Agendia";
+            var body =
+                $"<p>Hola {Encode(a.Client.Name)},</p>" +
+                $"<p>Te avisamos de que vamos con aproximadamente <strong>{delayMinutes} minutos</strong> de retraso sobre tu cita:</p>" +
+                Details(a) +
+                "<p>Disculpa las molestias. Puedes venir un poco mas tarde sin perder tu turno.</p>";
             return (subject, body);
         }
 
