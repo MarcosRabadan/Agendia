@@ -117,6 +117,16 @@ namespace MRC.Agendia.Application.Waitlist
                 if (entry is null)
                     return;
 
+                // Re-check the slot actually has room now before notifying. The freed
+                // appointment may not have opened a seat (employee MaxConcurrentAppointments
+                // > 1), and an "any-employee" entry (EmployeeId null) only wants a slot that
+                // is genuinely free across the business. Skip if it is still full (0) or no
+                // longer schedulable (null) so we do not raise a false "hay hueco" alert.
+                var capacity = await _availabilityService.GetSlotCapacityAsync(
+                    entry.BusinessId, entry.Date, entry.StartTime, entry.ServiceId, entry.EmployeeId, cancellationToken);
+                if (capacity is null or <= 0)
+                    return;
+
                 // Send first, then mark Notified only if it actually went out.
                 // Marking before sending (and swallowing a failed send) would leave
                 // the entry stuck on Notified -> GetNextWaitingForSlotAsync never
