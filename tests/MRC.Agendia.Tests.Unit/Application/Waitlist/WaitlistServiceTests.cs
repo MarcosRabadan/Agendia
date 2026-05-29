@@ -133,6 +133,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
             var waiting = new WaitlistEntry { Id = 7, ClientId = 1, Status = WaitlistStatus.Waiting };
             _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
                 .Returns(waiting);
+            SlotCapacity(1); // the freed slot now has room
             _notifications.SendWaitlistAvailabilityAsync(7, Arg.Any<CancellationToken>()).Returns(true);
 
             await _sut.NotifyForFreedAppointmentAsync(50);
@@ -150,6 +151,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
             var waiting = new WaitlistEntry { Id = 7, ClientId = 1, Status = WaitlistStatus.Waiting };
             _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
                 .Returns(waiting);
+            SlotCapacity(1); // the slot has room, so the send is attempted
             // The send fails (returns false): the entry must stay Waiting so a later
             // freed slot re-selects it - otherwise the notification would be lost.
             _notifications.SendWaitlistAvailabilityAsync(7, Arg.Any<CancellationToken>()).Returns(false);
@@ -158,6 +160,23 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
 
             Assert.Equal(WaitlistStatus.Waiting, waiting.Status);
             await _unitOfWork.DidNotReceive().Save(Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task NotifyForFreedAppointment_FranjaSigueLlena_NoAvisa()
+        {
+            _appointmentRepository.GetByIdWithDetailsAsync(50, Arg.Any<CancellationToken>())
+                .Returns(new Appointment { Id = 50, EmployeeId = 2, ServiceId = 3, StartDate = new DateTime(2030, 6, 7, 16, 0, 0), Employee = new Employee { Id = 2, BusinessId = 10 } });
+            var waiting = new WaitlistEntry { Id = 7, ClientId = 1, Status = WaitlistStatus.Waiting };
+            _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
+                .Returns(waiting);
+            SlotCapacity(0); // the freed appointment did not actually open a seat (still full)
+
+            await _sut.NotifyForFreedAppointmentAsync(50);
+
+            // No false "hay hueco" notification, and the entry stays Waiting for a real opening.
+            await _notifications.DidNotReceiveWithAnyArgs().SendWaitlistAvailabilityAsync(default, default);
+            Assert.Equal(WaitlistStatus.Waiting, waiting.Status);
         }
 
         [Fact]
