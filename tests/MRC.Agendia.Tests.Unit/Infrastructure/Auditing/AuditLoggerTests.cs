@@ -12,7 +12,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Auditing
         private static AgendiaDbContext NewContext() =>
             new(new DbContextOptionsBuilder<AgendiaDbContext>()
                 .UseInMemoryDatabase($"audit-{Guid.NewGuid()}")
-                .Options);
+                .Options, new UnrestrictedBusinessScope());
 
         [Fact]
         public async Task LogAsync_PersisteEntrada_ConUsuarioIpYDetails()

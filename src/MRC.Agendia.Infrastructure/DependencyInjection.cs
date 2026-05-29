@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments;
@@ -12,6 +13,7 @@ using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Domain.Services;
 using MRC.Agendia.Infrastructure.Auditing;
 using MRC.Agendia.Infrastructure.Authorization;
+using MRC.Agendia.Infrastructure.Caching;
 using MRC.Agendia.Infrastructure.Identity;
 using MRC.Agendia.Infrastructure.Notifications;
 using MRC.Agendia.Infrastructure.Persistence;
@@ -43,15 +45,27 @@ namespace MRC.Agendia.Infrastructure
                        .ConfigureWarnings(w => w.Ignore(
                            CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning)));
 
+            // In-memory cache for read-heavy, rarely-changing data (#55).
+            services.AddMemoryCache();
+
             // Repositories
             services.AddScoped<IAppointmentRepository, AppointmentRepository>();
             services.AddScoped<IBusinessRepository, BusinessRepository>();
             services.AddScoped<IClientRepository, ClientRepository>();
             services.AddScoped<IEmployeeRepository, EmployeeRepository>();
             services.AddScoped<IServiceRepository, ServiceRepository>();
-            services.AddScoped<IScheduleTemplateRepository, ScheduleTemplateRepository>();
             services.AddScoped<IScheduleOverrideRepository, ScheduleOverrideRepository>();
-            services.AddScoped<IHolidayCalendarRepository, HolidayCalendarRepository>();
+
+            // Schedule templates + holidays are decorated with a caching layer (#55):
+            // register the concrete repo, then wrap it with the caching decorator.
+            services.AddScoped<ScheduleTemplateRepository>();
+            services.AddScoped<IScheduleTemplateRepository>(sp => new CachingScheduleTemplateRepository(
+                sp.GetRequiredService<ScheduleTemplateRepository>(), sp.GetRequiredService<IMemoryCache>()));
+            services.AddScoped<HolidayCalendarRepository>();
+            services.AddScoped<IHolidayCalendarRepository>(sp => new CachingHolidayCalendarRepository(
+                sp.GetRequiredService<HolidayCalendarRepository>(),
+                sp.GetRequiredService<IMemoryCache>(),
+                sp.GetRequiredService<AgendiaDbContext>()));
             services.AddScoped<IAuditLogRepository, AuditLogRepository>();
             services.AddScoped<IBusinessStatsRepository, BusinessStatsRepository>();
             services.AddScoped<IWaitlistRepository, WaitlistRepository>();
@@ -80,6 +94,9 @@ namespace MRC.Agendia.Infrastructure
             // Resource-based authorization (more setup in the API project because
             // it depends on IHttpContextAccessor; here just the infrastructural service)
             services.AddScoped<IResourceAuthorizationService, ResourceAuthorizationService>();
+
+            // Per-request multi-tenant business scope for the global query filter (#58).
+            services.AddScoped<ICurrentBusinessScope, CurrentBusinessScope>();
 
             // Notifications (email; push/FCM tracked separately)
             services.AddScoped<INotificationService, NotificationService>();

@@ -16,7 +16,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Persistence
                 .ConfigureWarnings(w => w.Ignore(
                     CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning))
                 .AddInterceptors(new AuditableSaveChangesInterceptor(user))
-                .Options);
+                .Options, new UnrestrictedBusinessScope());
 
         [Fact]
         public async Task Insert_RellenaCreatedAtYCreatedBy()

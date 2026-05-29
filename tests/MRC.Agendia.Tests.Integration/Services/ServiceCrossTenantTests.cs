@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Auth.DTO;
+using MRC.Agendia.Application.Availability.DTO;
 using MRC.Agendia.Application.Business.DTO;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Services.DTO;
@@ -36,7 +37,7 @@ namespace MRC.Agendia.Tests.Integration.Services
         }
 
         [Fact]
-        public async Task UpdateService_OwnerB_TocaServiceDeBusinessA_DevuelveForbidden()
+        public async Task UpdateService_OwnerB_TocaServiceDeBusinessA_NoLoEncuentra()
         {
             var ownerA = await RegisterOwnerAsync("svc-a");
             var ownerB = await RegisterOwnerAsync("svc-b");
@@ -60,7 +61,10 @@ namespace MRC.Agendia.Tests.Integration.Services
 
             var response = await _client.SendAsync(request);
 
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            // Defense in depth (#58): the global business filter hides business A's
+            // service from owner B, so the handler cannot resolve it -> 404 (stronger
+            // than the previous 403: it does not even leak that the service exists).
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 
             // Sanity: the service is still in business A with the original data.
             using var scope = _factory.Services.CreateScope();
@@ -69,6 +73,26 @@ namespace MRC.Agendia.Tests.Integration.Services
             Assert.NotNull(stored);
             Assert.Equal(ownerA.Business.Id, stored!.BusinessId);
             Assert.Equal("Corte A", stored.Name);
+        }
+
+        [Fact]
+        public async Task ListaPublicaDeNegocios_OwnerAutenticado_VeTodos_NoSoloElSuyo()
+        {
+            // #58 must NOT scope public catalog reads: an authenticated owner still
+            // sees every business via the anonymous list (IgnoreQueryFilters), not
+            // just his own. Confirms the public-read bypass works for a restricted user.
+            var ownerA = await RegisterOwnerAsync("scope-list-a");
+            var ownerB = await RegisterOwnerAsync("scope-list-b");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/api/Business?page=1&pageSize=200");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerB.Token);
+            var response = await _client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var paged = await response.Content.ReadFromJsonAsync<PagedResult<BusinessPublicDto>>();
+            Assert.NotNull(paged);
+            Assert.Contains(paged!.Items, b => b.Id == ownerA.Business.Id);
+            Assert.Contains(paged.Items, b => b.Id == ownerB.Business.Id);
         }
 
         [Fact]
@@ -100,6 +124,74 @@ namespace MRC.Agendia.Tests.Integration.Services
             Assert.Equal(22m, updated.Price);
             // The service stays in its owner's business.
             Assert.Equal(ownerA.Business.Id, updated.BusinessId);
+        }
+
+        [Fact]
+        public async Task GetServiceById_OwnerAutenticado_DeOtroNegocio_DevuelveOk()
+        {
+            // #58 regression: GET /api/Service/{id} is [AllowAnonymous] (public
+            // catalog detail). Before the fix it read through the scoped GetByIdAsync,
+            // so an authenticated owner browsing ANOTHER business's service got 404.
+            // It must now return the service (read unscoped via GetByIdPublicAsync).
+            var ownerA = await RegisterOwnerAsync("svc-detail-a");
+            var ownerB = await RegisterOwnerAsync("svc-detail-b");
+            var serviceOfA = await CreateServiceAsAsync(ownerA, "Corte A", price: 20m, duration: 30);
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/Service/{serviceOfA.Id}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerB.Token);
+            var response = await _client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var dto = await response.Content.ReadFromJsonAsync<ServiceDto>();
+            Assert.NotNull(dto);
+            Assert.Equal(serviceOfA.Id, dto!.Id);
+            Assert.Equal(ownerA.Business.Id, dto.BusinessId);
+        }
+
+        [Fact]
+        public async Task Disponibilidad_OwnerAutenticado_DeOtroNegocio_NoDevuelve404()
+        {
+            // #58 regression: GET /api/businesses/{id}/availability is [AllowAnonymous]
+            // (public booking flow). Before the fix the business/service reads were
+            // scoped, so an authenticated owner querying ANOTHER business got 404. It
+            // must now resolve (200) - the day may be closed, but it is not hidden.
+            var ownerA = await RegisterOwnerAsync("avail-a");
+            var ownerB = await RegisterOwnerAsync("avail-b");
+            var serviceOfA = await CreateServiceAsAsync(ownerA, "Corte A", price: 20m, duration: 30);
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"/api/businesses/{ownerA.Business.Id}/availability?date=2099-01-05&serviceId={serviceOfA.Id}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerB.Token);
+            var response = await _client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var availability = await response.Content.ReadFromJsonAsync<AvailabilityDto>();
+            Assert.NotNull(availability);
+            Assert.Equal(ownerA.Business.Id, availability!.BusinessId);
+        }
+
+        [Fact]
+        public async Task CatalogoPublicoDeServicios_OwnerAutenticado_VeServiciosDeOtroNegocio()
+        {
+            // #58 must NOT scope the public Service catalog: an authenticated owner
+            // still sees every business's services via the anonymous list
+            // (IgnoreQueryFilters), not just his own. Mirrors the public-business-list
+            // test for the GET /api/Service catalog path.
+            var ownerA = await RegisterOwnerAsync("svc-cat-a");
+            var ownerB = await RegisterOwnerAsync("svc-cat-b");
+            var serviceOfA = await CreateServiceAsAsync(ownerA, "Corte A", price: 20m, duration: 30);
+            var serviceOfB = await CreateServiceAsAsync(ownerB, "Corte B", price: 25m, duration: 45);
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/api/Service?page=1&pageSize=200");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerB.Token);
+            var response = await _client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var paged = await response.Content.ReadFromJsonAsync<PagedResult<ServiceDto>>();
+            Assert.NotNull(paged);
+            Assert.Contains(paged!.Items, s => s.Id == serviceOfA.Id);
+            Assert.Contains(paged.Items, s => s.Id == serviceOfB.Id);
         }
 
         // ----- Helpers -----

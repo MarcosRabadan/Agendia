@@ -4,6 +4,7 @@ using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Infrastructure.Repositories;
+using MRC.Agendia.Tests.Unit.TestDoubles;
 
 namespace MRC.Agendia.Tests.Unit.Infrastructure.Repositories
 {
@@ -17,7 +18,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Repositories
                 .UseInMemoryDatabase(dbName)
                 .ConfigureWarnings(w => w.Ignore(
                     CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning))
-                .Options);
+                .Options, new UnrestrictedBusinessScope());
 
         private sealed record Seeded(int AppointmentId, int BusinessId, int ClientId, int EmployeeId, int ServiceId);
 

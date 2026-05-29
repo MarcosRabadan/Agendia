@@ -15,6 +15,16 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
 
+        // Public (anonymous) read by id for the booking/availability flow:
+        // IgnoreQueryFilters so it works regardless of the caller's business scope
+        // (#58); re-apply !IsDeleted since the filter is bypassed. The caller still
+        // checks BusinessId/IsActive. Management paths keep the scoped GetByIdAsync.
+        public Task<Employee?> GetByIdPublicAsync(int id, CancellationToken cancellationToken = default)
+            => Set
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(e => e.Id == id && !e.IsDeleted, cancellationToken);
+
         public Task<(IReadOnlyList<Employee> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
@@ -28,9 +38,13 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderBy(e => e.Id)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
+        // Used only by the public availability flow: IgnoreQueryFilters so an
+        // authenticated owner/employee can read another business's active staff
+        // (#58); re-apply !IsDeleted since the global business filter is bypassed.
         public async Task<IEnumerable<Employee>> GetActiveByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default)
             => await Set.AsNoTracking()
-                .Where(e => e.BusinessId == businessId && e.IsActive)
+                .IgnoreQueryFilters()
+                .Where(e => e.BusinessId == businessId && e.IsActive && !e.IsDeleted)
                 .OrderBy(e => e.Id)
                 .ToListAsync(cancellationToken);
     }

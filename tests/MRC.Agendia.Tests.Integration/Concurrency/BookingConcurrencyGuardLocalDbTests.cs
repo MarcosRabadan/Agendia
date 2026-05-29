@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Infrastructure.Persistence;
+using MRC.Agendia.Tests.Integration.Infrastructure;
 
 namespace MRC.Agendia.Tests.Integration.Concurrency
 {
@@ -25,7 +26,7 @@ namespace MRC.Agendia.Tests.Integration.Concurrency
             var connectionString = $"{LocalDbBase};Database=agendia-conc-{Guid.NewGuid():N}";
 
             AgendiaDbContext NewContext() =>
-                new(new DbContextOptionsBuilder<AgendiaDbContext>().UseSqlServer(connectionString).Options);
+                new(new DbContextOptionsBuilder<AgendiaDbContext>().UseSqlServer(connectionString).Options, new UnrestrictedBusinessScope());
 
             // Probe LocalDB; skip cleanly if it is not available in this environment.
             var available = false;

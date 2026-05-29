@@ -30,7 +30,10 @@ namespace MRC.Agendia.Application.Services
 
         public async Task<ServiceDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            var entity = await _repository.GetByIdAsync(id, cancellationToken);
+            // Public catalog detail (GET /api/Service/{id} is [AllowAnonymous]):
+            // read unscoped so an authenticated owner/employee can see any service,
+            // not only their own business's (#58). Update/Delete stay scoped.
+            var entity = await _repository.GetByIdPublicAsync(id, cancellationToken);
             return entity is null ? null : _mapper.Map<ServiceDto>(entity);
         }
 

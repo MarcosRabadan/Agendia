@@ -50,12 +50,14 @@ namespace MRC.Agendia.Application.Availability
                 throw new ArgumentException(
                     $"stepMinutes debe estar entre {MinStepMinutes} y {MaxStepMinutes}.");
 
-            // A soft-deleted business is filtered out here (GetByIdAsync honours the
-            // query filter), so it is not bookable and does not resolve schedules.
-            _ = await _businessRepository.GetByIdAsync(businessId, cancellationToken)
+            // Public booking read: resolve the business unscoped (GetActiveByIdAsync
+            // uses IgnoreQueryFilters) so an authenticated owner/employee browsing
+            // ANOTHER business still gets it (#58). An inactive or soft-deleted
+            // business is not bookable -> 404, like the public business-detail read.
+            _ = await _businessRepository.GetActiveByIdAsync(businessId, cancellationToken)
                 ?? throw new BusinessNotFoundException(businessId);
 
-            var service = await _serviceRepository.GetByIdAsync(serviceId, cancellationToken)
+            var service = await _serviceRepository.GetByIdPublicAsync(serviceId, cancellationToken)
                 ?? throw new ServiceNotFoundException(serviceId);
 
             if (service.BusinessId != businessId)
@@ -73,7 +75,7 @@ namespace MRC.Agendia.Application.Availability
             {
                 foreach (var extraId in extraServiceIds)
                 {
-                    var extra = await _serviceRepository.GetByIdAsync(extraId, cancellationToken)
+                    var extra = await _serviceRepository.GetByIdPublicAsync(extraId, cancellationToken)
                         ?? throw new ServiceNotFoundException(extraId);
                     if (extra.BusinessId != businessId)
                         throw new InvalidOperationException("Un servicio adicional no pertenece al negocio indicado.");
@@ -87,7 +89,7 @@ namespace MRC.Agendia.Application.Availability
             List<Employee> employees;
             if (employeeId is int empId)
             {
-                var employee = await _employeeRepository.GetByIdAsync(empId, cancellationToken)
+                var employee = await _employeeRepository.GetByIdPublicAsync(empId, cancellationToken)
                     ?? throw new EmployeeNotFoundException(empId);
 
                 if (employee.BusinessId != businessId)
@@ -211,10 +213,10 @@ namespace MRC.Agendia.Application.Availability
             int? employeeId,
             CancellationToken cancellationToken = default)
         {
-            _ = await _businessRepository.GetByIdAsync(businessId, cancellationToken)
+            _ = await _businessRepository.GetActiveByIdAsync(businessId, cancellationToken)
                 ?? throw new BusinessNotFoundException(businessId);
 
-            var service = await _serviceRepository.GetByIdAsync(serviceId, cancellationToken)
+            var service = await _serviceRepository.GetByIdPublicAsync(serviceId, cancellationToken)
                 ?? throw new ServiceNotFoundException(serviceId);
             if (service.BusinessId != businessId)
                 throw new InvalidOperationException("El servicio no pertenece al negocio indicado.");
@@ -224,7 +226,7 @@ namespace MRC.Agendia.Application.Availability
             List<Employee> employees;
             if (employeeId is int empId)
             {
-                var employee = await _employeeRepository.GetByIdAsync(empId, cancellationToken)
+                var employee = await _employeeRepository.GetByIdPublicAsync(empId, cancellationToken)
                     ?? throw new EmployeeNotFoundException(empId);
                 if (employee.BusinessId != businessId)
                     throw new InvalidOperationException("El empleado no pertenece al negocio indicado.");
