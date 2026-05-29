@@ -7,5 +7,6 @@ namespace MRC.Agendia.Application.Business.DTO
         string Address,
         string Phone,
         string Email,
-        bool IsActive);
+        bool IsActive,
+        int? CancellationWindowHours = null);
 }

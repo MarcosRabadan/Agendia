@@ -41,5 +41,12 @@ namespace MRC.Agendia.Domain.Interfaces
             DateTime fromInclusive,
             DateTime toExclusive,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// The owning business's self-service cancellation window in hours for the
+        /// given appointment, or null when the appointment is gone or no window is
+        /// configured. Used to enforce the self-service cancel/reschedule policy.
+        /// </summary>
+        Task<int?> GetCancellationWindowHoursAsync(int appointmentId, CancellationToken cancellationToken = default);
     }
 }

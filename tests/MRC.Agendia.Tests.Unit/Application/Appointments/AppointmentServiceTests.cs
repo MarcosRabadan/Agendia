@@ -3,11 +3,13 @@ using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Authorization;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Notifications;
 using MRC.Agendia.Application.Waitlist;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 using NSubstitute;
 
@@ -25,6 +27,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         private readonly IClientRepository _clientRepository = Substitute.For<IClientRepository>();
         private readonly IAppointmentSchedulingValidator _validator = Substitute.For<IAppointmentSchedulingValidator>();
         private readonly IBookingConcurrencyGuard _bookingGuard = Substitute.For<IBookingConcurrencyGuard>();
+        private readonly IClock _clock = Substitute.For<IClock>();
         private readonly INotificationService _notificationService = Substitute.For<INotificationService>();
         private readonly IWaitlistService _waitlistService = Substitute.For<IWaitlistService>();
         private readonly IAuditLogger _auditLogger = Substitute.For<IAuditLogger>();
@@ -47,7 +50,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             _currentUser.IsInRole(Roles.Employee).Returns(true);
 
             _sut = new AppointmentService(
-                _repository, _clientRepository, _validator, _bookingGuard,
+                _repository, _clientRepository, _validator, _bookingGuard, _clock,
                 _notificationService, _waitlistService, _auditLogger, _currentUser, _unitOfWork, _mapper);
         }
 
@@ -141,6 +144,119 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             Assert.NotNull(result);
         }
+
+        [Fact]
+        public async Task UpdateAsync_ClienteCancelaDentroDeLaVentana_Lanza()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = FutureAppointment(start);
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _repository.GetCancellationWindowHoursAsync(entity.Id).Returns<int?>(24);
+            _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a Client
+            _clock.BusinessNow.Returns(start.AddHours(-1)); // within 24h of the start
+
+            var dto = new UpdateAppointmentDto(
+                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.StartDate, entity.EndDate, AppointmentStatus.Cancelled, Notes: null);
+
+            await Assert.ThrowsAsync<CancellationWindowElapsedException>(() => _sut.UpdateAsync(dto));
+        }
+
+        [Fact]
+        public async Task UpdateAsync_StaffCancelaDentroDeLaVentana_NoAplicaVentana()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = FutureAppointment(start);
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
+            _clock.BusinessNow.Returns(start.AddHours(-1)); // default caller is staff
+
+            var dto = new UpdateAppointmentDto(
+                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.StartDate, entity.EndDate, AppointmentStatus.Cancelled, Notes: null);
+
+            var result = await _sut.UpdateAsync(dto);
+
+            Assert.NotNull(result);
+            await _repository.DidNotReceive().GetCancellationWindowHoursAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task UpdateAsync_ClienteCancelaFueraDeLaVentana_PermitidoYNotificaWaitlist()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = FutureAppointment(start); // Confirmed -> occupies capacity
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _repository.GetCancellationWindowHoursAsync(entity.Id).Returns<int?>(24);
+            _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
+            // The mock mapper must apply the new status so the cancel side effects run.
+            _mapper.Map(Arg.Any<UpdateAppointmentDto>(), Arg.Any<Appointment>()).Returns(ci =>
+            {
+                var e = ci.Arg<Appointment>();
+                e.Status = ci.Arg<UpdateAppointmentDto>().Status;
+                return e;
+            });
+            _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a Client
+            _clock.BusinessNow.Returns(start.AddDays(-5)); // well before the deadline
+
+            var dto = new UpdateAppointmentDto(
+                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.StartDate, entity.EndDate, AppointmentStatus.Cancelled, Notes: null);
+
+            var result = await _sut.UpdateAsync(dto);
+
+            Assert.Equal(AppointmentStatus.Cancelled, result.Status);
+            await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(entity.Id, Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task DeleteAsync_ClienteDentroDeLaVentana_Lanza()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = FutureAppointment(start);
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _repository.GetCancellationWindowHoursAsync(entity.Id).Returns<int?>(24);
+            _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a Client
+            _clock.BusinessNow.Returns(start.AddHours(-1)); // within 24h of the start
+
+            await Assert.ThrowsAsync<CancellationWindowElapsedException>(() => _sut.DeleteAsync(entity.Id));
+
+            _repository.DidNotReceive().Delete(Arg.Any<Appointment>());
+        }
+
+        [Fact]
+        public async Task UpdateAsync_ClienteReprogramaDentroDeLaVentana_LanzaAntesDeValidar()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = FutureAppointment(start);
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _repository.GetCancellationWindowHoursAsync(entity.Id).Returns<int?>(24);
+            _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a Client
+            _clock.BusinessNow.Returns(start.AddHours(-1)); // current start is within the window
+
+            // Reschedule to a later slot (bookingChanged). The window is checked against
+            // the CURRENT (imminent) start, so the client cannot escape by also moving it.
+            var dto = new UpdateAppointmentDto(
+                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.StartDate.AddDays(2), entity.EndDate.AddDays(2), entity.Status, Notes: null);
+
+            await Assert.ThrowsAsync<CancellationWindowElapsedException>(() => _sut.UpdateAsync(dto));
+
+            // The window gate runs before the booking guard / scheduling validation.
+            await _validator.DidNotReceiveWithAnyArgs().EnsureValidAsync(
+                default, default, default, default, default, default, default);
+        }
+
+        private static Appointment FutureAppointment(DateTime start) => new()
+        {
+            Id = 7,
+            ClientId = 1,
+            EmployeeId = 2,
+            ServiceId = 3,
+            StartDate = start,
+            EndDate = start.AddMinutes(30),
+            Status = AppointmentStatus.Confirmed,
+        };
 
         private static Appointment PastAppointment() => new()
         {

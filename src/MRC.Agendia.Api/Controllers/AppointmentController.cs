@@ -68,6 +68,11 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
+        /// <summary>
+        /// Actualiza una cita (reprogramar, cambiar estado o notas). Un cliente solo
+        /// puede cancelar o reprogramar su propia cita; si esta ya esta dentro de la
+        /// ventana de antelacion del negocio devuelve 400 CANCELLATION_WINDOW_ELAPSED.
+        /// </summary>
         [Authorize]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(AppointmentDto), StatusCodes.Status200OK)]
@@ -80,9 +85,14 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Elimina una cita. Para un cliente, si la cita ya esta dentro de la ventana
+        /// de antelacion del negocio devuelve 400 CANCELLATION_WINDOW_ELAPSED.
+        /// </summary>
         [Authorize]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(int id)
         {

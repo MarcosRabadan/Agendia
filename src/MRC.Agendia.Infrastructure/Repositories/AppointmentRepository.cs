@@ -116,5 +116,18 @@ namespace MRC.Agendia.Infrastructure.Repositories
                     && !a.Employee.Business.IsDeleted)
                 .OrderBy(a => a.StartDate)
                 .ToListAsync(cancellationToken);
+
+        public Task<int?> GetCancellationWindowHoursAsync(int appointmentId, CancellationToken cancellationToken = default)
+            // Project the owning business's window through employee -> business.
+            // IgnoreQueryFilters so a soft-deleted participant does not turn the
+            // required navigation into an INNER JOIN that drops the row (consistent
+            // with the reads above); a missing row or a null window both surface as
+            // null => no restriction.
+            => Set
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Where(a => a.Id == appointmentId)
+                .Select(a => a.Employee.Business.CancellationWindowHours)
+                .FirstOrDefaultAsync(cancellationToken);
     }
 }
