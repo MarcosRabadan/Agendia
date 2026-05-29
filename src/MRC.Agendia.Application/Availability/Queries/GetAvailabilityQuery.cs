@@ -8,5 +8,6 @@ namespace MRC.Agendia.Application.Availability.Queries
         DateOnly Date,
         int ServiceId,
         int? EmployeeId,
-        int StepMinutes) : IRequest<AvailabilityDto>;
+        int StepMinutes,
+        IReadOnlyList<int>? ExtraServiceIds = null) : IRequest<AvailabilityDto>;
 }

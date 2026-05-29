@@ -16,6 +16,11 @@ namespace MRC.Agendia.Application.Appointments
         /// Null when validating a new appointment, set to the existing id
         /// when validating an update (so it is excluded from the conflict check).
         /// </param>
+        /// <param name="extraServiceIds">
+        /// Optional additional services booked in the same visit (#170). The
+        /// appointment's duration must equal the sum of the primary service plus
+        /// all of these; each must belong to the same business.
+        /// </param>
         Task EnsureValidAsync(
             int? appointmentId,
             int clientId,
@@ -23,6 +28,7 @@ namespace MRC.Agendia.Application.Appointments
             int serviceId,
             DateTime startDate,
             DateTime endDate,
+            IReadOnlyCollection<int>? extraServiceIds = null,
             CancellationToken cancellationToken = default);
     }
 }

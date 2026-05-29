@@ -29,14 +29,25 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .IgnoreQueryFilters()
                 .Include(a => a.Client)
                 .Include(a => a.Service)
+                .Include(a => a.ExtraServices)
                 .Include(a => a.Employee)
                     .ThenInclude(e => e.Business)
+                .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+
+        public Task<Appointment?> GetByIdWithExtrasAsync(int id, CancellationToken cancellationToken = default)
+            // Only ExtraServices is included (no soft-deletable parent navigation),
+            // so the global !IsDeleted filter on Appointment applies as wanted: a
+            // soft-deleted appointment is not returned. AsNoTracking: read-only.
+            => Set
+                .AsNoTracking()
+                .Include(a => a.ExtraServices)
                 .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
         public Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
                 .IgnoreQueryFilters()
+                .Include(a => a.ExtraServices)
                 .Where(a => !a.IsDeleted)
                 .OrderByDescending(a => a.StartDate)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
@@ -45,6 +56,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
             => Set
                 .AsNoTracking()
                 .IgnoreQueryFilters()
+                .Include(a => a.ExtraServices)
                 .Where(a => a.ClientId == clientId && !a.IsDeleted)
                 .OrderByDescending(a => a.StartDate)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
@@ -54,6 +66,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
             var appointments = await Set
                  .AsNoTracking()
                  .IgnoreQueryFilters()
+                 .Include(a => a.ExtraServices)
                  .Where(a => !a.IsDeleted &&
                              a.Employee.BusinessId == businessId &&
                              a.StartDate < endDate &&
@@ -115,6 +128,17 @@ namespace MRC.Agendia.Infrastructure.Repositories
                     && a.Employee.IsActive
                     && !a.Employee.Business.IsDeleted)
                 .OrderBy(a => a.StartDate)
+                .ToListAsync(cancellationToken);
+
+        public async Task<IReadOnlyList<int>> GetExtraServiceIdsAsync(int appointmentId, CancellationToken cancellationToken = default)
+            // Service ids of the appointment's extra services, used to re-validate
+            // the total duration on reschedule without loading the whole graph.
+            // IgnoreQueryFilters mirrors the other appointment reads.
+            => await Set
+                .IgnoreQueryFilters()
+                .Where(a => a.Id == appointmentId)
+                .SelectMany(a => a.ExtraServices)
+                .Select(e => e.ServiceId)
                 .ToListAsync(cancellationToken);
     }
 }

@@ -42,6 +42,7 @@ namespace MRC.Agendia.Application.Availability
             int serviceId,
             int? employeeId,
             int stepMinutes = 15,
+            IReadOnlyCollection<int>? extraServiceIds = null,
             CancellationToken cancellationToken = default)
         {
             // ---------- Validate inputs ----------
@@ -65,6 +66,23 @@ namespace MRC.Agendia.Application.Availability
                 throw new InvalidOperationException(
                     "El servicio no tiene una duracion valida.");
 
+            // Multiservice (#170): the slot must fit the SUM of the primary service
+            // plus any extra services; each extra must belong to the same business.
+            var totalDurationMinutes = service.DurationMinutes;
+            if (extraServiceIds is { Count: > 0 })
+            {
+                foreach (var extraId in extraServiceIds)
+                {
+                    var extra = await _serviceRepository.GetByIdAsync(extraId, cancellationToken)
+                        ?? throw new ServiceNotFoundException(extraId);
+                    if (extra.BusinessId != businessId)
+                        throw new InvalidOperationException("Un servicio adicional no pertenece al negocio indicado.");
+                    if (extra.DurationMinutes <= 0)
+                        throw new InvalidOperationException("Un servicio adicional no tiene una duracion valida.");
+                    totalDurationMinutes += extra.DurationMinutes;
+                }
+            }
+
             // ---------- Pick the candidate employees ----------
             List<Employee> employees;
             if (employeeId is int empId)
@@ -79,7 +97,7 @@ namespace MRC.Agendia.Application.Availability
                 if (!employee.IsActive)
                     return EmptyAvailability(
                         date, businessId, serviceId, employeeId,
-                        service.DurationMinutes, stepMinutes,
+                        totalDurationMinutes, stepMinutes,
                         "El empleado indicado esta inactivo.");
 
                 employees = new List<Employee> { employee };
@@ -95,7 +113,7 @@ namespace MRC.Agendia.Application.Availability
             {
                 return EmptyAvailability(
                     date, businessId, serviceId, employeeId,
-                    service.DurationMinutes, stepMinutes,
+                    totalDurationMinutes, stepMinutes,
                     "No hay empleados activos en este negocio.");
             }
 
@@ -105,7 +123,7 @@ namespace MRC.Agendia.Application.Availability
             {
                 return EmptyAvailability(
                     date, businessId, serviceId, employeeId,
-                    service.DurationMinutes, stepMinutes,
+                    totalDurationMinutes, stepMinutes,
                     effective.ClosedReason ?? "Cerrado.");
             }
 
@@ -124,7 +142,7 @@ namespace MRC.Agendia.Application.Availability
             //   remainingCapacity = MaxConcurrentAppointments - overlappingCount
             // If at least one employee has remainingCapacity > 0 the slot is
             // bookable; total Capacity is the sum across all employees.
-            var duration = TimeSpan.FromMinutes(service.DurationMinutes);
+            var duration = TimeSpan.FromMinutes(totalDurationMinutes);
             var step = TimeSpan.FromMinutes(stepMinutes);
             var slots = new List<AvailableSlotDto>();
 
@@ -178,7 +196,7 @@ namespace MRC.Agendia.Application.Availability
                 BusinessId: businessId,
                 ServiceId: serviceId,
                 EmployeeId: employeeId,
-                DurationMinutes: service.DurationMinutes,
+                DurationMinutes: totalDurationMinutes,
                 StepMinutes: stepMinutes,
                 IsOpen: true,
                 ClosedReason: null,

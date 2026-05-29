@@ -43,6 +43,7 @@ namespace MRC.Agendia.Application.Appointments
             int serviceId,
             DateTime startDate,
             DateTime endDate,
+            IReadOnlyCollection<int>? extraServiceIds = null,
             CancellationToken cancellationToken = default)
         {
             // ---------- Basic input checks ----------
@@ -75,12 +76,28 @@ namespace MRC.Agendia.Application.Appointments
             if (service.BusinessId != employee.BusinessId)
                 throw new ServiceEmployeeMismatchException();
 
-            // ---------- Duration matches the service ----------
+            // ---------- Total duration matches the sum of all services (#170) ----------
+            // The appointment may bundle extra services in the same visit (cut +
+            // beard); its block must span the primary service plus every extra, and
+            // each extra must belong to the same business.
+            var totalServiceMinutes = service.DurationMinutes;
+            if (extraServiceIds is { Count: > 0 })
+            {
+                foreach (var extraId in extraServiceIds)
+                {
+                    var extra = await _serviceRepository.GetByIdAsync(extraId, cancellationToken)
+                        ?? throw new ServiceNotFoundException(extraId);
+                    if (extra.BusinessId != employee.BusinessId)
+                        throw new ServiceEmployeeMismatchException();
+                    totalServiceMinutes += extra.DurationMinutes;
+                }
+            }
+
             var actualDuration = (endDate - startDate).TotalMinutes;
-            if (Math.Abs(actualDuration - service.DurationMinutes) > DurationToleranceMinutes)
+            if (Math.Abs(actualDuration - totalServiceMinutes) > DurationToleranceMinutes)
             {
                 throw new AppointmentDurationMismatchException(
-                    $"La duracion de la cita ({actualDuration:0.#} min) no coincide con la del servicio ({service.DurationMinutes} min).");
+                    $"La duracion de la cita ({actualDuration:0.#} min) no coincide con la de los servicios ({totalServiceMinutes} min).");
             }
 
             // ---------- Day must be open in the effective schedule ----------

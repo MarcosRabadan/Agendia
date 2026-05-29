@@ -33,6 +33,9 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
     // Waitlist (#167)
     public DbSet<WaitlistEntry> WaitlistEntries => Set<WaitlistEntry>();
 
+    // Multiservice (#170): extra services of an appointment beyond the primary one.
+    public DbSet<AppointmentExtraService> AppointmentExtraServices => Set<AppointmentExtraService>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -207,5 +210,24 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<WaitlistEntry>()
             .HasIndex(w => new { w.BusinessId, w.ServiceId, w.Date, w.StartTime, w.Status })
             .HasDatabaseName("IX_WaitlistEntry_Slot");
+
+        // Multiservice (#170): an appointment may include extra services beyond the
+        // primary ServiceId. Cascade from the appointment (owned children); restrict
+        // on Service so deleting/soft-deleting a service never cascades into bookings.
+        modelBuilder.Entity<AppointmentExtraService>()
+            .HasOne(x => x.Appointment)
+            .WithMany(a => a.ExtraServices)
+            .HasForeignKey(x => x.AppointmentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AppointmentExtraService>()
+            .HasOne(x => x.Service)
+            .WithMany()
+            .HasForeignKey(x => x.ServiceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AppointmentExtraService>()
+            .HasIndex(x => x.AppointmentId)
+            .HasDatabaseName("IX_AppointmentExtraService_AppointmentId");
     }
 }
