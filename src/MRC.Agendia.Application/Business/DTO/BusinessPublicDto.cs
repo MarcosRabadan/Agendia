@@ -14,5 +14,6 @@ namespace MRC.Agendia.Application.Business.DTO
         string Name,
         string? Description,
         string Address,
-        string Phone);
+        string Phone,
+        int? CancellationWindowHours = null);
 }

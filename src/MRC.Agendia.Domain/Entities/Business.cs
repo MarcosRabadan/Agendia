@@ -13,6 +13,14 @@ namespace MRC.Agendia.Domain.Entities
         public bool IsActive { get; set; }
         public string? OwnerUserId { get; set; }
 
+        /// <summary>
+        /// Minimum advance notice, in hours, a client must give to cancel or
+        /// reschedule their own appointment through self-service. Null means no
+        /// restriction (the only way to disable it via the API, which otherwise
+        /// accepts 1..8760). Staff are never subject to this window.
+        /// </summary>
+        public int? CancellationWindowHours { get; set; }
+
         public ICollection<Employee> Employees { get; set; } = new List<Employee>();
         public ICollection<Service> Services { get; set; } = new List<Service>();
         public ICollection<ScheduleTemplate> ScheduleTemplates { get; set; } = new List<ScheduleTemplate>();

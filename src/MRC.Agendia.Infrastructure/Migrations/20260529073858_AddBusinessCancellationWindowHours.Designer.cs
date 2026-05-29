@@ -4,6 +4,7 @@ using MRC.Agendia.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MRC.Agendia.Infrastructure.Migrations
 {
     [DbContext(typeof(AgendiaDbContext))]
-    partial class AgendiaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260529073858_AddBusinessCancellationWindowHours")]
+    partial class AddBusinessCancellationWindowHours
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -95,30 +98,6 @@ namespace MRC.Agendia.Infrastructure.Migrations
                         .HasDatabaseName("IX_Appointment_StartDate");
 
                     b.ToTable("Appointments");
-                });
-
-            modelBuilder.Entity("MRC.Agendia.Domain.Entities.AppointmentExtraService", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AppointmentId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ServiceId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AppointmentId")
-                        .HasDatabaseName("IX_AppointmentExtraService_AppointmentId");
-
-                    b.HasIndex("ServiceId");
-
-                    b.ToTable("AppointmentExtraServices");
                 });
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.AuditLog", b =>
@@ -867,25 +846,6 @@ namespace MRC.Agendia.Infrastructure.Migrations
                     b.Navigation("Service");
                 });
 
-            modelBuilder.Entity("MRC.Agendia.Domain.Entities.AppointmentExtraService", b =>
-                {
-                    b.HasOne("MRC.Agendia.Domain.Entities.Appointment", "Appointment")
-                        .WithMany("ExtraServices")
-                        .HasForeignKey("AppointmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("MRC.Agendia.Domain.Entities.Service", "Service")
-                        .WithMany()
-                        .HasForeignKey("ServiceId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Appointment");
-
-                    b.Navigation("Service");
-                });
-
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.CustomTimeSlot", b =>
                 {
                     b.HasOne("MRC.Agendia.Domain.Entities.ScheduleOverride", "ScheduleOverride")
@@ -1031,11 +991,6 @@ namespace MRC.Agendia.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("MRC.Agendia.Domain.Entities.Appointment", b =>
-                {
-                    b.Navigation("ExtraServices");
                 });
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.Business", b =>

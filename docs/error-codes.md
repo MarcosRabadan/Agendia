@@ -53,6 +53,7 @@ El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan 
 | `EMPLOYEE_INACTIVE` | `EmployeeInactiveException` | El empleado seleccionado está inactivo. |
 | `SERVICE_EMPLOYEE_MISMATCH` | `ServiceEmployeeMismatchException` | El servicio y el empleado pertenecen a negocios distintos. |
 | `APPOINTMENT_DURATION_MISMATCH` | `AppointmentDurationMismatchException` | La duración de la cita no coincide con la del servicio. |
+| `CANCELLATION_WINDOW_ELAPSED` | `CancellationWindowElapsedException` | Un cliente intenta cancelar/reprogramar su cita pasada la ventana de antelación del negocio (solo self-service; el personal no la sufre). |
 | `SLOT_HAS_CAPACITY` | `SlotHasCapacityException` | Al apuntarse a la lista de espera, la franja todavía tiene hueco (reserva directa). |
 | `DUPLICATE_WAITLIST_ENTRY` | `DuplicateWaitlistEntryException` | El cliente ya está en la lista de espera de esa franja. |
 
