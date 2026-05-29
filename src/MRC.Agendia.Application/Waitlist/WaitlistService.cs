@@ -117,11 +117,19 @@ namespace MRC.Agendia.Application.Waitlist
                 if (entry is null)
                     return;
 
+                // Send first, then mark Notified only if it actually went out.
+                // Marking before sending (and swallowing a failed send) would leave
+                // the entry stuck on Notified -> GetNextWaitingForSlotAsync never
+                // re-selects it, so the freed slot is lost with no retry. If the send
+                // succeeds but the Save below fails, the worst case is a duplicate
+                // notification on a later freed slot - preferable to a lost one.
+                var notified = await _notificationService.SendWaitlistAvailabilityAsync(entry.Id, cancellationToken);
+                if (!notified)
+                    return;
+
                 entry.Status = WaitlistStatus.Notified;
                 _repository.Update(entry);
                 await _unitOfWork.Save(cancellationToken);
-
-                await _notificationService.SendWaitlistAvailabilityAsync(entry.Id, cancellationToken);
             }
             catch
             {
