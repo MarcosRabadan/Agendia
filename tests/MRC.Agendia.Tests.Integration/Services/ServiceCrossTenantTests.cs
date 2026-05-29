@@ -75,6 +75,26 @@ namespace MRC.Agendia.Tests.Integration.Services
         }
 
         [Fact]
+        public async Task ListaPublicaDeNegocios_OwnerAutenticado_VeTodos_NoSoloElSuyo()
+        {
+            // #58 must NOT scope public catalog reads: an authenticated owner still
+            // sees every business via the anonymous list (IgnoreQueryFilters), not
+            // just his own. Confirms the public-read bypass works for a restricted user.
+            var ownerA = await RegisterOwnerAsync("scope-list-a");
+            var ownerB = await RegisterOwnerAsync("scope-list-b");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/api/Business?page=1&pageSize=200");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerB.Token);
+            var response = await _client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var paged = await response.Content.ReadFromJsonAsync<PagedResult<BusinessPublicDto>>();
+            Assert.NotNull(paged);
+            Assert.Contains(paged!.Items, b => b.Id == ownerA.Business.Id);
+            Assert.Contains(paged.Items, b => b.Id == ownerB.Business.Id);
+        }
+
+        [Fact]
         public async Task UpdateService_OwnerA_EnSuPropioBusiness_AplicaCambios()
         {
             var ownerA = await RegisterOwnerAsync("svc-happy");
