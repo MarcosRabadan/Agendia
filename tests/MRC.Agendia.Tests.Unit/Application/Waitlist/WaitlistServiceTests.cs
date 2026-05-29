@@ -133,12 +133,31 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
             var waiting = new WaitlistEntry { Id = 7, ClientId = 1, Status = WaitlistStatus.Waiting };
             _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
                 .Returns(waiting);
+            _notifications.SendWaitlistAvailabilityAsync(7, Arg.Any<CancellationToken>()).Returns(true);
 
             await _sut.NotifyForFreedAppointmentAsync(50);
 
             Assert.Equal(WaitlistStatus.Notified, waiting.Status);
             await _unitOfWork.Received(1).Save(Arg.Any<CancellationToken>());
             await _notifications.Received(1).SendWaitlistAvailabilityAsync(7, Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task NotifyForFreedAppointment_SiFallaElEnvio_DejaEnWaiting()
+        {
+            _appointmentRepository.GetByIdWithDetailsAsync(50, Arg.Any<CancellationToken>())
+                .Returns(new Appointment { Id = 50, EmployeeId = 2, ServiceId = 3, StartDate = new DateTime(2030, 6, 7, 16, 0, 0), Employee = new Employee { Id = 2, BusinessId = 10 } });
+            var waiting = new WaitlistEntry { Id = 7, ClientId = 1, Status = WaitlistStatus.Waiting };
+            _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
+                .Returns(waiting);
+            // The send fails (returns false): the entry must stay Waiting so a later
+            // freed slot re-selects it - otherwise the notification would be lost.
+            _notifications.SendWaitlistAvailabilityAsync(7, Arg.Any<CancellationToken>()).Returns(false);
+
+            await _sut.NotifyForFreedAppointmentAsync(50);
+
+            Assert.Equal(WaitlistStatus.Waiting, waiting.Status);
+            await _unitOfWork.DidNotReceive().Save(Arg.Any<CancellationToken>());
         }
 
         [Fact]
