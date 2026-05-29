@@ -33,6 +33,9 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
     // Waitlist (#167)
     public DbSet<WaitlistEntry> WaitlistEntries => Set<WaitlistEntry>();
 
+    // Push device tokens (#51)
+    public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -207,5 +210,19 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<WaitlistEntry>()
             .HasIndex(w => new { w.BusinessId, w.ServiceId, w.Date, w.StartTime, w.Status })
             .HasDatabaseName("IX_WaitlistEntry_Slot");
+
+        // Push device tokens (#51): one row per token (unique), fanned out by user.
+        modelBuilder.Entity<DeviceToken>()
+            .Property(d => d.Platform)
+            .HasConversion<int>();
+
+        modelBuilder.Entity<DeviceToken>()
+            .HasIndex(d => d.Token)
+            .IsUnique()
+            .HasDatabaseName("IX_DeviceToken_Token");
+
+        modelBuilder.Entity<DeviceToken>()
+            .HasIndex(d => d.UserId)
+            .HasDatabaseName("IX_DeviceToken_UserId");
     }
 }

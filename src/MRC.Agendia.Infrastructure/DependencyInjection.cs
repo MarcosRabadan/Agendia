@@ -55,6 +55,7 @@ namespace MRC.Agendia.Infrastructure
             services.AddScoped<IAuditLogRepository, AuditLogRepository>();
             services.AddScoped<IBusinessStatsRepository, BusinessStatsRepository>();
             services.AddScoped<IWaitlistRepository, WaitlistRepository>();
+            services.AddScoped<IDeviceTokenRepository, DeviceTokenRepository>();
 
             // Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();

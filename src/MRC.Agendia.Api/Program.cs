@@ -28,6 +28,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Email sender (Logging en Dev/Test, SMTP en el resto)
 builder.Services.AddEmailSender(builder.Configuration, builder.Environment);
 
+// Push sender (#51): de momento solo Logging en todos los entornos (FCM pendiente)
+builder.Services.AddPushSender(builder.Environment);
+
 // Identity + JWT (depende de Infrastructure por el DbContext)
 builder.Services.AddIdentityAndJwt(builder.Configuration);
 

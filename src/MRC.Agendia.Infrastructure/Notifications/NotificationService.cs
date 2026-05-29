@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.Extensions.Logging;
 using MRC.Agendia.Application.Common.Email;
+using MRC.Agendia.Application.Common.Push;
 using MRC.Agendia.Application.Notifications;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Interfaces;
@@ -18,18 +19,24 @@ namespace MRC.Agendia.Infrastructure.Notifications
     {
         private readonly IAppointmentRepository _appointmentRepository;
         private readonly IWaitlistRepository _waitlistRepository;
+        private readonly IDeviceTokenRepository _deviceTokenRepository;
         private readonly IEmailSender _emailSender;
+        private readonly IPushSender _pushSender;
         private readonly ILogger<NotificationService> _logger;
 
         public NotificationService(
             IAppointmentRepository appointmentRepository,
             IWaitlistRepository waitlistRepository,
+            IDeviceTokenRepository deviceTokenRepository,
             IEmailSender emailSender,
+            IPushSender pushSender,
             ILogger<NotificationService> logger)
         {
             _appointmentRepository = appointmentRepository;
             _waitlistRepository = waitlistRepository;
+            _deviceTokenRepository = deviceTokenRepository;
             _emailSender = emailSender;
+            _pushSender = pushSender;
             _logger = logger;
         }
 
@@ -56,13 +63,6 @@ namespace MRC.Agendia.Infrastructure.Notifications
                     return true;
                 }
 
-                var email = entry.Client?.Email;
-                if (string.IsNullOrWhiteSpace(email))
-                {
-                    _logger.LogWarning("Notification waitlist: entry {Id} client has no email; skipping.", waitlistEntryId);
-                    return true;
-                }
-
                 var subject = "Se ha liberado un hueco - Agendia";
                 var body =
                     $"<p>Hola {Encode(entry.Client!.Name)},</p>" +
@@ -73,8 +73,22 @@ namespace MRC.Agendia.Infrastructure.Notifications
                     "</ul>" +
                     "<p>Reserva cuanto antes desde la app; las plazas se asignan por orden de llegada.</p>";
 
+                // Push first, best-effort and independent of email.
+                await TrySendPushAsync(
+                    entry.Client?.UserId, subject,
+                    $"{entry.Service.Name} - {entry.Date:dd/MM} {entry.StartTime:HH:mm}",
+                    new Dictionary<string, string> { ["waitlistEntryId"] = waitlistEntryId.ToString(), ["type"] = "waitlist" },
+                    cancellationToken);
+
+                var email = entry.Client?.Email;
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    _logger.LogWarning("Notification waitlist: entry {Id} client has no email; skipping email.", waitlistEntryId);
+                    return true;
+                }
+
                 await _emailSender.SendAsync(email, subject, body);
-                _logger.LogInformation("Notification waitlist sent for entry {Id} to {Email}.", waitlistEntryId, email);
+                _logger.LogInformation("Notification waitlist email sent for entry {Id} to {Email}.", waitlistEntryId, email);
                 return true;
             }
             catch (Exception ex)
@@ -99,19 +113,27 @@ namespace MRC.Agendia.Infrastructure.Notifications
                     return true;
                 }
 
+                var (subject, body) = compose(appointment);
+
+                // Push first, best-effort and independent of email: a client may have
+                // a device registered even without an email on file.
+                await TrySendPushAsync(
+                    appointment.Client?.UserId, subject, PushSummary(appointment),
+                    new Dictionary<string, string> { ["appointmentId"] = appointmentId.ToString(), ["type"] = kind },
+                    cancellationToken);
+
                 var email = appointment.Client?.Email;
                 if (string.IsNullOrWhiteSpace(email))
                 {
                     _logger.LogWarning(
-                        "Notification {Kind}: appointment {Id} client has no email; skipping.", kind, appointmentId);
+                        "Notification {Kind}: appointment {Id} client has no email; skipping email.", kind, appointmentId);
                     return true;
                 }
 
-                var (subject, body) = compose(appointment);
                 await _emailSender.SendAsync(email, subject, body);
 
                 _logger.LogInformation(
-                    "Notification {Kind} sent for appointment {Id} to {Email}.", kind, appointmentId, email);
+                    "Notification {Kind} email sent for appointment {Id} to {Email}.", kind, appointmentId, email);
                 return true;
             }
             catch (Exception ex)
@@ -167,6 +189,36 @@ namespace MRC.Agendia.Infrastructure.Notifications
                 "<p>Disculpa las molestias. Puedes venir un poco mas tarde sin perder tu turno.</p>";
             return (subject, body);
         }
+
+        private async Task TrySendPushAsync(
+            string? userId,
+            string title,
+            string body,
+            IReadOnlyDictionary<string, string> data,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(userId))
+                    return;
+
+                var tokens = await _deviceTokenRepository.GetTokensByUserIdAsync(userId, cancellationToken);
+                if (tokens.Count == 0)
+                    return;
+
+                await _pushSender.SendAsync(tokens, title, body, data, cancellationToken);
+                _logger.LogInformation(
+                    "Notification push sent to {Count} device(s) for user {UserId}.", tokens.Count, userId);
+            }
+            catch (Exception ex)
+            {
+                // Push is strictly best-effort: never affect the email result or the booking flow.
+                _logger.LogError(ex, "Notification push failed for user {UserId}.", userId);
+            }
+        }
+
+        private static string PushSummary(Appointment a)
+            => $"{a.Service.Name} - {a.StartDate:dd/MM HH:mm}";
 
         private static string Details(Appointment a)
             => "<ul>" +
