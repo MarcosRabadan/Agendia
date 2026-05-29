@@ -111,9 +111,15 @@ namespace MRC.Agendia.Application.Schedules
             var yearFrom = new DateOnly(dto.Year, 1, 1);
             var yearTo = new DateOnly(dto.Year, 12, 31);
 
-            // 5. Collect overrides.
+            // 5. Collect overrides, deduped by date across holidays + vacations +
+            // closures AND against the overrides already persisted for the year, so
+            // re-generating (or generating over a manual override) never produces two
+            // overrides for the same (BusinessId, Date) - the unique index
+            // IX_ScheduleOverride_BusinessId_Date would otherwise throw (HTTP 500).
             var overrides = new List<ScheduleOverride>();
-            var holidayDates = new HashSet<DateOnly>();
+            var existingOverrides = await _overrideRepository.GetByBusinessIdAndDateRangeAsync(dto.BusinessId, yearFrom, yearTo, cancellationToken);
+            var claimedDates = new HashSet<DateOnly>(existingOverrides.Select(o => o.Date));
+            int holidayCount = 0;
 
             // 5a. National/local holidays.
             if (dto.IncludeNationalHolidays || dto.IncludeLocalHolidays)
@@ -125,9 +131,9 @@ namespace MRC.Agendia.Application.Schedules
                     if (holiday.Scope == HolidayScope.National && !dto.IncludeNationalHolidays) continue;
                     if (holiday.Scope != HolidayScope.National && !dto.IncludeLocalHolidays) continue;
 
-                    if (holidayDates.Contains(holiday.Date)) continue; // avoid duplicates
+                    if (!claimedDates.Add(holiday.Date)) continue; // skip dates already claimed (existing override or earlier holiday)
 
-                    holidayDates.Add(holiday.Date);
+                    holidayCount++;
                     overrides.Add(new ScheduleOverride
                     {
                         BusinessId = dto.BusinessId,
@@ -149,9 +155,9 @@ namespace MRC.Agendia.Application.Schedules
                 {
                     for (var date = vacation.From; date <= vacation.To; date = date.AddDays(1))
                     {
-                        if (holidayDates.Contains(date))
+                        if (!claimedDates.Add(date))
                         {
-                            warnings.Add($"El dia {date:yyyy-MM-dd} es festivo y tambien esta marcado como vacaciones ({vacation.Reason ?? "sin motivo"}).");
+                            warnings.Add($"El dia {date:yyyy-MM-dd} ya tiene un cierre/festivo; se omite de las vacaciones ({vacation.Reason ?? "sin motivo"}).");
                             continue;
                         }
 
@@ -174,9 +180,9 @@ namespace MRC.Agendia.Application.Schedules
             {
                 foreach (var closed in dto.CustomClosedDates)
                 {
-                    if (holidayDates.Contains(closed.Date))
+                    if (!claimedDates.Add(closed.Date))
                     {
-                        warnings.Add($"El dia {closed.Date:yyyy-MM-dd} es festivo y tambien esta marcado como cerrado.");
+                        warnings.Add($"El dia {closed.Date:yyyy-MM-dd} ya tiene un cierre/festivo; se omite.");
                         continue;
                     }
 
@@ -210,7 +216,7 @@ namespace MRC.Agendia.Application.Schedules
 
             return new ScheduleBuild(
                 templates, overrides, warnings,
-                holidayDates.Count, vacationDays, customClosedDays, totalWorkingDays);
+                holidayCount, vacationDays, customClosedDays, totalWorkingDays);
         }
 
         private static void ValidateTemplatesDoNotOverlap(List<GenerateScheduleTemplateInputDto> templates)
