@@ -19,6 +19,7 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IClientRepository _clientRepository;
         private readonly IAppointmentSchedulingValidator _schedulingValidator;
         private readonly IBookingConcurrencyGuard _bookingGuard;
+        private readonly IClock _clock;
         private readonly INotificationService _notificationService;
         private readonly IWaitlistService _waitlistService;
         private readonly IAuditLogger _auditLogger;
@@ -31,6 +32,7 @@ namespace MRC.Agendia.Application.Appointments
             IClientRepository clientRepository,
             IAppointmentSchedulingValidator schedulingValidator,
             IBookingConcurrencyGuard bookingGuard,
+            IClock clock,
             INotificationService notificationService,
             IWaitlistService waitlistService,
             IAuditLogger auditLogger,
@@ -42,6 +44,7 @@ namespace MRC.Agendia.Application.Appointments
             _clientRepository = clientRepository;
             _schedulingValidator = schedulingValidator;
             _bookingGuard = bookingGuard;
+            _clock = clock;
             _notificationService = notificationService;
             _waitlistService = waitlistService;
             _auditLogger = auditLogger;
@@ -139,6 +142,18 @@ namespace MRC.Agendia.Application.Appointments
                 dto.EmployeeId != entity.EmployeeId ||
                 dto.ServiceId != entity.ServiceId;
 
+            // #171: self-service advance-notice window. Staff bypass it; a client
+            // cannot cancel or reschedule an appointment that is already within the
+            // business's cancellation window. Checked against the appointment's
+            // CURRENT start time (you cannot act on an imminent appointment yourself).
+            var isSelfServiceCancellation =
+                dto.Status == AppointmentStatus.Cancelled && previousStatus != AppointmentStatus.Cancelled;
+            if (!IsStaff() && (isSelfServiceCancellation || bookingChanged))
+            {
+                var windowHours = await _repository.GetCancellationWindowHoursAsync(entity.Id, cancellationToken);
+                AppointmentCancellationPolicy.EnsureSelfServiceAllowed(previousStartDate, windowHours, _clock.BusinessNow);
+            }
+
             async Task ApplyAsync()
             {
                 _mapper.Map(dto, entity);
@@ -203,6 +218,13 @@ namespace MRC.Agendia.Application.Appointments
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken)
                 ?? throw new AppointmentNotFoundException(id);
+
+            // #171: deleting is a hard cancel, so the self-service window applies too.
+            if (!IsStaff())
+            {
+                var windowHours = await _repository.GetCancellationWindowHoursAsync(entity.Id, cancellationToken);
+                AppointmentCancellationPolicy.EnsureSelfServiceAllowed(entity.StartDate, windowHours, _clock.BusinessNow);
+            }
 
             // Deleting an occupying appointment frees a slot for the waitlist.
             var freedSlot = entity.Status.OccupiesCapacity();
