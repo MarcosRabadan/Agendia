@@ -565,7 +565,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
                 .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
                 .Options;
-            return new AgendiaDbContext(options);
+            return new AgendiaDbContext(options, new UnrestrictedBusinessScope());
         }
 
         private static async Task SeedDefaultGraphAsync(AgendiaDbContext db)
