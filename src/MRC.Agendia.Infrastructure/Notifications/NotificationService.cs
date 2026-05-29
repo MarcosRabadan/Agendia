@@ -65,7 +65,7 @@ namespace MRC.Agendia.Infrastructure.Notifications
 
                 var subject = "Se ha liberado un hueco - Agendia";
                 var body =
-                    $"<p>Hola {Encode(entry.Client.Name)},</p>" +
+                    $"<p>Hola {Encode(entry.Client!.Name)},</p>" +
                     "<p>Se ha liberado un hueco que estabas esperando:</p>" +
                     "<ul>" +
                     $"<li><strong>Servicio:</strong> {Encode(entry.Service.Name)}</li>" +
