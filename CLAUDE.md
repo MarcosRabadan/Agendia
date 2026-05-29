@@ -3,6 +3,12 @@
 Este fichero se carga **automáticamente** al inicio de cada sesión de Claude Code.
 Lee con atención antes de tocar código.
 
+> 📌 **Última actualización: 2026-05-29 (4ª sesión).** **3 features nuevas implementadas, revisadas con multi-agente y MERGEADAS a master**, + 1 feature construida en curso sin mergear. Build limpio; suite verde.
+> - **#174 — Reservas recurrentes / serie de citas (PR #175, MERGEADA):** el personal crea en masa una serie ("todos los viernes a las 16h hasta una fecha") y la gestiona por `SeriesId` (cancelar/reprogramar/borrar). Materializa una `Appointment` por ocurrencia reutilizando validador + booking guard; "saltar y avisar" en choques. Detalle en "Lo que SÍ funciona" + nota de diseño en "Citas y disponibilidad".
+> - **#168 — Alerta de retraso (PR #176, MERGEADA):** `POST /api/businesses/{id}/notify-delay` (Staff) avisa solo a los clientes con cita futura del mismo tramo (respeta turno partido vía `IScheduleResolver`); email best-effort, no reescribe horas.
+> - **#169 — Panel de estadísticas (PR #177, MERGEADA):** `GET /api/businesses/{id}/stats?from=&to=` (Owner/Admin); proyección server-side filtrada por negocio+rango + `BusinessStatsCalculator` puro (agrega en memoria para evitar GroupBy frágiles en SQL Server).
+> - **#167 — Lista de espera para huecos completos: EN CURSO, NO MERGEADA.** Construida entera en la rama local **`167-lista-de-espera`** (commit WIP `f9aa01c`, **sin pushear**): `WaitlistEntry` + enum `WaitlistStatus` + migración `AddWaitlist`; `IWaitlistRepository`/`WaitlistRepository`; `WaitlistService` (apuntarse/baja/listar + trigger FIFO `NotifyForFreedAppointmentAsync`, enganchado **best-effort** en `AppointmentService.UpdateAsync`→Cancelled y `DeleteAsync` solo si la cita ocupaba hueco); `INotificationService.SendWaitlistAvailabilityAsync`; `IAvailabilityService.GetSlotCapacityAsync` (reutilizado para validar "franja completa" al apuntarse); CQRS + endpoints `POST` / `GET me` / `DELETE /api/waitlist` (rol Client). 187 tests verdes en local. **Pendiente antes de PR:** arreglar warning `CS8602` en `NotificationService.SendWaitlistAvailabilityAsync` (deref de `entry.Client` tras `?.`), `dotnet format`, review multi-agente, push + PR (feature → revisión humana, NO auto-merge).
+
 > 📌 **Última actualización mayor: 2026-05-23 (3ª sesión).** **Re-auditoría multi-agente completa** (10 revisores en paralelo + 4 verificadores + re-review por PR) y cierre de **TODO el punch list** de la auditoría. 14 PRs mergeados a master: #139, #141, #143, #145, #147, #149, #151, #153, #155, #157, #159, #161, #163, #165. **146/146 tests verdes** (1 placeholder + 97 unit + 48 integration). Resumen por área:
 > - **Rendimiento:** N+1 del calendario eliminado (nuevo `IScheduleResolver.ResolveRange`), conteo de capacidad en servidor (`CountOverlappingForEmployeeAsync`), `AsNoTracking` en lecturas puras, `Include` innecesarios fuera, índice `IX_Appointment_StartDate` (migración `AddAppointmentStartDateIndex`).
 > - **Concurrencia (BIZ-02):** doble-reserva por carrera cerrada con un lock de aplicación de SQL Server (`sp_getapplock`) vía `IBookingConcurrencyGuard`, keyed por empleado+día.
@@ -498,17 +504,32 @@ dotnet run --project src/MRC.Agendia.Api
 - **`gh` CLI no está en el PATH del bash de Claude.** Invocar siempre con ruta completa: `"/c/Program Files/GitHub CLI/gh.exe"`. (Memoria persistida en `reference_gh_cli.md`.)
 - **Labels disponibles** en el repo: `area/auth`, `area/api`, `area/db`, `area/schedules`, `area/appointments`, `priority/{critical,high,medium,low}`, `type/{feature,bug,refactor,chore,tests,security}`. No hay `area/persistence` ni `area/auth` aceptan combos.
 
-## Estado del backlog (2026-05-23, 3ª sesión) — 3 issues abiertas
+## Estado del backlog (2026-05-29, 4ª sesión)
 
-> **3ª sesión:** re-auditoría completa con **TODO el punch list cerrado** (issues #138/#140/#142/#144/#146/#148/#150/#152/#154/#156/#158/#160/#162/#164 → 14 PRs mergeados, #139…#165). Resoluciones y decisiones aceptadas detalladas en la memoria `project_accepted_audit_decisions.md`. Las 3 issues de abajo (#51, #55, #58) NO eran parte de la auditoría y siguen abiertas a propósito.
+> **4ª sesión:** se abrió un backlog de **features nuevas** (#167–#173; #174 se creó nueva en esta sesión). Se implementaron, revisaron (multi-agente) y mergearon 3 (#174, #168, #169); #167 quedó construida en rama local sin pushear. Patrón: feature nueva → issue → implementar → PR → el **humano mergea** (no auto-merge de features).
 >
-> _2ª sesión (histórico):_ **#52** (soft delete + audit fields) y, de la auditoría inicial: **#125** (cross-tenant Employee), **#127** (soft-delete behavior), **#128** (RepositoryBase + AuditableEntity), **#129** (robustez + error codes), **#133** (integridad de citas), **#135** (código muerto).
+> _3ª sesión:_ re-auditoría completa, **TODO el punch list cerrado** (#139…#165); decisiones aceptadas en `project_accepted_audit_decisions.md`. _2ª sesión:_ **#52** + auditoría inicial (#125/#127/#128/#129/#133/#135).
+
+### Features nuevas (backlog de producto)
+
+| # | Título | Estado |
+|---|---|---|
+| [#174](https://github.com/MarcosRabadan/Agendia/issues/174) | Reservas recurrentes (serie en masa) | ✅ **MERGEADA** (PR #175) |
+| [#168](https://github.com/MarcosRabadan/Agendia/issues/168) | Alerta de retraso en tiempo real | ✅ **MERGEADA** (PR #176) |
+| [#169](https://github.com/MarcosRabadan/Agendia/issues/169) | Panel de estadísticas del negocio | ✅ **MERGEADA** (PR #177) |
+| [#167](https://github.com/MarcosRabadan/Agendia/issues/167) | Lista de espera para huecos completos | 🚧 **EN CURSO** — construida en rama local `167-lista-de-espera` (commit WIP `f9aa01c`, **sin pushear**). Pendiente: warning `CS8602`, `dotnet format`, review, PR. |
+| [#171](https://github.com/MarcosRabadan/Agendia/issues/171) | Cancelación/reprogramación self-service (política de antelación) | ⏳ Pendiente, **construible**: añadir `CancellationWindowHours` por negocio (migración) + comprobar la ventana en el Update/cancel existente. |
+| [#170](https://github.com/MarcosRabadan/Agendia/issues/170) | Reserva multiservicio (varios servicios en una cita) | ⏸️ **BLOQUEADA por decisión**: cambia el modelo core (`Appointment` de 1 `ServiceId` a colección) → rompe el contrato del front. Decidir compatibilidad antes de tocar. |
+| [#172](https://github.com/MarcosRabadan/Agendia/issues/172) | Pagos online y depósito anti-no-show | ⏸️ **DISCOVERY** (la propia issue dice "no lista para implementar": pasarela, política anti-no-show, asesoría legal/fiscal). |
+| [#173](https://github.com/MarcosRabadan/Agendia/issues/173) | Facturación electrónica / Verifactu | ⏸️ **FUTURO, no construir** (integrar proveedor). |
+
+### Otras issues abiertas (anteriores)
 
 | # | Título | Estado / Notas |
 |---|---|---|
-| [#51](https://github.com/MarcosRabadan/Agendia/issues/51) | Sistema de notificaciones (email + push) | **Email HECHO** (mergeado). Abierta solo por **push (FCM)**: necesita decidir Firebase + persistir device tokens (cloud aparcado). **Push = feature nueva → PR para revisión humana.** |
-| [#55](https://github.com/MarcosRabadan/Agendia/issues/55) | Caching de festivos y plantillas | priority/low. **No atacar sin métricas** (su AC pide mejora medible). |
-| [#58](https://github.com/MarcosRabadan/Agendia/issues/58) | Global query filter por BusinessId | priority/low. **No atacar** salvo más devs o incidente real de leak (los bugs reales ya se cerraron en #87/#91/#93/#125). |
+| [#51](https://github.com/MarcosRabadan/Agendia/issues/51) | Notificaciones (email + push) | **Email HECHO**. Abierta solo por **push (FCM)**: Firebase + device tokens (cloud aparcado). |
+| [#55](https://github.com/MarcosRabadan/Agendia/issues/55) | Caching de festivos y plantillas | priority/low. **No atacar sin métricas**. |
+| [#58](https://github.com/MarcosRabadan/Agendia/issues/58) | Global query filter por BusinessId | priority/low. **No atacar** salvo incidente real de leak. |
 
 ### Pendientes "fuera de scope" (no en el backlog)
 
@@ -519,7 +540,7 @@ dotnet run --project src/MRC.Agendia.Api
 
 El punch list de la auditoría está **cerrado** (incluidos los 2 riesgos reales: zona horaria y concurrencia). Lo natural ahora son features o pasos de pre-producción, no más arreglos. Por orden:
 
-1. **Push notifications (#51)** — feature nueva → **implementar y dejar en PR para revisión humana** (no auto-merge). Requiere decidir Firebase (FCM) + persistir device tokens (migración) — necesita decisión de cloud, hoy aparcada.
+1. **Terminar #167 (lista de espera)** — está en la rama local `167-lista-de-espera` (commit WIP `f9aa01c`, sin pushear): arreglar el warning `CS8602` en `NotificationService.SendWaitlistAvailabilityAsync`, `dotnet format`, review multi-agente, push + PR (feature → revisión humana). Luego **#171 (self-service cancel/reprogramar)** (config `CancellationWindowHours` + migración). **Push (#51)** sigue pendiente (Firebase/cloud aparcado).
 2. **Antes de producción real**: verificar el **envío SMTP real** (`SmtpEmailSender`) contra un relay (Mailtrap/SES). La lógica está hecha y testeada con un fake; el envío real no se ha probado contra un servidor.
 3. **Re-auditar periódicamente** con agentes (reviewers por área + verificadores). Antes de reportar, revisar la memoria `project_accepted_audit_decisions.md` para no re-levantar lo ya resuelto/aceptado (FindAsync+query filters, soft-delete sin cascada, modelo anémico, multi-zona horaria descartado, etc.).
 4. **NO atacar #55 (caching) ni #58 (global query filter)** sin métricas / sin incidente.
