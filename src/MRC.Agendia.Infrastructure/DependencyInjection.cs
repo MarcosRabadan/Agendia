@@ -63,7 +63,9 @@ namespace MRC.Agendia.Infrastructure
                 sp.GetRequiredService<ScheduleTemplateRepository>(), sp.GetRequiredService<IMemoryCache>()));
             services.AddScoped<HolidayCalendarRepository>();
             services.AddScoped<IHolidayCalendarRepository>(sp => new CachingHolidayCalendarRepository(
-                sp.GetRequiredService<HolidayCalendarRepository>(), sp.GetRequiredService<IMemoryCache>()));
+                sp.GetRequiredService<HolidayCalendarRepository>(),
+                sp.GetRequiredService<IMemoryCache>(),
+                sp.GetRequiredService<AgendiaDbContext>()));
             services.AddScoped<IAuditLogRepository, AuditLogRepository>();
             services.AddScoped<IBusinessStatsRepository, BusinessStatsRepository>();
             services.AddScoped<IWaitlistRepository, WaitlistRepository>();

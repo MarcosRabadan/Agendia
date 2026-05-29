@@ -15,6 +15,16 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
 
+        // Public (anonymous) catalog read by id: IgnoreQueryFilters so the service
+        // detail / availability stays open regardless of the caller's business
+        // scope (#58); re-apply !IsDeleted explicitly since the filter is bypassed.
+        // The management paths (Update/Delete/validator) keep the scoped GetByIdAsync.
+        public Task<Service?> GetByIdPublicAsync(int id, CancellationToken cancellationToken = default)
+            => Set
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(s => s.Id == id && !s.IsDeleted, cancellationToken);
+
         // Public (anonymous) catalog read: IgnoreQueryFilters so it stays a global
         // catalog regardless of the caller's business scope (#58); re-apply
         // !IsDeleted explicitly since the global filter is bypassed.

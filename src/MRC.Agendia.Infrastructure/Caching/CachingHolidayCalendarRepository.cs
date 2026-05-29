@@ -9,7 +9,9 @@ namespace MRC.Agendia.Infrastructure.Caching
     /// Holidays for a year are effectively immutable, so the per-year list
     /// (AsNoTracking, detached) is cached and evicted on a write of that year.
     /// Each <see cref="HolidayCalendar"/> carries its <c>Year</c>, so a write
-    /// evicts exactly the affected year(s) - no shared key-tracking needed.
+    /// evicts exactly the affected year(s) - no shared key-tracking needed. An
+    /// <see cref="Update"/> that moves a holiday across a year boundary also evicts
+    /// the previous year (read from the change tracker) so neither list goes stale.
     /// </summary>
     public class CachingHolidayCalendarRepository : IHolidayCalendarRepository
     {
@@ -17,11 +19,13 @@ namespace MRC.Agendia.Infrastructure.Caching
 
         private readonly IHolidayCalendarRepository _inner;
         private readonly IMemoryCache _cache;
+        private readonly AgendiaDbContext _context;
 
-        public CachingHolidayCalendarRepository(IHolidayCalendarRepository inner, IMemoryCache cache)
+        public CachingHolidayCalendarRepository(IHolidayCalendarRepository inner, IMemoryCache cache, AgendiaDbContext context)
         {
             _inner = inner;
             _cache = cache;
+            _context = context;
         }
 
         private static string Key(int year) => $"holidays:{year}";
@@ -54,8 +58,19 @@ namespace MRC.Agendia.Infrastructure.Caching
 
         public void Update(HolidayCalendar holiday)
         {
+            // A cross-year edit (Date/Year moved) leaves the entity carrying the NEW
+            // year here, so read the persisted year from the change tracker to evict
+            // the OLD year's list too; otherwise it would stay stale until the TTL.
+            var tracked = _context.ChangeTracker
+                .Entries<HolidayCalendar>()
+                .FirstOrDefault(e => ReferenceEquals(e.Entity, holiday));
+            var previousYear = tracked?.OriginalValues.GetValue<int>(nameof(HolidayCalendar.Year)) ?? holiday.Year;
+
             _inner.Update(holiday);
+
             _cache.Remove(Key(holiday.Year));
+            if (previousYear != holiday.Year)
+                _cache.Remove(Key(previousYear));
         }
 
         public void Delete(HolidayCalendar holiday)

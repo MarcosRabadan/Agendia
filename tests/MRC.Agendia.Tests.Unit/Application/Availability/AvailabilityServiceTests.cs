@@ -36,8 +36,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Availability
         {
             var date = new DateOnly(2030, 6, 3);
 
-            _businessRepository.GetByIdAsync(BusinessId).Returns(new Business());
-            _serviceRepository.GetByIdAsync(ServiceId)
+            _businessRepository.GetActiveByIdAsync(BusinessId).Returns(new Business());
+            _serviceRepository.GetByIdPublicAsync(ServiceId)
                 .Returns(new Service { Id = ServiceId, BusinessId = BusinessId, DurationMinutes = 30 });
             _employeeRepository.GetActiveByBusinessIdAsync(BusinessId)
                 .Returns(new List<Employee> { new() { Id = 10, BusinessId = BusinessId, IsActive = true, MaxConcurrentAppointments = 1 } });
@@ -72,10 +72,10 @@ namespace MRC.Agendia.Tests.Unit.Application.Availability
             var date = new DateOnly(2030, 6, 3);
             const int ExtraServiceId = 3;
 
-            _businessRepository.GetByIdAsync(BusinessId).Returns(new Business());
-            _serviceRepository.GetByIdAsync(ServiceId)
+            _businessRepository.GetActiveByIdAsync(BusinessId).Returns(new Business());
+            _serviceRepository.GetByIdPublicAsync(ServiceId)
                 .Returns(new Service { Id = ServiceId, BusinessId = BusinessId, DurationMinutes = 30 });
-            _serviceRepository.GetByIdAsync(ExtraServiceId)
+            _serviceRepository.GetByIdPublicAsync(ExtraServiceId)
                 .Returns(new Service { Id = ExtraServiceId, BusinessId = BusinessId, DurationMinutes = 30 });
             _employeeRepository.GetActiveByBusinessIdAsync(BusinessId)
                 .Returns(new List<Employee> { new() { Id = 10, BusinessId = BusinessId, IsActive = true, MaxConcurrentAppointments = 1 } });

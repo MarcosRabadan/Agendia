@@ -60,7 +60,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
             var ownerBusinessIds = db.Businesses
                 .IgnoreQueryFilters()
-                .Where(b => b.OwnerUserId == userId)
+                .Where(b => b.OwnerUserId == userId && !b.IsDeleted)
                 .Select(b => b.Id);
 
             var employeeBusinessIds = db.Employees

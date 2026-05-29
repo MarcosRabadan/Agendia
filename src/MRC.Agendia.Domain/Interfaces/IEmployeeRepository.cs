@@ -5,6 +5,7 @@ namespace MRC.Agendia.Domain.Interfaces
     public interface IEmployeeRepository
     {
         Task<Employee?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<Employee?> GetByIdPublicAsync(int id, CancellationToken cancellationToken = default);
         Task<Employee?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default);
         Task<IEnumerable<Employee>> GetActiveByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default);
         Task<(IReadOnlyList<Employee> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default);
