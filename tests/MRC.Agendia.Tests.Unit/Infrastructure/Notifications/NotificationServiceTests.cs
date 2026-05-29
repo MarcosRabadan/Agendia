@@ -11,12 +11,13 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Notifications
     public class NotificationServiceTests
     {
         private readonly IAppointmentRepository _appointments = Substitute.For<IAppointmentRepository>();
+        private readonly IWaitlistRepository _waitlist = Substitute.For<IWaitlistRepository>();
         private readonly IEmailSender _emailSender = Substitute.For<IEmailSender>();
         private readonly NotificationService _sut;
 
         public NotificationServiceTests()
         {
-            _sut = new NotificationService(_appointments, _emailSender, Substitute.For<ILogger<NotificationService>>());
+            _sut = new NotificationService(_appointments, _waitlist, _emailSender, Substitute.For<ILogger<NotificationService>>());
         }
 
         private static Appointment BuildAppointment(string? clientEmail = "ana@test.com") => new()

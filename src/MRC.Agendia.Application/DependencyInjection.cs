@@ -11,6 +11,7 @@ using MRC.Agendia.Application.Holidays;
 using MRC.Agendia.Application.Mappings;
 using MRC.Agendia.Application.Schedules;
 using MRC.Agendia.Application.Services;
+using MRC.Agendia.Application.Waitlist;
 
 namespace MRC.Agendia.Application
 {
@@ -51,6 +52,7 @@ namespace MRC.Agendia.Application
             services.AddScoped<IScheduleGenerationService, ScheduleGenerationService>();
             services.AddScoped<IHolidayService, HolidayService>();
             services.AddScoped<IAvailabilityService, AvailabilityService>();
+            services.AddScoped<IWaitlistService, WaitlistService>();
 
             return services;
         }

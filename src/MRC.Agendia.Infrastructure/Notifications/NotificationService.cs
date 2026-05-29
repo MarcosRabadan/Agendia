@@ -17,15 +17,18 @@ namespace MRC.Agendia.Infrastructure.Notifications
     public class NotificationService : INotificationService
     {
         private readonly IAppointmentRepository _appointmentRepository;
+        private readonly IWaitlistRepository _waitlistRepository;
         private readonly IEmailSender _emailSender;
         private readonly ILogger<NotificationService> _logger;
 
         public NotificationService(
             IAppointmentRepository appointmentRepository,
+            IWaitlistRepository waitlistRepository,
             IEmailSender emailSender,
             ILogger<NotificationService> logger)
         {
             _appointmentRepository = appointmentRepository;
+            _waitlistRepository = waitlistRepository;
             _emailSender = emailSender;
             _logger = logger;
         }
@@ -41,6 +44,45 @@ namespace MRC.Agendia.Infrastructure.Notifications
 
         public Task<bool> SendDelayNotificationAsync(int appointmentId, int delayMinutes, CancellationToken cancellationToken = default)
             => SendAsync(appointmentId, "delay", a => BuildDelay(a, delayMinutes), cancellationToken);
+
+        public async Task<bool> SendWaitlistAvailabilityAsync(int waitlistEntryId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var entry = await _waitlistRepository.GetByIdWithDetailsAsync(waitlistEntryId, cancellationToken);
+                if (entry is null)
+                {
+                    _logger.LogWarning("Notification waitlist: entry {Id} not found or participant deleted; skipping.", waitlistEntryId);
+                    return true;
+                }
+
+                var email = entry.Client?.Email;
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    _logger.LogWarning("Notification waitlist: entry {Id} client has no email; skipping.", waitlistEntryId);
+                    return true;
+                }
+
+                var subject = "Se ha liberado un hueco - Agendia";
+                var body =
+                    $"<p>Hola {Encode(entry.Client.Name)},</p>" +
+                    "<p>Se ha liberado un hueco que estabas esperando:</p>" +
+                    "<ul>" +
+                    $"<li><strong>Servicio:</strong> {Encode(entry.Service.Name)}</li>" +
+                    $"<li><strong>Fecha:</strong> {entry.Date:dd/MM/yyyy} a las {entry.StartTime:HH:mm}</li>" +
+                    "</ul>" +
+                    "<p>Reserva cuanto antes desde la app; las plazas se asignan por orden de llegada.</p>";
+
+                await _emailSender.SendAsync(email, subject, body);
+                _logger.LogInformation("Notification waitlist sent for entry {Id} to {Email}.", waitlistEntryId, email);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Notification waitlist failed for entry {Id}.", waitlistEntryId);
+                return false;
+            }
+        }
 
         private async Task<bool> SendAsync(
             int appointmentId,

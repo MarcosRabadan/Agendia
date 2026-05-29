@@ -18,5 +18,8 @@ namespace MRC.Agendia.Application.Notifications
 
         /// <summary>Tells the client the business is running ~<paramref name="delayMinutes"/> minutes late.</summary>
         Task<bool> SendDelayNotificationAsync(int appointmentId, int delayMinutes, CancellationToken cancellationToken = default);
+
+        /// <summary>Tells a waiting client that a slot they were waiting for has freed up.</summary>
+        Task<bool> SendWaitlistAvailabilityAsync(int waitlistEntryId, CancellationToken cancellationToken = default);
     }
 }

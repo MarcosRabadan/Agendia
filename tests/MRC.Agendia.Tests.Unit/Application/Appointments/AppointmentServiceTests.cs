@@ -4,6 +4,7 @@ using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Application.Notifications;
+using MRC.Agendia.Application.Waitlist;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
@@ -25,6 +26,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         private readonly IAppointmentSchedulingValidator _validator = Substitute.For<IAppointmentSchedulingValidator>();
         private readonly IBookingConcurrencyGuard _bookingGuard = Substitute.For<IBookingConcurrencyGuard>();
         private readonly INotificationService _notificationService = Substitute.For<INotificationService>();
+        private readonly IWaitlistService _waitlistService = Substitute.For<IWaitlistService>();
         private readonly IAuditLogger _auditLogger = Substitute.For<IAuditLogger>();
         private readonly ICurrentUserContext _currentUser = Substitute.For<ICurrentUserContext>();
         private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
@@ -46,7 +48,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             _sut = new AppointmentService(
                 _repository, _clientRepository, _validator, _bookingGuard,
-                _notificationService, _auditLogger, _currentUser, _unitOfWork, _mapper);
+                _notificationService, _waitlistService, _auditLogger, _currentUser, _unitOfWork, _mapper);
         }
 
         [Fact]

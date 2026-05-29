@@ -4,6 +4,7 @@ using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Notifications;
+using MRC.Agendia.Application.Waitlist;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
@@ -19,6 +20,7 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IAppointmentSchedulingValidator _schedulingValidator;
         private readonly IBookingConcurrencyGuard _bookingGuard;
         private readonly INotificationService _notificationService;
+        private readonly IWaitlistService _waitlistService;
         private readonly IAuditLogger _auditLogger;
         private readonly ICurrentUserContext _currentUser;
         private readonly IUnitOfWork _unitOfWork;
@@ -30,6 +32,7 @@ namespace MRC.Agendia.Application.Appointments
             IAppointmentSchedulingValidator schedulingValidator,
             IBookingConcurrencyGuard bookingGuard,
             INotificationService notificationService,
+            IWaitlistService waitlistService,
             IAuditLogger auditLogger,
             ICurrentUserContext currentUser,
             IUnitOfWork unitOfWork,
@@ -40,6 +43,7 @@ namespace MRC.Agendia.Application.Appointments
             _schedulingValidator = schedulingValidator;
             _bookingGuard = bookingGuard;
             _notificationService = notificationService;
+            _waitlistService = waitlistService;
             _auditLogger = auditLogger;
             _currentUser = currentUser;
             _unitOfWork = unitOfWork;
@@ -188,6 +192,10 @@ namespace MRC.Agendia.Application.Appointments
             if (previousStatus != AppointmentStatus.Cancelled && entity.Status == AppointmentStatus.Cancelled)
                 await _notificationService.SendAppointmentCancellationAsync(entity.Id, cancellationToken);
 
+            // Cancelling an occupying appointment frees a slot: notify the waitlist (best-effort).
+            if (previousStatus.OccupiesCapacity() && entity.Status == AppointmentStatus.Cancelled)
+                await _waitlistService.NotifyForFreedAppointmentAsync(entity.Id, cancellationToken);
+
             return _mapper.Map<AppointmentDto>(entity);
         }
 
@@ -196,8 +204,16 @@ namespace MRC.Agendia.Application.Appointments
             var entity = await _repository.GetByIdAsync(id, cancellationToken)
                 ?? throw new AppointmentNotFoundException(id);
 
+            // Deleting an occupying appointment frees a slot for the waitlist.
+            var freedSlot = entity.Status.OccupiesCapacity();
+
             _repository.Delete(entity);
             await _unitOfWork.Save(cancellationToken);
+
+            // Notify the waitlist after the deletion is persisted (best-effort).
+            if (freedSlot)
+                await _waitlistService.NotifyForFreedAppointmentAsync(id, cancellationToken);
+
             return true;
         }
 
