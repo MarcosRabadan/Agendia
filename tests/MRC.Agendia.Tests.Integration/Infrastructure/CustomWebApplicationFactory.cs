@@ -63,9 +63,22 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
             builder.ConfigureServices(services =>
             {
                 // Replace the SQL Server DbContext registered by AddInfrastructure
-                // with an InMemory one shared across the whole fixture.
-                services.RemoveAll<DbContextOptions<AgendiaDbContext>>();
-                services.RemoveAll<AgendiaDbContext>();
+                // with an InMemory one shared across the whole fixture. EF Core 9
+                // also registers an IDbContextOptionsConfiguration<AgendiaDbContext>
+                // (the UseSqlServer call) on top of DbContextOptions<>, and applies
+                // EVERY such config, so the SQL Server one must be removed too or both
+                // providers end up active ("Only a single database provider can be
+                // registered"). Remove all AgendiaDbContext options/config descriptors
+                // by service type (version-agnostic) before re-registering InMemory.
+                var dbDescriptors = services.Where(d =>
+                        d.ServiceType == typeof(DbContextOptions<AgendiaDbContext>)
+                        || d.ServiceType == typeof(AgendiaDbContext)
+                        || (d.ServiceType.IsGenericType
+                            && d.ServiceType.GetGenericTypeDefinition().Name.StartsWith("IDbContextOptionsConfiguration")
+                            && d.ServiceType.GenericTypeArguments.Contains(typeof(AgendiaDbContext))))
+                    .ToList();
+                foreach (var descriptor in dbDescriptors)
+                    services.Remove(descriptor);
 
                 services.AddDbContext<AgendiaDbContext>((sp, options) =>
                 {
