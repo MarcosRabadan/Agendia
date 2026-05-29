@@ -93,6 +93,9 @@ namespace MRC.Agendia.Infrastructure
             // it depends on IHttpContextAccessor; here just the infrastructural service)
             services.AddScoped<IResourceAuthorizationService, ResourceAuthorizationService>();
 
+            // Per-request multi-tenant business scope for the global query filter (#58).
+            services.AddScoped<ICurrentBusinessScope, CurrentBusinessScope>();
+
             // Notifications (email; push/FCM tracked separately)
             services.AddScoped<INotificationService, NotificationService>();
 

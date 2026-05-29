@@ -15,15 +15,20 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
 
+        // Public (anonymous) reads: IgnoreQueryFilters so the catalog stays open to
+        // everyone regardless of the caller's business scope (#58); re-apply
+        // !IsDeleted explicitly since the global filter is bypassed.
         public Task<Business?> GetActiveByIdAsync(int id, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
-                .FirstOrDefaultAsync(b => b.Id == id && b.IsActive, cancellationToken);
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(b => b.Id == id && b.IsActive && !b.IsDeleted, cancellationToken);
 
         public Task<(IReadOnlyList<Business> Items, int TotalCount)> GetPagedActiveAsync(int page, int pageSize, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
-                .Where(b => b.IsActive)
+                .IgnoreQueryFilters()
+                .Where(b => b.IsActive && !b.IsDeleted)
                 .OrderBy(b => b.Id)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
     }

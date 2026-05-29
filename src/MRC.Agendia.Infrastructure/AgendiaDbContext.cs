@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Infrastructure.Identity;
 
@@ -7,8 +8,11 @@ namespace MRC.Agendia.Infrastructure;
 
 public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
 {
-    public AgendiaDbContext(DbContextOptions<AgendiaDbContext> options) : base(options)
+    private readonly ICurrentBusinessScope _businessScope;
+
+    public AgendiaDbContext(DbContextOptions<AgendiaDbContext> options, ICurrentBusinessScope businessScope) : base(options)
     {
+        _businessScope = businessScope;
     }
 
     public DbSet<Business> Businesses => Set<Business>();
@@ -158,10 +162,24 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
 
         // Soft delete: hide deleted rows from every query by default.
         // Restore paths use IgnoreQueryFilters() to reach them again.
-        modelBuilder.Entity<Business>().HasQueryFilter(b => !b.IsDeleted);
+        //
+        // Multi-tenant business scope (#58, defense in depth over resource auth):
+        // Business/Employee/Service additionally restrict to the caller's own
+        // business(es) for Owner/Employee callers; the clause is a no-op for Admin,
+        // anonymous and Client callers (see CurrentBusinessScope). Public reads of
+        // Business/Service use IgnoreQueryFilters() so the catalog stays open to all.
+        // NOT scoped here (deliberate): Appointment (no direct BusinessId; filtering
+        // via Employee.BusinessId would fight the IgnoreQueryFilters reads that keep
+        // appointments whose parent is soft-deleted, #127/#133), ScheduleTemplate/
+        // ScheduleOverride (cross-tenant calendar reads are an accepted decision) and
+        // RefreshToken (user-scoped). Those stay protected by resource authorization.
+        modelBuilder.Entity<Business>().HasQueryFilter(b => !b.IsDeleted
+            && (!_businessScope.IsRestricted || _businessScope.BusinessIds.Contains(b.Id)));
         modelBuilder.Entity<Client>().HasQueryFilter(c => !c.IsDeleted);
-        modelBuilder.Entity<Employee>().HasQueryFilter(e => !e.IsDeleted);
-        modelBuilder.Entity<Service>().HasQueryFilter(s => !s.IsDeleted);
+        modelBuilder.Entity<Employee>().HasQueryFilter(e => !e.IsDeleted
+            && (!_businessScope.IsRestricted || _businessScope.BusinessIds.Contains(e.BusinessId)));
+        modelBuilder.Entity<Service>().HasQueryFilter(s => !s.IsDeleted
+            && (!_businessScope.IsRestricted || _businessScope.BusinessIds.Contains(s.BusinessId)));
         modelBuilder.Entity<Appointment>().HasQueryFilter(a => !a.IsDeleted);
 
         // Backfill CreatedAt for rows that existed before audit fields were added.
