@@ -36,6 +36,9 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
     // Multiservice (#170): extra services of an appointment beyond the primary one.
     public DbSet<AppointmentExtraService> AppointmentExtraServices => Set<AppointmentExtraService>();
 
+    // Push device tokens (#51)
+    public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -229,5 +232,19 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<AppointmentExtraService>()
             .HasIndex(x => x.AppointmentId)
             .HasDatabaseName("IX_AppointmentExtraService_AppointmentId");
+
+        // Push device tokens (#51): one row per token (unique), fanned out by user.
+        modelBuilder.Entity<DeviceToken>()
+            .Property(d => d.Platform)
+            .HasConversion<int>();
+
+        modelBuilder.Entity<DeviceToken>()
+            .HasIndex(d => d.Token)
+            .IsUnique()
+            .HasDatabaseName("IX_DeviceToken_Token");
+
+        modelBuilder.Entity<DeviceToken>()
+            .HasIndex(d => d.UserId)
+            .HasDatabaseName("IX_DeviceToken_UserId");
     }
 }

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MRC.Agendia.Application.Common.Email;
+using MRC.Agendia.Application.Common.Push;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Infrastructure.Persistence;
 
@@ -32,6 +33,9 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
 
         /// <summary>Captures emails so tests can read the reset/confirmation token.</summary>
         public FakeEmailSender EmailSender { get; } = new();
+
+        /// <summary>Captures push notifications so tests can assert on them.</summary>
+        public FakePushSender PushSender { get; } = new();
 
         public CustomWebApplicationFactory()
         {
@@ -81,6 +85,10 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
                 // read the reset/confirmation token out of the body.
                 services.RemoveAll<IEmailSender>();
                 services.AddSingleton<IEmailSender>(EmailSender);
+
+                // Capture push notifications instead of logging them.
+                services.RemoveAll<IPushSender>();
+                services.AddSingleton<IPushSender>(PushSender);
             });
         }
     }
