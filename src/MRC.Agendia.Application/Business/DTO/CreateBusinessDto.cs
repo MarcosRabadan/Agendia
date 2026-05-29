@@ -1,3 +1,5 @@
+using MRC.Agendia.Domain.Constants;
+
 namespace MRC.Agendia.Application.Business.DTO
 {
     public record CreateBusinessDto(
@@ -6,5 +8,6 @@ namespace MRC.Agendia.Application.Business.DTO
         string Address,
         string Phone,
         string Email,
-        int? CancellationWindowHours = null);
+        int? CancellationWindowHours = null,
+        string DefaultLanguage = SupportedLanguages.Spanish);
 }

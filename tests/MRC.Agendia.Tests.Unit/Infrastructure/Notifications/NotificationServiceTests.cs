@@ -25,14 +25,24 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Notifications
                 Substitute.For<ILogger<NotificationService>>());
         }
 
-        private static Appointment BuildAppointment(string? clientEmail = "ana@test.com", string? clientUserId = null) => new()
+        private static Appointment BuildAppointment(
+            string? clientEmail = "ana@test.com", string? clientUserId = null, string defaultLanguage = "es") => new()
+            {
+                Id = 5,
+                StartDate = new DateTime(2027, 1, 4, 9, 0, 0, DateTimeKind.Utc),
+                EndDate = new DateTime(2027, 1, 4, 9, 30, 0, DateTimeKind.Utc),
+                Client = new Client { Name = "Ana", Email = clientEmail, UserId = clientUserId },
+                Service = new Service { Name = "Corte" },
+                Employee = new Employee { FullName = "Luis", Business = new Business { Name = "Peluqueria X", DefaultLanguage = defaultLanguage } }
+            };
+
+        private static WaitlistEntry BuildWaitlistEntry(string defaultLanguage = "es") => new()
         {
-            Id = 5,
-            StartDate = new DateTime(2027, 1, 4, 9, 0, 0, DateTimeKind.Utc),
-            EndDate = new DateTime(2027, 1, 4, 9, 30, 0, DateTimeKind.Utc),
-            Client = new Client { Name = "Ana", Email = clientEmail, UserId = clientUserId },
-            Service = new Service { Name = "Corte" },
-            Employee = new Employee { FullName = "Luis", Business = new Business { Name = "Peluqueria X" } }
+            Id = 7,
+            Date = new DateOnly(2027, 1, 4),
+            StartTime = new TimeOnly(9, 0),
+            Client = new Client { Name = "Ana", Email = "ana@test.com" },
+            Service = new Service { Name = "Corte", Business = new Business { Name = "Peluqueria X", DefaultLanguage = defaultLanguage } }
         };
 
         [Fact]
@@ -150,6 +160,87 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Notifications
             var handled = await _sut.SendAppointmentReminderAsync(5);
 
             Assert.False(handled);
+        }
+
+        [Fact]
+        public async Task Confirmation_NegocioEnIngles_AsuntoYCuerpoEnIngles()
+        {
+            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>())
+                .Returns(BuildAppointment(defaultLanguage: "en"));
+
+            await _sut.SendAppointmentConfirmationAsync(5);
+
+            await _emailSender.Received(1).SendAsync(
+                "ana@test.com",
+                Arg.Is<string>(s => s.Contains("confirmed", StringComparison.OrdinalIgnoreCase)),
+                Arg.Is<string>(b => b.Contains("Hello") && b.Contains("Service:")));
+        }
+
+        [Fact]
+        public async Task Confirmation_NegocioEnFrances_AsuntoYCuerpoEnFrances()
+        {
+            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>())
+                .Returns(BuildAppointment(defaultLanguage: "fr"));
+
+            await _sut.SendAppointmentConfirmationAsync(5);
+
+            await _emailSender.Received(1).SendAsync(
+                "ana@test.com",
+                Arg.Is<string>(s => s.Contains("Rendez-vous")),
+                Arg.Is<string>(b => b.Contains("Bonjour")));
+        }
+
+        [Fact]
+        public async Task Delay_NegocioEnIngles_CuerpoConMinutosEnIngles()
+        {
+            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>())
+                .Returns(BuildAppointment(defaultLanguage: "en"));
+
+            await _sut.SendDelayNotificationAsync(5, 15);
+
+            await _emailSender.Received(1).SendAsync(
+                "ana@test.com",
+                Arg.Is<string>(s => s.Contains("delayed", StringComparison.OrdinalIgnoreCase)),
+                Arg.Is<string>(b => b.Contains("15") && b.Contains("minutes")));
+        }
+
+        [Fact]
+        public async Task Waitlist_PorDefecto_EnEspanol()
+        {
+            _waitlist.GetByIdWithDetailsAsync(7, Arg.Any<CancellationToken>()).Returns(BuildWaitlistEntry());
+
+            await _sut.SendWaitlistAvailabilityAsync(7);
+
+            await _emailSender.Received(1).SendAsync(
+                "ana@test.com",
+                Arg.Is<string>(s => s.Contains("hueco", StringComparison.OrdinalIgnoreCase)),
+                Arg.Is<string>(b => b.Contains("Hola") && b.Contains("Servicio:")));
+        }
+
+        [Fact]
+        public async Task Waitlist_NegocioEnIngles_EnIngles()
+        {
+            _waitlist.GetByIdWithDetailsAsync(7, Arg.Any<CancellationToken>()).Returns(BuildWaitlistEntry("en"));
+
+            await _sut.SendWaitlistAvailabilityAsync(7);
+
+            await _emailSender.Received(1).SendAsync(
+                "ana@test.com",
+                Arg.Is<string>(s => s.Contains("slot", StringComparison.OrdinalIgnoreCase)),
+                Arg.Is<string>(b => b.Contains("Hello") && b.Contains("Service:")));
+        }
+
+        [Fact]
+        public async Task Waitlist_NegocioEnFrances_EnFrances()
+        {
+            _waitlist.GetByIdWithDetailsAsync(7, Arg.Any<CancellationToken>()).Returns(BuildWaitlistEntry("fr"));
+
+            await _sut.SendWaitlistAvailabilityAsync(7);
+
+            await _emailSender.Received(1).SendAsync(
+                "ana@test.com",
+                Arg.Any<string>(),
+                Arg.Is<string>(b => b.Contains("Bonjour")));
         }
     }
 }

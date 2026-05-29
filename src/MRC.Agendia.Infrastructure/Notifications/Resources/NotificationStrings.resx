@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Subject_Confirmation" xml:space="preserve">
+    <value>Cita confirmada - Agendia</value>
+  </data>
+  <data name="Subject_Reminder" xml:space="preserve">
+    <value>Recordatorio de tu cita - Agendia</value>
+  </data>
+  <data name="Subject_Cancellation" xml:space="preserve">
+    <value>Cita cancelada - Agendia</value>
+  </data>
+  <data name="Subject_Delay" xml:space="preserve">
+    <value>Tu cita va con retraso - Agendia</value>
+  </data>
+  <data name="Subject_Waitlist" xml:space="preserve">
+    <value>Se ha liberado un hueco - Agendia</value>
+  </data>
+  <data name="Greeting" xml:space="preserve">
+    <value>Hola {0},</value>
+  </data>
+  <data name="Confirmation_Intro" xml:space="preserve">
+    <value>Tu cita ha sido confirmada:</value>
+  </data>
+  <data name="Confirmation_Outro" xml:space="preserve">
+    <value>Te esperamos. Si necesitas cancelarla, hazlo desde la app.</value>
+  </data>
+  <data name="Reminder_Intro" xml:space="preserve">
+    <value>Te recordamos tu proxima cita:</value>
+  </data>
+  <data name="Reminder_Outro" xml:space="preserve">
+    <value>Si no puedes asistir, cancelala con antelacion desde la app.</value>
+  </data>
+  <data name="Cancellation_Intro" xml:space="preserve">
+    <value>Tu cita ha sido cancelada:</value>
+  </data>
+  <data name="Cancellation_Outro" xml:space="preserve">
+    <value>Puedes reservar una nueva cuando quieras desde la app.</value>
+  </data>
+  <data name="Delay_Intro" xml:space="preserve">
+    <value>Te avisamos de que vamos con aproximadamente {0} de retraso sobre tu cita:</value>
+  </data>
+  <data name="Delay_Outro" xml:space="preserve">
+    <value>Disculpa las molestias. Puedes venir un poco mas tarde sin perder tu turno.</value>
+  </data>
+  <data name="Waitlist_Intro" xml:space="preserve">
+    <value>Se ha liberado un hueco que estabas esperando:</value>
+  </data>
+  <data name="Waitlist_Outro" xml:space="preserve">
+    <value>Reserva cuanto antes desde la app; las plazas se asignan por orden de llegada.</value>
+  </data>
+  <data name="Unit_Minutes" xml:space="preserve">
+    <value>minutos</value>
+  </data>
+  <data name="Label_Service" xml:space="preserve">
+    <value>Servicio:</value>
+  </data>
+  <data name="Label_Professional" xml:space="preserve">
+    <value>Profesional:</value>
+  </data>
+  <data name="Label_Business" xml:space="preserve">
+    <value>Negocio:</value>
+  </data>
+  <data name="Label_Date" xml:space="preserve">
+    <value>Fecha:</value>
+  </data>
+  <data name="Waitlist_SlotFormat" xml:space="preserve">
+    <value>{0} a las {1}</value>
+  </data>
+</root>
