@@ -1,0 +1,27 @@
+<Project>
+
+  <!--
+    Accepted security advisories (auditoria 6a sesion, decision del owner, #190).
+    NuGetAuditSuppress silences ONLY these two specific advisories, so any
+    genuinely-new high/critical advisory on any package still surfaces (NU1901-04).
+    Rationale recorded in the memory project_accepted_audit_decisions.md.
+
+    - GHSA-rvv3-g6hj-g44x  (AutoMapper, High, CVE-2026-32933)
+      DoS via ~25,000-level recursive object graphs -> StackOverflowException.
+      No FREE patched version exists (12/13/14 unpatched; 15.1.1/16.1.1 are
+      commercially licensed). NOT reachable in this API: ASP.NET Core's default
+      JSON MaxDepth (64) rejects such payloads before they ever reach AutoMapper,
+      all mappings are static Profiles, and there is no attacker-controlled mapping
+      configuration. Revisit if a free fix ships or if recursive DTOs are introduced.
+
+    - GHSA-w7r3-mgwf-4mqq  (KubernetesClient, Moderate)
+      Transitive dependency of AspNetCore.HealthChecks.UI, whose dashboard
+      (/health-ui) is mounted ONLY in Development. Not part of the production
+      attack surface.
+  -->
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-rvv3-g6hj-g44x" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-w7r3-mgwf-4mqq" />
+  </ItemGroup>
+
+</Project>
