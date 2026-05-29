@@ -30,6 +30,9 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
     // Audit
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+    // Waitlist (#167)
+    public DbSet<WaitlistEntry> WaitlistEntries => Set<WaitlistEntry>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -182,5 +185,27 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(a => a.SeriesId)
             .HasDatabaseName("IX_Appointment_SeriesId")
             .HasFilter("[SeriesId] IS NOT NULL");
+
+        // Waitlist (#167)
+        modelBuilder.Entity<WaitlistEntry>()
+            .HasOne(w => w.Client)
+            .WithMany()
+            .HasForeignKey(w => w.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<WaitlistEntry>()
+            .HasOne(w => w.Service)
+            .WithMany()
+            .HasForeignKey(w => w.ServiceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<WaitlistEntry>()
+            .Property(w => w.Status)
+            .HasConversion<int>();
+
+        // The freed-slot trigger looks up waiting entries by this exact tuple.
+        modelBuilder.Entity<WaitlistEntry>()
+            .HasIndex(w => new { w.BusinessId, w.ServiceId, w.Date, w.StartTime, w.Status })
+            .HasDatabaseName("IX_WaitlistEntry_Slot");
     }
 }

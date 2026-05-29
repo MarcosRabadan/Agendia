@@ -185,6 +185,66 @@ namespace MRC.Agendia.Application.Availability
                 Slots: slots);
         }
 
+        public async Task<int?> GetSlotCapacityAsync(
+            int businessId,
+            DateOnly date,
+            TimeOnly startTime,
+            int serviceId,
+            int? employeeId,
+            CancellationToken cancellationToken = default)
+        {
+            _ = await _businessRepository.GetByIdAsync(businessId, cancellationToken)
+                ?? throw new BusinessNotFoundException(businessId);
+
+            var service = await _serviceRepository.GetByIdAsync(serviceId, cancellationToken)
+                ?? throw new ServiceNotFoundException(serviceId);
+            if (service.BusinessId != businessId)
+                throw new InvalidOperationException("El servicio no pertenece al negocio indicado.");
+            if (service.DurationMinutes <= 0)
+                throw new InvalidOperationException("El servicio no tiene una duracion valida.");
+
+            List<Employee> employees;
+            if (employeeId is int empId)
+            {
+                var employee = await _employeeRepository.GetByIdAsync(empId, cancellationToken)
+                    ?? throw new EmployeeNotFoundException(empId);
+                if (employee.BusinessId != businessId)
+                    throw new InvalidOperationException("El empleado no pertenece al negocio indicado.");
+                if (!employee.IsActive)
+                    return null;
+                employees = new List<Employee> { employee };
+            }
+            else
+            {
+                employees = (await _employeeRepository.GetActiveByBusinessIdAsync(businessId, cancellationToken)).ToList();
+            }
+
+            if (employees.Count == 0)
+                return null;
+
+            var effective = await _scheduleResolver.GetEffectiveScheduleAsync(businessId, date, cancellationToken);
+            if (!effective.IsOpen || effective.TimeSlots.Count == 0)
+                return null;
+
+            var endTime = startTime.Add(TimeSpan.FromMinutes(service.DurationMinutes));
+            // The slot must fit entirely inside one continuous open window.
+            if (!effective.TimeSlots.Any(w => startTime >= w.StartTime && endTime <= w.EndTime))
+                return null;
+
+            var start = date.ToDateTime(startTime);
+            var end = date.ToDateTime(endTime);
+            var capacity = 0;
+            foreach (var employee in employees)
+            {
+                var overlapping = await _appointmentRepository.CountOverlappingForEmployeeAsync(employee.Id, start, end, null, cancellationToken);
+                var remaining = employee.MaxConcurrentAppointments - overlapping;
+                if (remaining > 0)
+                    capacity += remaining;
+            }
+
+            return capacity;
+        }
+
         /// <summary>
         /// Counts how many of the employee's existing appointments overlap with
         /// the candidate window [slotStart, slotEnd] on the given date.

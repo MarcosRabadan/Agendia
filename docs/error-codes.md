@@ -35,6 +35,7 @@ El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan 
 | `SERVICE_NOT_FOUND` | `ServiceNotFoundException` |
 | `APPOINTMENT_NOT_FOUND` | `AppointmentNotFoundException` |
 | `APPOINTMENT_SERIES_NOT_FOUND` | `AppointmentSeriesNotFoundException` |
+| `WAITLIST_ENTRY_NOT_FOUND` | `WaitlistEntryNotFoundException` |
 | `SCHEDULE_TEMPLATE_NOT_FOUND` | `ScheduleTemplateNotFoundException` |
 | `SCHEDULE_OVERRIDE_NOT_FOUND` | `ScheduleOverrideNotFoundException` |
 | `HOLIDAY_NOT_FOUND` | `HolidayNotFoundException` |
@@ -52,6 +53,8 @@ El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan 
 | `EMPLOYEE_INACTIVE` | `EmployeeInactiveException` | El empleado seleccionado está inactivo. |
 | `SERVICE_EMPLOYEE_MISMATCH` | `ServiceEmployeeMismatchException` | El servicio y el empleado pertenecen a negocios distintos. |
 | `APPOINTMENT_DURATION_MISMATCH` | `AppointmentDurationMismatchException` | La duración de la cita no coincide con la del servicio. |
+| `SLOT_HAS_CAPACITY` | `SlotHasCapacityException` | Al apuntarse a la lista de espera, la franja todavía tiene hueco (reserva directa). |
+| `DUPLICATE_WAITLIST_ENTRY` | `DuplicateWaitlistEntryException` | El cliente ya está en la lista de espera de esa franja. |
 
 ## Cómo añadir un código nuevo
 

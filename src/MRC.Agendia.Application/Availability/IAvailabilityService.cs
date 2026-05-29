@@ -23,5 +23,19 @@ namespace MRC.Agendia.Application.Availability
             int? employeeId,
             int stepMinutes = 15,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Free capacity of one exact slot (start time + service duration) for a
+        /// service, optionally limited to an employee. Returns null when the slot
+        /// is not bookable at all (day closed, outside the open windows, no active
+        /// employee); 0 means the slot exists but is full; &gt; 0 means it has room.
+        /// </summary>
+        Task<int?> GetSlotCapacityAsync(
+            int businessId,
+            DateOnly date,
+            TimeOnly startTime,
+            int serviceId,
+            int? employeeId,
+            CancellationToken cancellationToken = default);
     }
 }
