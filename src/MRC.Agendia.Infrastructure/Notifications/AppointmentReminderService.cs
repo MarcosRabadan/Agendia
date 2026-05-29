@@ -125,16 +125,21 @@ namespace MRC.Agendia.Infrastructure.Notifications
             foreach (var appointment in due)
             {
                 // Only mark as reminded when the send actually succeeded, so a
-                // transient failure is retried on the next run instead of being
-                // silently lost.
+                // transient failure is retried on the next run instead of being lost.
                 if (await notifications.SendAppointmentReminderAsync(appointment.Id, cancellationToken))
                 {
                     appointment.ReminderSentAt = DateTime.UtcNow;
+                    // Persist per item, NOT once after the whole loop: otherwise a
+                    // crash/recycle mid-batch loses every ReminderSentAt mark and
+                    // re-sends all the already-delivered reminders on the next run.
+                    // (This makes a single-instance run crash-safe. Running multiple
+                    // instances concurrently would additionally need a RowVersion /
+                    // atomic claim to avoid double-sends; single-instance today.)
+                    await context.SaveChangesAsync(cancellationToken);
                     sent++;
                 }
             }
 
-            await context.SaveChangesAsync(cancellationToken);
             _logger.LogInformation("Enviados {Sent} de {Total} recordatorio(s) de cita.", sent, due.Count);
         }
     }
