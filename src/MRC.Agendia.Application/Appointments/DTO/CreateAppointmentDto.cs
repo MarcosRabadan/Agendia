@@ -6,5 +6,6 @@ namespace MRC.Agendia.Application.Appointments.DTO
         int ServiceId,
         DateTime StartDate,
         DateTime EndDate,
-        string? Notes);
+        string? Notes,
+        IReadOnlyList<int>? ExtraServiceIds = null);
 }

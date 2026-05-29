@@ -79,7 +79,8 @@ namespace MRC.Agendia.Application.Appointments
 
         public async Task<AppointmentDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            var entity = await _repository.GetByIdAsync(id, cancellationToken);
+            // WithExtras so the DTO echoes the booked extra services (#170). Read-only.
+            var entity = await _repository.GetByIdWithExtrasAsync(id, cancellationToken);
             return entity is null ? null : _mapper.Map<AppointmentDto>(entity);
         }
 
@@ -99,9 +100,18 @@ namespace MRC.Agendia.Application.Appointments
                         serviceId: dto.ServiceId,
                         startDate: dto.StartDate,
                         endDate: dto.EndDate,
+                        extraServiceIds: dto.ExtraServiceIds,
                         cancellationToken: cancellationToken);
 
                     var created = _mapper.Map<Appointment>(dto);
+                    // Multiservice (#170): attach the extra services so EF inserts
+                    // them with the appointment (cascade via the navigation).
+                    if (dto.ExtraServiceIds is { Count: > 0 })
+                    {
+                        created.ExtraServices = dto.ExtraServiceIds
+                            .Select(extraServiceId => new AppointmentExtraService { ServiceId = extraServiceId })
+                            .ToList();
+                    }
                     await _repository.AddAsync(created, cancellationToken);
                     await _unitOfWork.Save(cancellationToken);
                     return created;
@@ -169,6 +179,11 @@ namespace MRC.Agendia.Application.Appointments
 
             if (bookingChanged)
             {
+                // Multiservice (#170): re-validate the total duration against the
+                // appointment's existing extra services (extras are not editable on
+                // update in v1, but a reschedule must still honour their duration).
+                var existingExtraServiceIds = await _repository.GetExtraServiceIdsAsync(dto.Id, cancellationToken);
+
                 // Re-validate + persist inside the per-employee/day lock (same as
                 // Create) so a reschedule cannot over-book the destination slot.
                 await _bookingGuard.ExecuteSerializedAsync(
@@ -183,6 +198,7 @@ namespace MRC.Agendia.Application.Appointments
                             serviceId: dto.ServiceId,
                             startDate: dto.StartDate,
                             endDate: dto.EndDate,
+                            extraServiceIds: existingExtraServiceIds,
                             cancellationToken: cancellationToken);
                         await ApplyAsync();
                     },
@@ -211,7 +227,10 @@ namespace MRC.Agendia.Application.Appointments
             if (previousStatus.OccupiesCapacity() && entity.Status == AppointmentStatus.Cancelled)
                 await _waitlistService.NotifyForFreedAppointmentAsync(entity.Id, cancellationToken);
 
-            return _mapper.Map<AppointmentDto>(entity);
+            // Return WITH the extra services (#170): the tracked entity was loaded
+            // without them, so re-read so the response matches GET/Create.
+            var refreshed = await _repository.GetByIdWithExtrasAsync(entity.Id, cancellationToken);
+            return _mapper.Map<AppointmentDto>(refreshed ?? entity);
         }
 
         public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)

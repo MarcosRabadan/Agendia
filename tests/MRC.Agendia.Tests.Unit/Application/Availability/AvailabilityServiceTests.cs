@@ -65,5 +65,45 @@ namespace MRC.Agendia.Tests.Unit.Application.Availability
             Assert.Contains(result.Slots, s => s.StartTime == new TimeOnly(12, 0));
             Assert.DoesNotContain(result.Slots, s => s.StartTime == new TimeOnly(8, 0));
         }
+
+        [Fact]
+        public async Task GetAvailabilityAsync_Multiservicio_DimensionaLosHuecosPorLaDuracionTotal()
+        {
+            var date = new DateOnly(2030, 6, 3);
+            const int ExtraServiceId = 3;
+
+            _businessRepository.GetByIdAsync(BusinessId).Returns(new Business());
+            _serviceRepository.GetByIdAsync(ServiceId)
+                .Returns(new Service { Id = ServiceId, BusinessId = BusinessId, DurationMinutes = 30 });
+            _serviceRepository.GetByIdAsync(ExtraServiceId)
+                .Returns(new Service { Id = ExtraServiceId, BusinessId = BusinessId, DurationMinutes = 30 });
+            _employeeRepository.GetActiveByBusinessIdAsync(BusinessId)
+                .Returns(new List<Employee> { new() { Id = 10, BusinessId = BusinessId, IsActive = true, MaxConcurrentAppointments = 1 } });
+            _scheduleResolver.GetEffectiveScheduleAsync(BusinessId, date)
+                .Returns(new EffectiveSchedule
+                {
+                    Date = date,
+                    IsOpen = true,
+                    TimeSlots = new List<EffectiveTimeSlot>
+                    {
+                        new() { StartTime = new TimeOnly(9, 0), EndTime = new TimeOnly(11, 0) }
+                    }
+                });
+            _appointmentRepository.GetByBusinessIdAndDateRangeAsync(BusinessId, Arg.Any<DateTime>(), Arg.Any<DateTime>())
+                .Returns(new List<Appointment>());
+            _clock.BusinessNow.Returns(new DateTime(2030, 6, 1, 0, 0, 0)); // before the queried date
+
+            var result = await _sut.GetAvailabilityAsync(
+                BusinessId, date, ServiceId, employeeId: null, stepMinutes: 30,
+                extraServiceIds: new[] { ExtraServiceId });
+
+            // 30 (primary) + 30 (extra) = 60-minute blocks.
+            Assert.Equal(60, result.DurationMinutes);
+            Assert.NotEmpty(result.Slots);
+            Assert.All(result.Slots, s => Assert.Equal(60, (s.EndTime - s.StartTime).TotalMinutes));
+            // Window 9-11, 60-min block, 30-min step: 9:00, 9:30, 10:00 fit; nothing after 10:00.
+            Assert.Contains(result.Slots, s => s.StartTime == new TimeOnly(9, 0) && s.EndTime == new TimeOnly(10, 0));
+            Assert.DoesNotContain(result.Slots, s => s.StartTime == new TimeOnly(10, 30));
+        }
     }
 }

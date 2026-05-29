@@ -73,7 +73,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // The 2nd occurrence is full; the rest fit.
             _validator.EnsureValidAsync(
                     Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(),
-                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
                 .Returns(
                     Task.CompletedTask,
                     Task.FromException(new AppointmentConflictException("El empleado ya tiene otra cita.")),
@@ -154,7 +154,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // First moves fine, second hits a closed day.
             _validator.EnsureValidAsync(
                     Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(),
-                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
                 .Returns(
                     Task.CompletedTask,
                     Task.FromException(new AppointmentOutsideScheduleException("El negocio esta cerrado.")));

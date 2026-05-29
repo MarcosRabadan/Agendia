@@ -11,5 +11,6 @@ namespace MRC.Agendia.Application.Appointments.DTO
         DateTime EndDate,
         AppointmentStatus Status,
         string? Notes,
-        Guid? SeriesId = null);
+        Guid? SeriesId = null,
+        IReadOnlyList<int>? ExtraServiceIds = null);
 }
