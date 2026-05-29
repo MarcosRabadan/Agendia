@@ -34,6 +34,11 @@ namespace MRC.Agendia.Api.Controllers
         /// <param name="stepMinutes">
         /// Granularity of candidate start times, between 5 and 120. Default 15.
         /// </param>
+        /// <param name="extraServiceIds">
+        /// Optional: extra services booked in the same visit (#170). Slots are
+        /// sized for the total duration (primary + extras). Repeat the parameter
+        /// to add several (?extraServiceIds=3&amp;extraServiceIds=5).
+        /// </param>
         [HttpGet]
         [AllowAnonymous]
         [ProducesResponseType(typeof(AvailabilityDto), StatusCodes.Status200OK)]
@@ -44,10 +49,11 @@ namespace MRC.Agendia.Api.Controllers
             [FromQuery] DateOnly date,
             [FromQuery] int serviceId,
             [FromQuery] int? employeeId = null,
-            [FromQuery] int stepMinutes = 15)
+            [FromQuery] int stepMinutes = 15,
+            [FromQuery] List<int>? extraServiceIds = null)
         {
             var result = await _mediator.Send(
-                new GetAvailabilityQuery(businessId, date, serviceId, employeeId, stepMinutes));
+                new GetAvailabilityQuery(businessId, date, serviceId, employeeId, stepMinutes, extraServiceIds));
             return Ok(result);
         }
     }

@@ -4,6 +4,7 @@ using MRC.Agendia.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MRC.Agendia.Infrastructure.Migrations
 {
     [DbContext(typeof(AgendiaDbContext))]
-    partial class AgendiaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260529084908_AddAppointmentExtraServices")]
+    partial class AddAppointmentExtraServices
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -178,9 +181,6 @@ namespace MRC.Agendia.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("CancellationWindowHours")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
@@ -306,40 +306,6 @@ namespace MRC.Agendia.Infrastructure.Migrations
                     b.HasIndex("ScheduleOverrideId");
 
                     b.ToTable("CustomTimeSlots");
-                });
-
-            modelBuilder.Entity("MRC.Agendia.Domain.Entities.DeviceToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Platform")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Token")
-                        .IsUnique()
-                        .HasDatabaseName("IX_DeviceToken_Token");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("IX_DeviceToken_UserId");
-
-                    b.ToTable("DeviceTokens");
                 });
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.Employee", b =>

@@ -30,5 +30,12 @@ namespace MRC.Agendia.Domain.Entities
         public Client Client { get; set; } = null!;
         public Employee Employee { get; set; } = null!;
         public Service Service { get; set; } = null!;
+
+        /// <summary>
+        /// Additional services booked in the same visit beyond the primary
+        /// <see cref="ServiceId"/>. Empty for single-service appointments. The
+        /// total duration/price is the primary service plus all of these.
+        /// </summary>
+        public ICollection<AppointmentExtraService> ExtraServices { get; set; } = new List<AppointmentExtraService>();
     }
 }

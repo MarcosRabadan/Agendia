@@ -73,8 +73,34 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                 dto.EmployeeId, DateOnly.FromDateTime(dto.StartDate),
                 Arg.Any<Func<Task<Appointment>>>(), Arg.Any<CancellationToken>());
             await _validator.Received(1).EnsureValidAsync(
-                Arg.Any<int?>(), dto.ClientId, dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate, Arg.Any<CancellationToken>());
+                Arg.Any<int?>(), dto.ClientId, dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
             await _repository.Received(1).AddAsync(Arg.Any<Appointment>(), Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task CreateAsync_ConServiciosExtra_LosAdjuntaYValidaConLaDuracionTotal()
+        {
+            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = 11 });
+            _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
+
+            var dto = new CreateAppointmentDto(
+                ClientId: 1, EmployeeId: 2, ServiceId: 3,
+                StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
+                EndDate: new DateTime(2030, 1, 1, 10, 0, 0, DateTimeKind.Utc),
+                Notes: null,
+                ExtraServiceIds: new[] { 5, 7 });
+
+            await _sut.CreateAsync(dto);
+
+            // The extras are attached to the appointment EF persists...
+            await _repository.Received(1).AddAsync(
+                Arg.Is<Appointment>(a => a.ExtraServices.Select(e => e.ServiceId).SequenceEqual(new[] { 5, 7 })),
+                Arg.Any<CancellationToken>());
+            // ...and forwarded to the scheduling validator (total-duration check).
+            await _validator.Received(1).EnsureValidAsync(
+                Arg.Any<int?>(), dto.ClientId, dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate,
+                Arg.Is<IReadOnlyCollection<int>>(x => x != null && x.SequenceEqual(new[] { 5, 7 })),
+                Arg.Any<CancellationToken>());
         }
 
         [Fact]
@@ -111,7 +137,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             await _validator.Received(1).EnsureValidAsync(
                 entity.Id, dto.ClientId, dto.EmployeeId, dto.ServiceId,
-                dto.StartDate, dto.EndDate, Arg.Any<CancellationToken>());
+                dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]

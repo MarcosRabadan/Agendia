@@ -16,12 +16,17 @@ namespace MRC.Agendia.Application.Availability
         /// Granularity of candidate start times in minutes (default 15).
         /// A smaller step yields more bookable windows.
         /// </param>
+        /// <param name="extraServiceIds">
+        /// Optional additional services booked in the same visit (#170). When
+        /// present, slots are sized to fit the total duration (primary + extras).
+        /// </param>
         Task<AvailabilityDto> GetAvailabilityAsync(
             int businessId,
             DateOnly date,
             int serviceId,
             int? employeeId,
             int stepMinutes = 15,
+            IReadOnlyCollection<int>? extraServiceIds = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>
