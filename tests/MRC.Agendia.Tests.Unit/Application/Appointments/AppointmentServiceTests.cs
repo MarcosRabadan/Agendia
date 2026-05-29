@@ -172,6 +172,55 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         }
 
         [Fact]
+        public async Task UpdateAsync_CitaEnEstadoFinal_NoSePuedeCambiarElEstado()
+        {
+            var entity = PastAppointment();
+            entity.Status = AppointmentStatus.Completed; // terminal
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            // default caller is staff
+
+            var dto = new UpdateAppointmentDto(
+                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.StartDate, entity.EndDate, AppointmentStatus.Cancelled, Notes: null);
+
+            await Assert.ThrowsAsync<InvalidAppointmentStatusTransitionException>(() => _sut.UpdateAsync(dto));
+        }
+
+        [Fact]
+        public async Task UpdateAsync_ClienteCancelaCitaYaCompletada_LanzaTransicionInvalida()
+        {
+            var entity = PastAppointment();
+            entity.Status = AppointmentStatus.Completed; // terminal
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a Client
+
+            var dto = new UpdateAppointmentDto(
+                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.StartDate, entity.EndDate, AppointmentStatus.Cancelled, Notes: null);
+
+            // The terminal-state guard fires before the role check.
+            await Assert.ThrowsAsync<InvalidAppointmentStatusTransitionException>(() => _sut.UpdateAsync(dto));
+        }
+
+        [Fact]
+        public async Task UpdateAsync_CitaEnEstadoFinal_CambioSinTocarEstado_Permitido()
+        {
+            var entity = PastAppointment();
+            entity.Status = AppointmentStatus.Completed; // terminal
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
+
+            // Same status (Completed); only the notes change -> allowed.
+            var dto = new UpdateAppointmentDto(
+                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.StartDate, entity.EndDate, AppointmentStatus.Completed, Notes: "actualizada");
+
+            var result = await _sut.UpdateAsync(dto);
+
+            Assert.NotNull(result);
+        }
+
+        [Fact]
         public async Task UpdateAsync_ClienteCancelaDentroDeLaVentana_Lanza()
         {
             var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);

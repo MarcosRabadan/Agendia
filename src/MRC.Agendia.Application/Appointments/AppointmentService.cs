@@ -132,6 +132,13 @@ namespace MRC.Agendia.Application.Appointments
             var previousStatus = entity.Status;
             var previousStartDate = entity.StartDate;
 
+            // Terminal states (Completed/NoShow/Cancelled) are final: block any change
+            // out of them - e.g. a client cancelling an already-Completed appointment,
+            // or staff reverting a Cancelled one. A change that leaves the status
+            // unchanged (notes, reschedule) is unaffected.
+            if (dto.Status != previousStatus && previousStatus.IsTerminal())
+                throw new InvalidAppointmentStatusTransitionException(previousStatus, dto.Status);
+
             // A Client may only cancel their own appointment; Confirmed/Completed/
             // NoShow are staff-only transitions, so a Client cannot falsify the
             // status history. Notes/reschedule (status unchanged) stay allowed.
