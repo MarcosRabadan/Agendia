@@ -223,7 +223,8 @@ namespace MRC.Agendia.Infrastructure.Identity
         /// orphaned ApplicationUsers (UserManager auto-saves immediately, so without
         /// this a later failure would leave a committed user with no domain entity).
         /// EF InMemory (tests) does not support transactions, so it runs directly
-        /// there - mirrors the IsRelational guard used by BookingConcurrencyGuard.
+        /// there - the same provider-guard approach BookingConcurrencyGuard uses
+        /// (it guards on IsSqlServer; here IsRelational covers any relational provider).
         /// </summary>
         private async Task RunInTransactionAsync(Func<Task> work, CancellationToken cancellationToken)
         {
