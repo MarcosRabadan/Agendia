@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Auth;
@@ -21,6 +22,7 @@ namespace MRC.Agendia.Infrastructure.Identity
         private readonly IAuthResponseFactory _authResponseFactory;
         private readonly IAuditLogger _auditLogger;
         private readonly IConfiguration _configuration;
+        private readonly AgendiaDbContext _dbContext;
 
         public UserRegistrationService(
             UserManager<ApplicationUser> userManager,
@@ -31,7 +33,8 @@ namespace MRC.Agendia.Infrastructure.Identity
             IAuthEmailService authEmailService,
             IAuthResponseFactory authResponseFactory,
             IAuditLogger auditLogger,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            AgendiaDbContext dbContext)
         {
             _userManager = userManager;
             _clientRepository = clientRepository;
@@ -42,6 +45,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             _authResponseFactory = authResponseFactory;
             _auditLogger = auditLogger;
             _configuration = configuration;
+            _dbContext = dbContext;
         }
 
         public async Task<AuthResponseDto> RegisterClientAsync(RegisterClientDto dto, CancellationToken cancellationToken = default)
@@ -59,33 +63,33 @@ namespace MRC.Agendia.Infrastructure.Identity
                 IsActive = true
             };
 
-            var result = await _userManager.CreateAsync(user, dto.Password);
-            if (!result.Succeeded)
-                throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+            AuthResponseDto response = null!;
 
-            await _userManager.AddToRoleAsync(user, Roles.Client);
-
-            // Create the associated Client entity.
-            var client = new Client
+            // Atomic: the user, role, Client entity and session token commit together
+            // or not at all, so a failure mid-flow cannot leave an orphaned account
+            // (the email taken but no Client row). Best-effort audit/email run after.
+            await RunInTransactionAsync(async () =>
             {
-                Name = dto.FullName,
-                Phone = dto.Phone,
-                Email = dto.Email,
-                UserId = user.Id
-            };
-            await _clientRepository.AddAsync(client, cancellationToken);
-            await _unitOfWork.Save(cancellationToken);
+                await CreateUserAsync(user, dto.Password);
+                await _userManager.AddToRoleAsync(user, Roles.Client);
+
+                var client = new Client
+                {
+                    Name = dto.FullName,
+                    Phone = dto.Phone,
+                    Email = dto.Email,
+                    UserId = user.Id
+                };
+                await _clientRepository.AddAsync(client, cancellationToken);
+                await _unitOfWork.Save(cancellationToken);
+
+                response = await BuildSessionAsync(user, cancellationToken);
+            }, cancellationToken);
 
             await _auditLogger.LogAsync(AuditActions.UserCreated, "User", user.Id, new { user.Email, role = Roles.Client }, cancellationToken);
             await _authEmailService.SendEmailConfirmationAsync(user, cancellationToken);
 
-            // When email confirmation is required, do not auto-login: the login
-            // gate blocks unconfirmed users, so issuing a session here would bypass
-            // it. The account exists; the user confirms then logs in.
-            if (_configuration.GetValue<bool>("Auth:RequireConfirmedEmail"))
-                return await _authResponseFactory.CreateWithoutSessionAsync(user);
-
-            return await _authResponseFactory.CreateAsync(user, cancellationToken: cancellationToken);
+            return response;
         }
 
         public async Task<AuthResponseDto> RegisterOwnerAsync(RegisterOwnerDto dto, CancellationToken cancellationToken = default)
@@ -103,58 +107,56 @@ namespace MRC.Agendia.Infrastructure.Identity
                 IsActive = true
             };
 
-            var result = await _userManager.CreateAsync(user, dto.Password);
-            if (!result.Succeeded)
-                throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+            AuthResponseDto response = null!;
 
-            await _userManager.AddToRoleAsync(user, Roles.BusinessOwner);
-
-            // Create the associated Business.
-            var business = new Business
+            await RunInTransactionAsync(async () =>
             {
-                Name = dto.BusinessName,
-                Description = dto.BusinessDescription,
-                Address = dto.BusinessAddress,
-                Phone = dto.BusinessPhone,
-                Email = dto.BusinessEmail,
-                IsActive = true,
-                OwnerUserId = user.Id
-            };
-            await _businessRepository.AddAsync(business, cancellationToken);
-            await _unitOfWork.Save(cancellationToken);
+                await CreateUserAsync(user, dto.Password);
+                await _userManager.AddToRoleAsync(user, Roles.BusinessOwner);
 
-            // Also auto-create an Employee record for the owner so a solo
-            // professional can start taking bookings immediately without an
-            // extra setup step. MaxConcurrentAppointments defaults to 1; the
-            // owner can change it from /api/employee.
-            var ownerEmployee = new Employee
-            {
-                BusinessId = business.Id,
-                FullName = dto.FullName,
-                Email = dto.Email,
-                Phone = dto.Phone,
-                IsActive = true,
-                UserId = user.Id,
-                MaxConcurrentAppointments = 1
-            };
-            await _employeeRepository.AddAsync(ownerEmployee, cancellationToken);
-            await _unitOfWork.Save(cancellationToken);
+                // Create the associated Business.
+                var business = new Business
+                {
+                    Name = dto.BusinessName,
+                    Description = dto.BusinessDescription,
+                    Address = dto.BusinessAddress,
+                    Phone = dto.BusinessPhone,
+                    Email = dto.BusinessEmail,
+                    IsActive = true,
+                    OwnerUserId = user.Id
+                };
+                await _businessRepository.AddAsync(business, cancellationToken);
+                await _unitOfWork.Save(cancellationToken);
+
+                // Also auto-create an Employee record for the owner so a solo
+                // professional can start taking bookings immediately without an
+                // extra setup step. MaxConcurrentAppointments defaults to 1; the
+                // owner can change it from /api/employee.
+                var ownerEmployee = new Employee
+                {
+                    BusinessId = business.Id,
+                    FullName = dto.FullName,
+                    Email = dto.Email,
+                    Phone = dto.Phone,
+                    IsActive = true,
+                    UserId = user.Id,
+                    MaxConcurrentAppointments = 1
+                };
+                await _employeeRepository.AddAsync(ownerEmployee, cancellationToken);
+                await _unitOfWork.Save(cancellationToken);
+
+                response = await BuildSessionAsync(user, cancellationToken);
+            }, cancellationToken);
 
             await _auditLogger.LogAsync(AuditActions.UserCreated, "User", user.Id, new { user.Email, role = Roles.BusinessOwner }, cancellationToken);
             await _authEmailService.SendEmailConfirmationAsync(user, cancellationToken);
 
-            // When email confirmation is required, do not auto-login: the login
-            // gate blocks unconfirmed users, so issuing a session here would bypass
-            // it. The account exists; the user confirms then logs in.
-            if (_configuration.GetValue<bool>("Auth:RequireConfirmedEmail"))
-                return await _authResponseFactory.CreateWithoutSessionAsync(user);
-
-            return await _authResponseFactory.CreateAsync(user, cancellationToken: cancellationToken);
+            return response;
         }
 
         public async Task<UserDto> RegisterEmployeeAsync(RegisterEmployeeDto dto, string currentOwnerUserId, CancellationToken cancellationToken = default)
         {
-            // Validate the business exists and the caller owns it.
+            // Validate the business exists and the caller owns it (before creating anything).
             var business = await _businessRepository.GetByIdAsync(dto.BusinessId, cancellationToken)
                 ?? throw new BusinessNotFoundException(dto.BusinessId);
 
@@ -174,29 +176,66 @@ namespace MRC.Agendia.Infrastructure.Identity
                 IsActive = true
             };
 
-            var result = await _userManager.CreateAsync(user, dto.Password);
-            if (!result.Succeeded)
-                throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
-
-            await _userManager.AddToRoleAsync(user, Roles.Employee);
-
-            var employee = new Employee
+            await RunInTransactionAsync(async () =>
             {
-                BusinessId = dto.BusinessId,
-                FullName = dto.FullName,
-                Email = dto.Email,
-                Phone = dto.Phone,
-                IsActive = true,
-                UserId = user.Id
-            };
-            await _employeeRepository.AddAsync(employee, cancellationToken);
-            await _unitOfWork.Save(cancellationToken);
+                await CreateUserAsync(user, dto.Password);
+                await _userManager.AddToRoleAsync(user, Roles.Employee);
+
+                var employee = new Employee
+                {
+                    BusinessId = dto.BusinessId,
+                    FullName = dto.FullName,
+                    Email = dto.Email,
+                    Phone = dto.Phone,
+                    IsActive = true,
+                    UserId = user.Id
+                };
+                await _employeeRepository.AddAsync(employee, cancellationToken);
+                await _unitOfWork.Save(cancellationToken);
+            }, cancellationToken);
 
             await _auditLogger.LogAsync(AuditActions.UserCreated, "User", user.Id, new { user.Email, role = Roles.Employee }, cancellationToken);
             await _authEmailService.SendEmailConfirmationAsync(user, cancellationToken);
 
             var roles = await _userManager.GetRolesAsync(user);
             return new UserDto(user.Id, user.Email!, user.FullName, user.PhoneNumber, user.IsActive, roles);
+        }
+
+        private async Task CreateUserAsync(ApplicationUser user, string password)
+        {
+            var result = await _userManager.CreateAsync(user, password);
+            if (!result.Succeeded)
+                throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+        }
+
+        // When email confirmation is required, do not auto-login: the login gate
+        // blocks unconfirmed users, so issuing a session here would bypass it. The
+        // account exists; the user confirms then logs in.
+        private async Task<AuthResponseDto> BuildSessionAsync(ApplicationUser user, CancellationToken cancellationToken)
+            => _configuration.GetValue<bool>("Auth:RequireConfirmedEmail")
+                ? await _authResponseFactory.CreateWithoutSessionAsync(user)
+                : await _authResponseFactory.CreateAsync(user, cancellationToken: cancellationToken);
+
+        /// <summary>
+        /// Runs the account-creation critical section atomically. On a relational
+        /// provider it wraps the steps (user + role + domain entity + session token)
+        /// in a single transaction so any failure rolls them all back, preventing
+        /// orphaned ApplicationUsers (UserManager auto-saves immediately, so without
+        /// this a later failure would leave a committed user with no domain entity).
+        /// EF InMemory (tests) does not support transactions, so it runs directly
+        /// there - mirrors the IsRelational guard used by BookingConcurrencyGuard.
+        /// </summary>
+        private async Task RunInTransactionAsync(Func<Task> work, CancellationToken cancellationToken)
+        {
+            if (!_dbContext.Database.IsRelational())
+            {
+                await work();
+                return;
+            }
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await work();
+            await transaction.CommitAsync(cancellationToken);
         }
     }
 }
