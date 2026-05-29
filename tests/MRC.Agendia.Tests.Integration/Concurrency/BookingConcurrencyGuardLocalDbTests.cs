@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Infrastructure.Persistence;
+using MRC.Agendia.Tests.Integration.Infrastructure;
 
 namespace MRC.Agendia.Tests.Integration.Concurrency
 {

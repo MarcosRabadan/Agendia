@@ -36,7 +36,7 @@ namespace MRC.Agendia.Tests.Integration.Services
         }
 
         [Fact]
-        public async Task UpdateService_OwnerB_TocaServiceDeBusinessA_DevuelveForbidden()
+        public async Task UpdateService_OwnerB_TocaServiceDeBusinessA_NoLoEncuentra()
         {
             var ownerA = await RegisterOwnerAsync("svc-a");
             var ownerB = await RegisterOwnerAsync("svc-b");
@@ -60,7 +60,10 @@ namespace MRC.Agendia.Tests.Integration.Services
 
             var response = await _client.SendAsync(request);
 
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            // Defense in depth (#58): the global business filter hides business A's
+            // service from owner B, so the handler cannot resolve it -> 404 (stronger
+            // than the previous 403: it does not even leak that the service exists).
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
 
             // Sanity: the service is still in business A with the original data.
             using var scope = _factory.Services.CreateScope();
