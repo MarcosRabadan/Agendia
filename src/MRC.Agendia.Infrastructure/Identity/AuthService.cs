@@ -29,16 +29,15 @@ namespace MRC.Agendia.Infrastructure.Identity
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<AuthService> _logger;
 
-        public AuthService(
-            UserManager<ApplicationUser> userManager,
-            IJwtTokenService jwtTokenService,
-            IRefreshTokenStore refreshTokenStore,
-            IConfiguration configuration,
-            IAuthResponseFactory authResponseFactory,
-            IAuthEmailService authEmailService,
-            IAuditLogger auditLogger,
-            IServiceScopeFactory scopeFactory,
-            ILogger<AuthService> logger)
+        public AuthService(UserManager<ApplicationUser> userManager,
+                           IJwtTokenService jwtTokenService,
+                           IRefreshTokenStore refreshTokenStore,
+                           IConfiguration configuration,
+                           IAuthResponseFactory authResponseFactory,
+                           IAuthEmailService authEmailService,
+                           IAuditLogger auditLogger,
+                           IServiceScopeFactory scopeFactory,
+                           ILogger<AuthService> logger)
         {
             _userManager = userManager;
             _jwtTokenService = jwtTokenService;

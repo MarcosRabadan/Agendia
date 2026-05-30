@@ -19,10 +19,9 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="toExclusive">Range end (exclusive).</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The projected appointment rows for the range.</returns>
-        Task<IReadOnlyList<AppointmentStatsRow>> GetAppointmentsAsync(
-            int businessId,
-            DateTime fromInclusive,
-            DateTime toExclusive,
-            CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<AppointmentStatsRow>> GetAppointmentsAsync(int businessId,
+                                                                      DateTime fromInclusive,
+                                                                      DateTime toExclusive,
+                                                                      CancellationToken cancellationToken = default);
     }
 }

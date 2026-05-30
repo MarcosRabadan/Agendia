@@ -13,13 +13,12 @@ namespace MRC.Agendia.Application.Appointments.Recurrence
         /// <summary>Hard safety cap on the number of generated dates.</summary>
         public const int MaxOccurrences = 366;
 
-        public static RecurrenceExpansion Expand(
-            RecurrenceFrequency frequency,
-            int interval,
-            IReadOnlyList<DayOfWeek>? daysOfWeek,
-            int? dayOfMonth,
-            DateOnly from,
-            DateOnly until)
+        public static RecurrenceExpansion Expand(RecurrenceFrequency frequency,
+                                                 int interval,
+                                                 IReadOnlyList<DayOfWeek>? daysOfWeek,
+                                                 int? dayOfMonth,
+                                                 DateOnly from,
+                                                 DateOnly until)
         {
             if (interval < 1) interval = 1;
 

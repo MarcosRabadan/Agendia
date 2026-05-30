@@ -24,17 +24,16 @@ namespace MRC.Agendia.Infrastructure.Identity
         private readonly IConfiguration _configuration;
         private readonly AgendiaDbContext _dbContext;
 
-        public UserRegistrationService(
-            UserManager<ApplicationUser> userManager,
-            IClientRepository clientRepository,
-            IBusinessRepository businessRepository,
-            IEmployeeRepository employeeRepository,
-            IUnitOfWork unitOfWork,
-            IAuthEmailService authEmailService,
-            IAuthResponseFactory authResponseFactory,
-            IAuditLogger auditLogger,
-            IConfiguration configuration,
-            AgendiaDbContext dbContext)
+        public UserRegistrationService(UserManager<ApplicationUser> userManager,
+                                       IClientRepository clientRepository,
+                                       IBusinessRepository businessRepository,
+                                       IEmployeeRepository employeeRepository,
+                                       IUnitOfWork unitOfWork,
+                                       IAuthEmailService authEmailService,
+                                       IAuthResponseFactory authResponseFactory,
+                                       IAuditLogger auditLogger,
+                                       IConfiguration configuration,
+                                       AgendiaDbContext dbContext)
         {
             _userManager = userManager;
             _clientRepository = clientRepository;

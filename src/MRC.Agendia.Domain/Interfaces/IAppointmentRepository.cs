@@ -77,11 +77,10 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="endDate">Range end (exclusive on overlap).</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The overlapping appointments.</returns>
-        Task<IEnumerable<Appointment>> GetByBusinessIdAndDateRangeAsync(
-            int businessId,
-            DateTime startDate,
-            DateTime endDate,
-            CancellationToken cancellationToken = default);
+        Task<IEnumerable<Appointment>> GetByBusinessIdAndDateRangeAsync(int businessId,
+                                                                        DateTime startDate,
+                                                                        DateTime endDate,
+                                                                        CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Counts an employee's capacity-occupying (Pending/Confirmed) appointments that
@@ -94,12 +93,11 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="excludeAppointmentId">Appointment id to exclude (the one being rescheduled), or null.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The number of overlapping occupying appointments.</returns>
-        Task<int> CountOverlappingForEmployeeAsync(
-            int employeeId,
-            DateTime startDate,
-            DateTime endDate,
-            int? excludeAppointmentId,
-            CancellationToken cancellationToken = default);
+        Task<int> CountOverlappingForEmployeeAsync(int employeeId,
+                                                   DateTime startDate,
+                                                   DateTime endDate,
+                                                   int? excludeAppointmentId,
+                                                   CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Tracked appointments of a recurring series (excluding soft-deleted),
@@ -121,12 +119,11 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="toExclusive">Window end (exclusive).</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The matching upcoming appointments ordered by start date.</returns>
-        Task<IReadOnlyList<Appointment>> GetUpcomingForDelayAsync(
-            int businessId,
-            int? employeeId,
-            DateTime fromInclusive,
-            DateTime toExclusive,
-            CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<Appointment>> GetUpcomingForDelayAsync(int businessId,
+                                                                  int? employeeId,
+                                                                  DateTime fromInclusive,
+                                                                  DateTime toExclusive,
+                                                                  CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Service ids of the appointment's extra services (beyond the primary

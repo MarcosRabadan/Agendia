@@ -19,11 +19,10 @@ namespace MRC.Agendia.Application.Common.Push
         /// <param name="body">Notification body.</param>
         /// <param name="data">Optional key/value payload for the client app (e.g. deep-link ids).</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
-        Task SendAsync(
-            IReadOnlyCollection<string> deviceTokens,
-            string title,
-            string body,
-            IReadOnlyDictionary<string, string>? data = null,
-            CancellationToken cancellationToken = default);
+        Task SendAsync(IReadOnlyCollection<string> deviceTokens,
+                       string title,
+                       string body,
+                       IReadOnlyDictionary<string, string>? data = null,
+                       CancellationToken cancellationToken = default);
     }
 }

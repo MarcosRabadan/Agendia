@@ -14,11 +14,10 @@ namespace MRC.Agendia.Infrastructure.Repositories
         }
 
         /// <inheritdoc />
-        public async Task<IReadOnlyList<AppointmentStatsRow>> GetAppointmentsAsync(
-            int businessId,
-            DateTime fromInclusive,
-            DateTime toExclusive,
-            CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<AppointmentStatsRow>> GetAppointmentsAsync(int businessId,
+                                                                                   DateTime fromInclusive,
+                                                                                   DateTime toExclusive,
+                                                                                   CancellationToken cancellationToken = default)
             // Server-side filter + projection: only the columns the aggregation needs.
             // IgnoreQueryFilters + explicit !IsDeleted keeps the (historical) appointment
             // even if its service was soft-deleted later, so revenue/usage stay accurate;

@@ -13,11 +13,10 @@ namespace MRC.Agendia.Infrastructure.Repositories
         /// Runs two queries: a Count and a Skip/Take. Returns a tuple ready to
         /// be wrapped in a <see cref="PagedResult{T}"/> by the service layer.
         /// </summary>
-        public static async Task<(IReadOnlyList<T> Items, int TotalCount)> ToPagedListAsync<T>(
-            this IQueryable<T> source,
-            int page,
-            int pageSize,
-            CancellationToken cancellationToken = default)
+        public static async Task<(IReadOnlyList<T> Items, int TotalCount)> ToPagedListAsync<T>(this IQueryable<T> source,
+                                                                                               int page,
+                                                                                               int pageSize,
+                                                                                               CancellationToken cancellationToken = default)
         {
             // Clamp inputs defensively in case validators were bypassed.
             page = page < 1 ? PaginationConstants.DefaultPage : page;

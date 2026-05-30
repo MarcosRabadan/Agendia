@@ -22,14 +22,13 @@ namespace MRC.Agendia.Application.Availability
         /// </param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The day's availability: the open windows and the bookable slots with their capacity.</returns>
-        Task<AvailabilityDto> GetAvailabilityAsync(
-            int businessId,
-            DateOnly date,
-            int serviceId,
-            int? employeeId,
-            int stepMinutes = 15,
-            IReadOnlyCollection<int>? extraServiceIds = null,
-            CancellationToken cancellationToken = default);
+        Task<AvailabilityDto> GetAvailabilityAsync(int businessId,
+                                                   DateOnly date,
+                                                   int serviceId,
+                                                   int? employeeId,
+                                                   int stepMinutes = 15,
+                                                   IReadOnlyCollection<int>? extraServiceIds = null,
+                                                   CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Free capacity of one exact slot (start time + service duration) for a
@@ -44,12 +43,11 @@ namespace MRC.Agendia.Application.Availability
         /// <param name="employeeId">Optional: limit the capacity to this employee.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>Free capacity of the slot; null when it is not bookable, 0 when full, &gt; 0 when it has room.</returns>
-        Task<int?> GetSlotCapacityAsync(
-            int businessId,
-            DateOnly date,
-            TimeOnly startTime,
-            int serviceId,
-            int? employeeId,
-            CancellationToken cancellationToken = default);
+        Task<int?> GetSlotCapacityAsync(int businessId,
+                                        DateOnly date,
+                                        TimeOnly startTime,
+                                        int serviceId,
+                                        int? employeeId,
+                                        CancellationToken cancellationToken = default);
     }
 }

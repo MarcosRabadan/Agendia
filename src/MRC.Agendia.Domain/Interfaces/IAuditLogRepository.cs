@@ -17,14 +17,13 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="pageSize">Page size.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The matching page of audit logs and the total count.</returns>
-        Task<(IReadOnlyList<AuditLog> Items, int TotalCount)> GetPagedFilteredAsync(
-            string? userId,
-            string? action,
-            string? entityType,
-            DateTime? from,
-            DateTime? to,
-            int page,
-            int pageSize,
-            CancellationToken cancellationToken = default);
+        Task<(IReadOnlyList<AuditLog> Items, int TotalCount)> GetPagedFilteredAsync(string? userId,
+                                                                                    string? action,
+                                                                                    string? entityType,
+                                                                                    DateTime? from,
+                                                                                    DateTime? to,
+                                                                                    int page,
+                                                                                    int pageSize,
+                                                                                    CancellationToken cancellationToken = default);
     }
 }

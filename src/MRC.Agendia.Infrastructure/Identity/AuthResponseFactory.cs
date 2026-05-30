@@ -12,11 +12,10 @@ namespace MRC.Agendia.Infrastructure.Identity
         private readonly IRefreshTokenStore _refreshTokenStore;
         private readonly IConfiguration _configuration;
 
-        public AuthResponseFactory(
-            UserManager<ApplicationUser> userManager,
-            IJwtTokenService jwtTokenService,
-            IRefreshTokenStore refreshTokenStore,
-            IConfiguration configuration)
+        public AuthResponseFactory(UserManager<ApplicationUser> userManager,
+                                   IJwtTokenService jwtTokenService,
+                                   IRefreshTokenStore refreshTokenStore,
+                                   IConfiguration configuration)
         {
             _userManager = userManager;
             _jwtTokenService = jwtTokenService;

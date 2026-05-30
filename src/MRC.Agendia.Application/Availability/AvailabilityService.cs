@@ -20,13 +20,12 @@ namespace MRC.Agendia.Application.Availability
         private readonly IScheduleResolver _scheduleResolver;
         private readonly IClock _clock;
 
-        public AvailabilityService(
-            IBusinessRepository businessRepository,
-            IServiceRepository serviceRepository,
-            IEmployeeRepository employeeRepository,
-            IAppointmentRepository appointmentRepository,
-            IScheduleResolver scheduleResolver,
-            IClock clock)
+        public AvailabilityService(IBusinessRepository businessRepository,
+                                   IServiceRepository serviceRepository,
+                                   IEmployeeRepository employeeRepository,
+                                   IAppointmentRepository appointmentRepository,
+                                   IScheduleResolver scheduleResolver,
+                                   IClock clock)
         {
             _businessRepository = businessRepository;
             _serviceRepository = serviceRepository;
@@ -37,14 +36,13 @@ namespace MRC.Agendia.Application.Availability
         }
 
         /// <inheritdoc />
-        public async Task<AvailabilityDto> GetAvailabilityAsync(
-            int businessId,
-            DateOnly date,
-            int serviceId,
-            int? employeeId,
-            int stepMinutes = 15,
-            IReadOnlyCollection<int>? extraServiceIds = null,
-            CancellationToken cancellationToken = default)
+        public async Task<AvailabilityDto> GetAvailabilityAsync(int businessId,
+                                                                DateOnly date,
+                                                                int serviceId,
+                                                                int? employeeId,
+                                                                int stepMinutes = 15,
+                                                                IReadOnlyCollection<int>? extraServiceIds = null,
+                                                                CancellationToken cancellationToken = default)
         {
             // ---------- Validate inputs ----------
             if (stepMinutes < MinStepMinutes || stepMinutes > MaxStepMinutes)
@@ -207,13 +205,12 @@ namespace MRC.Agendia.Application.Availability
         }
 
         /// <inheritdoc />
-        public async Task<int?> GetSlotCapacityAsync(
-            int businessId,
-            DateOnly date,
-            TimeOnly startTime,
-            int serviceId,
-            int? employeeId,
-            CancellationToken cancellationToken = default)
+        public async Task<int?> GetSlotCapacityAsync(int businessId,
+                                                     DateOnly date,
+                                                     TimeOnly startTime,
+                                                     int serviceId,
+                                                     int? employeeId,
+                                                     CancellationToken cancellationToken = default)
         {
             _ = await _businessRepository.GetActiveByIdAsync(businessId, cancellationToken)
                 ?? throw new BusinessNotFoundException(businessId);
@@ -271,12 +268,11 @@ namespace MRC.Agendia.Application.Availability
         /// Counts how many of the employee's existing appointments overlap with
         /// the candidate window [slotStart, slotEnd] on the given date.
         /// </summary>
-        private static int CountOverlapping(
-            Dictionary<int, List<Appointment>> appointmentsByEmployee,
-            int employeeId,
-            DateOnly date,
-            TimeOnly slotStart,
-            TimeOnly slotEnd)
+        private static int CountOverlapping(Dictionary<int, List<Appointment>> appointmentsByEmployee,
+                                            int employeeId,
+                                            DateOnly date,
+                                            TimeOnly slotStart,
+                                            TimeOnly slotEnd)
         {
             if (!appointmentsByEmployee.TryGetValue(employeeId, out var appts) || appts.Count == 0)
                 return 0;

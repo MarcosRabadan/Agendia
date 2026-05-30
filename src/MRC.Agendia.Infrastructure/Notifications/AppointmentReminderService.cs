@@ -28,11 +28,10 @@ namespace MRC.Agendia.Infrastructure.Notifications
         private readonly TimeSpan _interval;
         private readonly TimeSpan _window;
 
-        public AppointmentReminderService(
-            IServiceProvider serviceProvider,
-            IClock clock,
-            IConfiguration configuration,
-            ILogger<AppointmentReminderService> logger)
+        public AppointmentReminderService(IServiceProvider serviceProvider,
+                                          IClock clock,
+                                          IConfiguration configuration,
+                                          ILogger<AppointmentReminderService> logger)
         {
             _serviceProvider = serviceProvider;
             _clock = clock;

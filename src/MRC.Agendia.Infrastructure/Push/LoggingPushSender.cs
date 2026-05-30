@@ -18,12 +18,11 @@ namespace MRC.Agendia.Infrastructure.Push
         }
 
         /// <inheritdoc />
-        public Task SendAsync(
-            IReadOnlyCollection<string> deviceTokens,
-            string title,
-            string body,
-            IReadOnlyDictionary<string, string>? data = null,
-            CancellationToken cancellationToken = default)
+        public Task SendAsync(IReadOnlyCollection<string> deviceTokens,
+                              string title,
+                              string body,
+                              IReadOnlyDictionary<string, string>? data = null,
+                              CancellationToken cancellationToken = default)
         {
             if (deviceTokens is null || deviceTokens.Count == 0)
                 return Task.CompletedTask;

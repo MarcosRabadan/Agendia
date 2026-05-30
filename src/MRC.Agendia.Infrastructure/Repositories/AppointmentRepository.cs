@@ -99,12 +99,11 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
         /// <inheritdoc />
-        public Task<int> CountOverlappingForEmployeeAsync(
-            int employeeId,
-            DateTime startDate,
-            DateTime endDate,
-            int? excludeAppointmentId,
-            CancellationToken cancellationToken = default)
+        public Task<int> CountOverlappingForEmployeeAsync(int employeeId,
+                                                          DateTime startDate,
+                                                          DateTime endDate,
+                                                          int? excludeAppointmentId,
+                                                          CancellationToken cancellationToken = default)
             // Mirror of AppointmentStatus.OccupiesCapacity() (Pending|Confirmed),
             // inlined because the extension method cannot be translated to SQL.
             // IgnoreQueryFilters + !IsDeleted so a live appointment whose parent is
@@ -120,12 +119,11 @@ namespace MRC.Agendia.Infrastructure.Repositories
                     cancellationToken);
 
         /// <inheritdoc />
-        public async Task<IReadOnlyList<Appointment>> GetUpcomingForDelayAsync(
-            int businessId,
-            int? employeeId,
-            DateTime fromInclusive,
-            DateTime toExclusive,
-            CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<Appointment>> GetUpcomingForDelayAsync(int businessId,
+                                                                               int? employeeId,
+                                                                               DateTime fromInclusive,
+                                                                               DateTime toExclusive,
+                                                                               CancellationToken cancellationToken = default)
             // IgnoreQueryFilters + explicit liveness checks: only notify clients of
             // live appointments whose client/employee/business are not soft-deleted
             // and whose employee is active (BIZ-03). AsNoTracking: read-only.

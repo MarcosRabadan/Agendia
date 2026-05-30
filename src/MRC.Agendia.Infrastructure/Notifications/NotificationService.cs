@@ -31,13 +31,12 @@ namespace MRC.Agendia.Infrastructure.Notifications
         private readonly IPushSender _pushSender;
         private readonly ILogger<NotificationService> _logger;
 
-        public NotificationService(
-            IAppointmentRepository appointmentRepository,
-            IWaitlistRepository waitlistRepository,
-            IDeviceTokenRepository deviceTokenRepository,
-            IEmailSender emailSender,
-            IPushSender pushSender,
-            ILogger<NotificationService> logger)
+        public NotificationService(IAppointmentRepository appointmentRepository,
+                                   IWaitlistRepository waitlistRepository,
+                                   IDeviceTokenRepository deviceTokenRepository,
+                                   IEmailSender emailSender,
+                                   IPushSender pushSender,
+                                   ILogger<NotificationService> logger)
         {
             _appointmentRepository = appointmentRepository;
             _waitlistRepository = waitlistRepository;
@@ -140,11 +139,10 @@ namespace MRC.Agendia.Infrastructure.Notifications
             }
         }
 
-        private async Task<bool> SendAsync(
-            int appointmentId,
-            string kind,
-            Func<Appointment, CultureInfo, (string Subject, string Body)> compose,
-            CancellationToken cancellationToken)
+        private async Task<bool> SendAsync(int appointmentId,
+                                           string kind,
+                                           Func<Appointment, CultureInfo, (string Subject, string Body)> compose,
+                                           CancellationToken cancellationToken)
         {
             Appointment? appointment;
             try
@@ -261,12 +259,11 @@ namespace MRC.Agendia.Infrastructure.Notifications
             return (subject, body);
         }
 
-        private async Task TrySendPushAsync(
-            string? userId,
-            string title,
-            string body,
-            IReadOnlyDictionary<string, string> data,
-            CancellationToken cancellationToken)
+        private async Task TrySendPushAsync(string? userId,
+                                            string title,
+                                            string body,
+                                            IReadOnlyDictionary<string, string> data,
+                                            CancellationToken cancellationToken)
         {
             try
             {
