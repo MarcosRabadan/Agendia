@@ -21,6 +21,7 @@ namespace MRC.Agendia.Application.Employees
         }
 
         #region CRUD
+        /// <inheritdoc />
         public async Task<PagedResult<EmployeeDto>> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
         {
             var (items, totalCount) = await _repository.GetPagedAsync(page, pageSize, cancellationToken);
@@ -28,19 +29,25 @@ namespace MRC.Agendia.Application.Employees
             return PagedResult<EmployeeDto>.Create(dtos, totalCount, page, pageSize);
         }
 
-        public async Task<PagedResult<EmployeeDto>> GetPagedByOwnerUserIdAsync(string ownerUserId, int page, int pageSize, CancellationToken cancellationToken = default)
+        /// <inheritdoc />
+        public async Task<PagedResult<EmployeeDto>> GetPagedByOwnerUserIdAsync(string ownerUserId,
+                                                                               int page,
+                                                                               int pageSize,
+                                                                               CancellationToken cancellationToken = default)
         {
             var (items, totalCount) = await _repository.GetPagedByOwnerUserIdAsync(ownerUserId, page, pageSize, cancellationToken);
             var dtos = _mapper.Map<List<EmployeeDto>>(items);
             return PagedResult<EmployeeDto>.Create(dtos, totalCount, page, pageSize);
         }
 
+        /// <inheritdoc />
         public async Task<EmployeeDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken);
             return entity is null ? null : _mapper.Map<EmployeeDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<EmployeeDto> CreateAsync(CreateEmployeeDto dto, CancellationToken cancellationToken = default)
         {
             var entity = _mapper.Map<Employee>(dto);
@@ -49,6 +56,7 @@ namespace MRC.Agendia.Application.Employees
             return _mapper.Map<EmployeeDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<EmployeeDto> UpdateAsync(UpdateEmployeeDto dto, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(dto.Id, cancellationToken)
@@ -60,6 +68,7 @@ namespace MRC.Agendia.Application.Employees
             return _mapper.Map<EmployeeDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken)
@@ -70,6 +79,7 @@ namespace MRC.Agendia.Application.Employees
             return true;
         }
 
+        /// <inheritdoc />
         public async Task<bool> RestoreAsync(int id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdIncludingDeletedAsync(id, cancellationToken)

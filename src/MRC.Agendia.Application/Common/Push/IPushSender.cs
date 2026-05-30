@@ -14,6 +14,11 @@ namespace MRC.Agendia.Application.Common.Push
         /// is a no-op. <paramref name="data"/> is an optional key/value payload for
         /// the client app (e.g. an appointmentId for deep-linking).
         /// </summary>
+        /// <param name="deviceTokens">Target device tokens; null/empty is a no-op.</param>
+        /// <param name="title">Notification title.</param>
+        /// <param name="body">Notification body.</param>
+        /// <param name="data">Optional key/value payload for the client app (e.g. deep-link ids).</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
         Task SendAsync(
             IReadOnlyCollection<string> deviceTokens,
             string title,

@@ -10,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Logging
 builder.ConfigureSerilog();
 
-// MVC + utilidades
+// MVC + utilities
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddAppHealthChecks(builder.Configuration, builder.Environment);
@@ -21,17 +21,17 @@ builder.Services
     .AddAuthRateLimiting()
     .AddSwaggerWithJwt();
 
-// Capas de la app (cada una se autorregistra)
+// App layers (each one self-registers)
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Email sender (Logging en Dev/Test, SMTP en el resto)
+// Email sender (Logging in Dev/Test, SMTP elsewhere)
 builder.Services.AddEmailSender(builder.Configuration, builder.Environment);
 
-// Push sender (#51): de momento solo Logging en todos los entornos (FCM pendiente)
+// Push sender (#51): only Logging in every environment for now (FCM pending)
 builder.Services.AddPushSender(builder.Environment);
 
-// Identity + JWT (depende de Infrastructure por el DbContext)
+// Identity + JWT (depends on Infrastructure for the DbContext)
 builder.Services.AddIdentityAndJwt(builder.Configuration);
 
 var app = builder.Build();
@@ -72,7 +72,7 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-// Seed inicial de roles y admin
+// Initial seed of roles and admin
 try
 {
     Log.Information("Agendia: aplicando seed de roles y admin...");

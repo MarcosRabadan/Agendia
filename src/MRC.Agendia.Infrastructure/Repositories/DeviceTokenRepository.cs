@@ -10,9 +10,11 @@ namespace MRC.Agendia.Infrastructure.Repositories
         {
         }
 
+        /// <inheritdoc />
         public Task<DeviceToken?> GetByTokenAsync(string token, CancellationToken cancellationToken = default)
             => Set.FirstOrDefaultAsync(d => d.Token == token, cancellationToken);
 
+        /// <inheritdoc />
         public async Task<IReadOnlyList<string>> GetTokensByUserIdAsync(string userId, CancellationToken cancellationToken = default)
             => await Set
                 .AsNoTracking()

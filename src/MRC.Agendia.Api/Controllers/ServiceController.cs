@@ -2,10 +2,14 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Application.Services.Commands;
 using MRC.Agendia.Application.Services.DTO;
-using MRC.Agendia.Application.Services.Queries;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Application.Services.Commands.Create;
+using MRC.Agendia.Application.Services.Commands.Delete;
+using MRC.Agendia.Application.Services.Commands.Restore;
+using MRC.Agendia.Application.Services.Commands.Update;
+using MRC.Agendia.Application.Services.Queries.GetAll;
+using MRC.Agendia.Application.Services.Queries.GetById;
 
 namespace MRC.Agendia.Api.Controllers
 {
@@ -21,6 +25,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
+        /// <summary>Gets a paged list of services.</summary>
         [AllowAnonymous]
         [HttpGet]
         [ProducesResponseType(typeof(PagedResult<ServiceDto>), StatusCodes.Status200OK)]
@@ -33,6 +38,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Gets a service by its identifier.</summary>
         [AllowAnonymous]
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status200OK)]
@@ -44,6 +50,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Creates a new service.</summary>
         [Authorize(Roles = RolePolicies.AdminOrOwner)]
         [HttpPost]
         [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status201Created)]
@@ -54,6 +61,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
+        /// <summary>Updates an existing service.</summary>
         [Authorize(Roles = RolePolicies.AdminOrOwner)]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status200OK)]
@@ -66,6 +74,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Soft-deletes a service by its identifier.</summary>
         [Authorize(Roles = RolePolicies.AdminOrOwner)]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -76,9 +85,7 @@ namespace MRC.Agendia.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Restaura un servicio previamente eliminado (soft delete). Solo Admin.
-        /// </summary>
+        /// <summary>Restores a previously soft-deleted service. Admin only.</summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpPost("{id}/restore")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]

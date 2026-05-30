@@ -20,9 +20,9 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         /// <summary>
-        /// Estadisticas del negocio en un rango de fechas: reservas por mes y semana,
-        /// servicios mas y menos usados (con ingresos), ausencias y cancelaciones,
-        /// e ingresos por hora y por dia de la semana. Solo el dueno (o un admin).
+        /// Business statistics over a date range: bookings per month and week,
+        /// most and least used services (with revenue), no-shows and cancellations,
+        /// and revenue per hour and per weekday. Owner only (or an admin).
         /// </summary>
         [Authorize(Roles = RolePolicies.AdminOrOwner)]
         [HttpGet]

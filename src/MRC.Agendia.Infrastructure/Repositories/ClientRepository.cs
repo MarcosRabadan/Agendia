@@ -10,16 +10,19 @@ namespace MRC.Agendia.Infrastructure.Repositories
         {
         }
 
+        /// <inheritdoc />
         public Task<Client?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default)
             => Set
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
 
+        /// <inheritdoc />
         public Task<Client?> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.UserId == userId, cancellationToken);
 
+        /// <inheritdoc />
         public Task<(IReadOnlyList<Client> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()

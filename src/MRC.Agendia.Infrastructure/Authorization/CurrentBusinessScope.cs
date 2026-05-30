@@ -28,11 +28,13 @@ namespace MRC.Agendia.Infrastructure.Authorization
             _scopeFactory = scopeFactory;
         }
 
+        /// <inheritdoc />
         public bool IsRestricted
         {
             get { Resolve(); return _isRestricted; }
         }
 
+        /// <inheritdoc />
         public IReadOnlyCollection<int> BusinessIds
         {
             get { Resolve(); return _businessIds; }

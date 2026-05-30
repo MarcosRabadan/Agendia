@@ -41,6 +41,7 @@ namespace MRC.Agendia.Application.Waitlist
             _mapper = mapper;
         }
 
+        /// <inheritdoc />
         public async Task<WaitlistEntryDto> JoinAsync(JoinWaitlistDto dto, string userId, CancellationToken cancellationToken = default)
         {
             var client = await _clientRepository.GetByUserIdAsync(userId, cancellationToken)
@@ -76,6 +77,7 @@ namespace MRC.Agendia.Application.Waitlist
             return _mapper.Map<WaitlistEntryDto>(entry);
         }
 
+        /// <inheritdoc />
         public async Task LeaveAsync(int entryId, string userId, CancellationToken cancellationToken = default)
         {
             var entry = await _repository.GetByIdAsync(entryId, cancellationToken)
@@ -93,6 +95,7 @@ namespace MRC.Agendia.Application.Waitlist
             await _unitOfWork.Save(cancellationToken);
         }
 
+        /// <inheritdoc />
         public async Task<IReadOnlyList<WaitlistEntryDto>> GetMineAsync(string userId, CancellationToken cancellationToken = default)
         {
             var client = await _clientRepository.GetByUserIdAsync(userId, cancellationToken);
@@ -103,6 +106,7 @@ namespace MRC.Agendia.Application.Waitlist
             return _mapper.Map<List<WaitlistEntryDto>>(entries);
         }
 
+        /// <inheritdoc />
         public async Task NotifyForFreedAppointmentAsync(int appointmentId, CancellationToken cancellationToken = default)
         {
             // Best-effort: this runs after the cancellation/deletion has been saved,

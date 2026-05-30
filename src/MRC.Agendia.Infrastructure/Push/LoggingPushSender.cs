@@ -17,6 +17,7 @@ namespace MRC.Agendia.Infrastructure.Push
             _logger = logger;
         }
 
+        /// <inheritdoc />
         public Task SendAsync(
             IReadOnlyCollection<string> deviceTokens,
             string title,

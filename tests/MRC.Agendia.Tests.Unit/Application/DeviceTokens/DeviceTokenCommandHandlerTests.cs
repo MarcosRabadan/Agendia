@@ -1,10 +1,11 @@
 using MRC.Agendia.Application.Authorization;
-using MRC.Agendia.Application.DeviceTokens.Commands;
 using MRC.Agendia.Application.DeviceTokens.DTO;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Interfaces;
 using NSubstitute;
+using MRC.Agendia.Application.DeviceTokens.Commands.Register;
+using MRC.Agendia.Application.DeviceTokens.Commands.Remove;
 
 namespace MRC.Agendia.Tests.Unit.Application.DeviceTokens
 {

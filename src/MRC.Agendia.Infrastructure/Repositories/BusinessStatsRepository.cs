@@ -13,6 +13,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
             _context = context;
         }
 
+        /// <inheritdoc />
         public async Task<IReadOnlyList<AppointmentStatsRow>> GetAppointmentsAsync(
             int businessId,
             DateTime fromInclusive,

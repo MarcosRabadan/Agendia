@@ -1,11 +1,14 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MRC.Agendia.Application.Appointments.Commands;
 using MRC.Agendia.Application.Appointments.DTO;
-using MRC.Agendia.Application.Appointments.Queries;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Application.Appointments.Commands.Crud;
+using MRC.Agendia.Application.Appointments.Commands.Series;
+using MRC.Agendia.Application.Appointments.Queries.ByDateRange;
+using MRC.Agendia.Application.Appointments.Queries.GetAll;
+using MRC.Agendia.Application.Appointments.Queries.GetById;
 
 namespace MRC.Agendia.Api.Controllers
 {
@@ -21,6 +24,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
+        /// <summary>Returns a paged list of all appointments. Admin only.</summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpGet]
         [ProducesResponseType(typeof(PagedResult<AppointmentDto>), StatusCodes.Status200OK)]
@@ -33,6 +37,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Gets a single appointment by id.</summary>
         [Authorize]
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(AppointmentDto), StatusCodes.Status200OK)]
@@ -44,6 +49,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Returns the appointments of a business that overlap the given date range. Staff only.</summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpGet("business/{businessId:int}")]
         [ProducesResponseType(typeof(IEnumerable<AppointmentDto>), StatusCodes.Status200OK)]
@@ -58,6 +64,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Creates a new appointment.</summary>
         [Authorize]
         [HttpPost]
         [ProducesResponseType(typeof(AppointmentDto), StatusCodes.Status201Created)]
@@ -69,9 +76,9 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         /// <summary>
-        /// Actualiza una cita (reprogramar, cambiar estado o notas). Un cliente solo
-        /// puede cancelar o reprogramar su propia cita; si esta ya esta dentro de la
-        /// ventana de antelacion del negocio devuelve 400 CANCELLATION_WINDOW_ELAPSED.
+        /// Updates an appointment (reschedule, change status or notes). A client can
+        /// only cancel or reschedule their own appointment; if it is already within
+        /// the business's advance-notice window it returns 400 CANCELLATION_WINDOW_ELAPSED.
         /// </summary>
         [Authorize]
         [HttpPut("{id}")]
@@ -86,8 +93,8 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         /// <summary>
-        /// Elimina una cita. Para un cliente, si la cita ya esta dentro de la ventana
-        /// de antelacion del negocio devuelve 400 CANCELLATION_WINDOW_ELAPSED.
+        /// Deletes an appointment. For a client, if the appointment is already within
+        /// the business's advance-notice window it returns 400 CANCELLATION_WINDOW_ELAPSED.
         /// </summary>
         [Authorize]
         [HttpDelete("{id}")]
@@ -101,9 +108,9 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         /// <summary>
-        /// Crea en masa una serie de citas recurrentes (p. ej. todos los viernes a
-        /// las 16h hasta una fecha). Devuelve las citas creadas y las omitidas (con
-        /// su motivo) cuando una ocurrencia cae en dia cerrado, choca o esta llena.
+        /// Bulk-creates a recurring appointment series (e.g. every Friday at 16h until
+        /// a date). Returns the created appointments and the skipped ones (with their
+        /// reason) when an occurrence falls on a closed day, conflicts or is full.
         /// </summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpPost("series")]
@@ -116,7 +123,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>Cancela las citas futuras y activas de una serie recurrente.</summary>
+        /// <summary>Cancels the future, active appointments of a recurring series.</summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpPost("series/{seriesId:guid}/cancel")]
         [ProducesResponseType(typeof(AppointmentSeriesCountResultDto), StatusCodes.Status200OK)]
@@ -129,8 +136,8 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         /// <summary>
-        /// Reprograma (desplaza) las citas futuras de una serie: nueva hora y/o
-        /// desplazamiento de dias. Las ocurrencias que choquen se omiten y se informan.
+        /// Reschedules (shifts) the future appointments of a series: new time and/or
+        /// day shift. Occurrences that conflict are skipped and reported.
         /// </summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpPost("series/{seriesId:guid}/move")]
@@ -144,7 +151,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>Elimina (soft delete) todas las citas de una serie recurrente.</summary>
+        /// <summary>Soft-deletes every appointment of a recurring series.</summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpDelete("series/{seriesId:guid}")]
         [ProducesResponseType(typeof(AppointmentSeriesCountResultDto), StatusCodes.Status200OK)]
@@ -157,7 +164,7 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         /// <summary>
-        /// Restaura una cita previamente eliminada (soft delete). Solo Admin.
+        /// Restores a previously soft-deleted appointment. Admin only.
         /// </summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpPost("{id}/restore")]

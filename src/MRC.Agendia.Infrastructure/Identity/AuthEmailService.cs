@@ -21,6 +21,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             _configuration = configuration;
         }
 
+        /// <inheritdoc />
         public async Task SendEmailConfirmationAsync(ApplicationUser user, CancellationToken cancellationToken = default)
         {
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -35,6 +36,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             await _emailSender.SendAsync(user.Email!, "Confirma tu email - Agendia", body, cancellationToken);
         }
 
+        /// <inheritdoc />
         public async Task SendPasswordResetAsync(ApplicationUser user, CancellationToken cancellationToken = default)
         {
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);

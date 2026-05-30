@@ -19,24 +19,28 @@ namespace MRC.Agendia.Application.Holidays
             _mapper = mapper;
         }
 
+        /// <inheritdoc />
         public async Task<IEnumerable<HolidayCalendarDto>> GetAllAsync(CancellationToken cancellationToken = default)
         {
             var entities = await _repository.GetAllAsync(cancellationToken);
             return _mapper.Map<IEnumerable<HolidayCalendarDto>>(entities);
         }
 
+        /// <inheritdoc />
         public async Task<IEnumerable<HolidayCalendarDto>> GetByYearAsync(int year, CancellationToken cancellationToken = default)
         {
             var entities = await _repository.GetByYearAsync(year, cancellationToken);
             return _mapper.Map<IEnumerable<HolidayCalendarDto>>(entities);
         }
 
+        /// <inheritdoc />
         public async Task<HolidayCalendarDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken);
             return entity is null ? null : _mapper.Map<HolidayCalendarDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<HolidayCalendarDto> CreateAsync(CreateHolidayCalendarDto dto, CancellationToken cancellationToken = default)
         {
             var entity = _mapper.Map<HolidayCalendar>(dto);
@@ -45,6 +49,7 @@ namespace MRC.Agendia.Application.Holidays
             return _mapper.Map<HolidayCalendarDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<HolidayCalendarDto> UpdateAsync(UpdateHolidayCalendarDto dto, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(dto.Id, cancellationToken)
@@ -56,6 +61,7 @@ namespace MRC.Agendia.Application.Holidays
             return _mapper.Map<HolidayCalendarDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken)

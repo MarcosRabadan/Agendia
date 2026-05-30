@@ -45,6 +45,7 @@ namespace MRC.Agendia.Application.Appointments
             _mapper = mapper;
         }
 
+        /// <inheritdoc />
         public async Task<AppointmentSeriesResultDto> CreateSeriesAsync(CreateAppointmentSeriesDto dto, CancellationToken cancellationToken = default)
         {
             // The service is loaded up front: its duration sets each occurrence's
@@ -129,6 +130,7 @@ namespace MRC.Agendia.Application.Appointments
             return new AppointmentSeriesResultDto(seriesId, ToDtosByDate(created), OrderByDate(skipped));
         }
 
+        /// <inheritdoc />
         public async Task<AppointmentSeriesCountResultDto> CancelSeriesAsync(Guid seriesId, CancellationToken cancellationToken = default)
         {
             var appointments = await GetSeriesOrThrowAsync(seriesId, cancellationToken);
@@ -156,6 +158,7 @@ namespace MRC.Agendia.Application.Appointments
             return new AppointmentSeriesCountResultDto(seriesId, affected);
         }
 
+        /// <inheritdoc />
         public async Task<AppointmentSeriesCountResultDto> DeleteSeriesAsync(Guid seriesId, CancellationToken cancellationToken = default)
         {
             var appointments = await GetSeriesOrThrowAsync(seriesId, cancellationToken);
@@ -171,6 +174,7 @@ namespace MRC.Agendia.Application.Appointments
             return new AppointmentSeriesCountResultDto(seriesId, appointments.Count);
         }
 
+        /// <inheritdoc />
         public async Task<MoveAppointmentSeriesResultDto> MoveSeriesAsync(Guid seriesId, MoveAppointmentSeriesDto dto, CancellationToken cancellationToken = default)
         {
             var appointments = await GetSeriesOrThrowAsync(seriesId, cancellationToken);

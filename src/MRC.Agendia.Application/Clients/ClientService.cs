@@ -21,6 +21,7 @@ namespace MRC.Agendia.Application.Clients
         }
 
         #region CRUD
+        /// <inheritdoc />
         public async Task<PagedResult<ClientDto>> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
         {
             var (items, totalCount) = await _repository.GetPagedAsync(page, pageSize, cancellationToken);
@@ -28,12 +29,14 @@ namespace MRC.Agendia.Application.Clients
             return PagedResult<ClientDto>.Create(dtos, totalCount, page, pageSize);
         }
 
+        /// <inheritdoc />
         public async Task<ClientDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken);
             return entity is null ? null : _mapper.Map<ClientDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<ClientDto> CreateAsync(CreateClientDto dto, CancellationToken cancellationToken = default)
         {
             var entity = _mapper.Map<Client>(dto);
@@ -42,6 +45,7 @@ namespace MRC.Agendia.Application.Clients
             return _mapper.Map<ClientDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<ClientDto> UpdateAsync(UpdateClientDto dto, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(dto.Id, cancellationToken)
@@ -53,6 +57,7 @@ namespace MRC.Agendia.Application.Clients
             return _mapper.Map<ClientDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken)
@@ -63,6 +68,7 @@ namespace MRC.Agendia.Application.Clients
             return true;
         }
 
+        /// <inheritdoc />
         public async Task<bool> RestoreAsync(int id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdIncludingDeletedAsync(id, cancellationToken)

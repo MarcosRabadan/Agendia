@@ -1,7 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments;
-using MRC.Agendia.Application.Appointments.Commands;
+using MRC.Agendia.Application.Appointments.Commands.Crud;
 using MRC.Agendia.Application.Availability;
 using MRC.Agendia.Application.Behaviors;
 using MRC.Agendia.Application.Business;
@@ -39,7 +39,7 @@ namespace MRC.Agendia.Application
             // FluentValidation: auto-discovers all AbstractValidator<T> in the assembly.
             services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
 
-            // Servicios de aplicacion (uno por agregado)
+            // Application services (one per aggregate)
             services.AddScoped<IAppointmentService, AppointmentService>();
             services.AddScoped<IRecurringAppointmentService, RecurringAppointmentService>();
             services.AddScoped<IAppointmentDelayService, AppointmentDelayService>();

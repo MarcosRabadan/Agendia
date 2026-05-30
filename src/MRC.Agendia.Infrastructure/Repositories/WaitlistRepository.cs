@@ -11,6 +11,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         {
         }
 
+        /// <inheritdoc />
         public Task<bool> ExistsWaitingAsync(
             int clientId, int businessId, int serviceId, DateOnly date, TimeOnly startTime, int? employeeId,
             CancellationToken cancellationToken = default)
@@ -24,6 +25,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 && w.Status == WaitlistStatus.Waiting,
                 cancellationToken);
 
+        /// <inheritdoc />
         public Task<WaitlistEntry?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default)
             // Required Client/Service navigations keep their soft-delete filters, so a
             // soft-deleted participant makes this return null (the notification is skipped).
@@ -35,6 +37,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                     .ThenInclude(s => s.Business)
                 .FirstOrDefaultAsync(w => w.Id == id, cancellationToken);
 
+        /// <inheritdoc />
         public Task<WaitlistEntry?> GetNextWaitingForSlotAsync(
             int businessId, int serviceId, DateOnly date, TimeOnly startTime, int employeeId,
             CancellationToken cancellationToken = default)
@@ -54,6 +57,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderBy(w => w.CreatedAt)
                 .FirstOrDefaultAsync(cancellationToken);
 
+        /// <inheritdoc />
         public async Task<IReadOnlyList<WaitlistEntry>> GetActiveByClientAsync(int clientId, CancellationToken cancellationToken = default)
             => await Set
                 .AsNoTracking()

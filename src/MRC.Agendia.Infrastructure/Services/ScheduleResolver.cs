@@ -18,6 +18,7 @@ namespace MRC.Agendia.Infrastructure.Services
             _overrideRepository = overrideRepository;
         }
 
+        /// <inheritdoc />
         public async Task<EffectiveSchedule> GetEffectiveScheduleAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default)
         {
             // An override for the date wins; only hit the template store if there is none.
@@ -29,7 +30,11 @@ namespace MRC.Agendia.Infrastructure.Services
             return BuildEffectiveSchedule(scheduleOverride, template, date);
         }
 
-        public async Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(int businessId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
+        /// <inheritdoc />
+        public async Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(int businessId,
+                                                                                     DateOnly from,
+                                                                                     DateOnly to,
+                                                                                     CancellationToken cancellationToken = default)
         {
             // Load the whole range once and resolve in memory instead of issuing
             // 1-2 queries per day. The old per-day loop was an N+1 that made the
@@ -40,6 +45,7 @@ namespace MRC.Agendia.Infrastructure.Services
             return ResolveRange(templates, overrides, from, to);
         }
 
+        /// <inheritdoc />
         public EffectiveSchedule Resolve(
             IEnumerable<ScheduleTemplate> templates,
             IEnumerable<ScheduleOverride> overrides,
@@ -50,6 +56,7 @@ namespace MRC.Agendia.Infrastructure.Services
             return BuildEffectiveSchedule(scheduleOverride, template, date);
         }
 
+        /// <inheritdoc />
         public IEnumerable<EffectiveSchedule> ResolveRange(
             IEnumerable<ScheduleTemplate> templates,
             IEnumerable<ScheduleOverride> overrides,

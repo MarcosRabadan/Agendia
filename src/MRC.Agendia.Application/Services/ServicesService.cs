@@ -21,6 +21,7 @@ namespace MRC.Agendia.Application.Services
         }
 
         #region CRUD
+        /// <inheritdoc />
         public async Task<PagedResult<ServiceDto>> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
         {
             var (items, totalCount) = await _repository.GetPagedAsync(page, pageSize, cancellationToken);
@@ -28,6 +29,7 @@ namespace MRC.Agendia.Application.Services
             return PagedResult<ServiceDto>.Create(dtos, totalCount, page, pageSize);
         }
 
+        /// <inheritdoc />
         public async Task<ServiceDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             // Public catalog detail (GET /api/Service/{id} is [AllowAnonymous]):
@@ -37,6 +39,7 @@ namespace MRC.Agendia.Application.Services
             return entity is null ? null : _mapper.Map<ServiceDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<ServiceDto> CreateAsync(CreateServiceDto dto, CancellationToken cancellationToken = default)
         {
             var entity = _mapper.Map<Service>(dto);
@@ -45,6 +48,7 @@ namespace MRC.Agendia.Application.Services
             return _mapper.Map<ServiceDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<ServiceDto> UpdateAsync(UpdateServiceDto dto, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(dto.Id, cancellationToken)
@@ -56,6 +60,7 @@ namespace MRC.Agendia.Application.Services
             return _mapper.Map<ServiceDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken)
@@ -66,6 +71,7 @@ namespace MRC.Agendia.Application.Services
             return true;
         }
 
+        /// <inheritdoc />
         public async Task<bool> RestoreAsync(int id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdIncludingDeletedAsync(id, cancellationToken)

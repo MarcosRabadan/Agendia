@@ -1,14 +1,15 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MRC.Agendia.Application.DeviceTokens.Commands;
 using MRC.Agendia.Application.DeviceTokens.DTO;
+using MRC.Agendia.Application.DeviceTokens.Commands.Register;
+using MRC.Agendia.Application.DeviceTokens.Commands.Remove;
 
 namespace MRC.Agendia.Api.Controllers
 {
     /// <summary>
-    /// Registro y baja de tokens de dispositivo para notificaciones push (#51).
-    /// Cada usuario autenticado gestiona unicamente los suyos.
+    /// Registration and removal of device tokens for push notifications (#51).
+    /// Each authenticated user manages only their own.
     /// </summary>
     [ApiController]
     [Route("api/notifications/device-tokens")]
@@ -23,7 +24,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
-        /// <summary>Registra (o reasigna al usuario actual) un token de dispositivo para push.</summary>
+        /// <summary>Registers (or reassigns to the current user) a device token for push.</summary>
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -33,7 +34,7 @@ namespace MRC.Agendia.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>Da de baja un token de dispositivo del usuario actual (idempotente).</summary>
+        /// <summary>Removes a device token from the current user (idempotent).</summary>
         [HttpDelete]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

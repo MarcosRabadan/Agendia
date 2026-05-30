@@ -10,6 +10,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         {
         }
 
+        /// <inheritdoc />
         public Task<Service?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default)
             => Set
                 .IgnoreQueryFilters()
@@ -19,6 +20,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         // detail / availability stays open regardless of the caller's business
         // scope (#58); re-apply !IsDeleted explicitly since the filter is bypassed.
         // The management paths (Update/Delete/validator) keep the scoped GetByIdAsync.
+        /// <inheritdoc />
         public Task<Service?> GetByIdPublicAsync(int id, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
@@ -28,6 +30,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         // Public (anonymous) catalog read: IgnoreQueryFilters so it stays a global
         // catalog regardless of the caller's business scope (#58); re-apply
         // !IsDeleted explicitly since the global filter is bypassed.
+        /// <inheritdoc />
         public Task<(IReadOnlyList<Service> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()

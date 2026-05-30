@@ -1,10 +1,11 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MRC.Agendia.Application.Waitlist.Commands;
 using MRC.Agendia.Application.Waitlist.DTO;
 using MRC.Agendia.Application.Waitlist.Queries;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Application.Waitlist.Commands.Join;
+using MRC.Agendia.Application.Waitlist.Commands.Leave;
 
 namespace MRC.Agendia.Api.Controllers
 {
@@ -22,8 +23,8 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         /// <summary>
-        /// Apunta al cliente autenticado a la lista de espera de una franja completa.
-        /// Si la franja todavia tiene hueco, devuelve 400 invitando a reservar directamente.
+        /// Adds the authenticated client to the waitlist for a full slot.
+        /// If the slot still has room, returns 400 inviting them to book directly.
         /// </summary>
         [HttpPost]
         [ProducesResponseType(typeof(WaitlistEntryDto), StatusCodes.Status200OK)]
@@ -34,7 +35,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>Lista las entradas de lista de espera del cliente autenticado.</summary>
+        /// <summary>Lists the authenticated client's waitlist entries.</summary>
         [HttpGet("me")]
         [ProducesResponseType(typeof(IReadOnlyList<WaitlistEntryDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IReadOnlyList<WaitlistEntryDto>>> GetMine()
@@ -43,7 +44,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>Da de baja una entrada propia de la lista de espera.</summary>
+        /// <summary>Removes one of the client's own waitlist entries.</summary>
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]

@@ -30,6 +30,7 @@ namespace MRC.Agendia.Infrastructure.Caching
 
         private static string Key(int year) => $"holidays:{year}";
 
+        /// <inheritdoc />
         public async Task<IEnumerable<HolidayCalendar>> GetByYearAsync(int year, CancellationToken cancellationToken = default)
         {
             if (_cache.TryGetValue(Key(year), out IReadOnlyList<HolidayCalendar>? cached) && cached is not null)
@@ -42,12 +43,14 @@ namespace MRC.Agendia.Infrastructure.Caching
 
         // ----- Writes: evict exactly the affected year(s) -----
 
+        /// <inheritdoc />
         public async Task AddAsync(HolidayCalendar holiday, CancellationToken cancellationToken = default)
         {
             await _inner.AddAsync(holiday, cancellationToken);
             _cache.Remove(Key(holiday.Year));
         }
 
+        /// <inheritdoc />
         public async Task AddRangeAsync(IEnumerable<HolidayCalendar> holidays, CancellationToken cancellationToken = default)
         {
             var list = holidays as IReadOnlyCollection<HolidayCalendar> ?? holidays.ToList();
@@ -56,6 +59,7 @@ namespace MRC.Agendia.Infrastructure.Caching
                 _cache.Remove(Key(year));
         }
 
+        /// <inheritdoc />
         public void Update(HolidayCalendar holiday)
         {
             // A cross-year edit (Date/Year moved) leaves the entity carrying the NEW
@@ -73,6 +77,7 @@ namespace MRC.Agendia.Infrastructure.Caching
                 _cache.Remove(Key(previousYear));
         }
 
+        /// <inheritdoc />
         public void Delete(HolidayCalendar holiday)
         {
             _inner.Delete(holiday);
@@ -81,12 +86,15 @@ namespace MRC.Agendia.Infrastructure.Caching
 
         // ----- Pass-through (not cached) -----
 
+        /// <inheritdoc />
         public Task<HolidayCalendar?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
             => _inner.GetByIdAsync(id, cancellationToken);
 
+        /// <inheritdoc />
         public Task<IEnumerable<HolidayCalendar>> GetAllAsync(CancellationToken cancellationToken = default)
             => _inner.GetAllAsync(cancellationToken);
 
+        /// <inheritdoc />
         public Task<IEnumerable<HolidayCalendar>> GetByDateRangeAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
             => _inner.GetByDateRangeAsync(from, to, cancellationToken);
     }

@@ -3,10 +3,17 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using MRC.Agendia.Api.Services;
-using MRC.Agendia.Application.Auth.Commands;
 using MRC.Agendia.Application.Auth.DTO;
 using MRC.Agendia.Application.Auth.Queries;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Application.Auth.Commands.ChangePassword;
+using MRC.Agendia.Application.Auth.Commands.ConfirmEmail;
+using MRC.Agendia.Application.Auth.Commands.ForgotPassword;
+using MRC.Agendia.Application.Auth.Commands.Login;
+using MRC.Agendia.Application.Auth.Commands.Logout;
+using MRC.Agendia.Application.Auth.Commands.RefreshToken;
+using MRC.Agendia.Application.Auth.Commands.Registration;
+using MRC.Agendia.Application.Auth.Commands.ResetPassword;
 
 namespace MRC.Agendia.Api.Controllers
 {
@@ -22,7 +29,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
-        /// <summary>Registro publico de un cliente.</summary>
+        /// <summary>Public self-registration of a client.</summary>
         [HttpPost("register/client")]
         [AllowAnonymous]
         [EnableRateLimiting("auth-register")]
@@ -35,7 +42,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>Autoregistro publico de un BusinessOwner + su Business + Employee asociado.</summary>
+        /// <summary>Public self-registration of a BusinessOwner together with their Business and associated Employee.</summary>
         [HttpPost("register/owner")]
         [AllowAnonymous]
         [EnableRateLimiting("auth-register")]
@@ -48,7 +55,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>Solo Owner: crea un Employee + su user asociado a SU negocio.</summary>
+        /// <summary>Owner only: creates an Employee plus its user account for the owner's own business.</summary>
         [HttpPost("register/employee")]
         [Authorize(Roles = Roles.BusinessOwner)]
         [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
@@ -62,6 +69,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Authenticates with email and password and returns an access + refresh token pair.</summary>
         [HttpPost("login")]
         [AllowAnonymous]
         [EnableRateLimiting("auth-login")]
@@ -74,6 +82,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Exchanges a refresh token for a new access + refresh token pair (rotation).</summary>
         [HttpPost("refresh")]
         [AllowAnonymous]
         [EnableRateLimiting("auth-refresh")]
@@ -86,6 +95,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Revokes the supplied refresh token for the authenticated user.</summary>
         [HttpPost("logout")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -95,7 +105,7 @@ namespace MRC.Agendia.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>Revoca todas las sesiones (refresh tokens) del usuario autenticado.</summary>
+        /// <summary>Revokes all sessions (refresh tokens) of the authenticated user.</summary>
         [HttpPost("logout-all")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -107,6 +117,7 @@ namespace MRC.Agendia.Api.Controllers
             return NoContent();
         }
 
+        /// <summary>Returns the profile and roles of the authenticated user.</summary>
         [HttpGet("me")]
         [Authorize]
         [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
@@ -118,6 +129,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Changes the authenticated user's password and revokes their other sessions.</summary>
         [HttpPost("change-password")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -129,7 +141,7 @@ namespace MRC.Agendia.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>Solicita un enlace de restablecimiento de contrasena. Responde siempre 204 (no revela si el email existe).</summary>
+        /// <summary>Requests a password-reset link. Always responds 204 (does not reveal whether the email exists).</summary>
         [HttpPost("forgot-password")]
         [AllowAnonymous]
         [EnableRateLimiting("auth-register")]
@@ -142,7 +154,7 @@ namespace MRC.Agendia.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>Restablece la contrasena con el token recibido por email.</summary>
+        /// <summary>Resets the password using the token received by email.</summary>
         [HttpPost("reset-password")]
         [AllowAnonymous]
         [EnableRateLimiting("auth-login")]
@@ -155,7 +167,7 @@ namespace MRC.Agendia.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>Confirma el email de un usuario con el token enviado al registrarse.</summary>
+        /// <summary>Confirms a user's email with the token sent at registration.</summary>
         [HttpPost("confirm-email")]
         [AllowAnonymous]
         [EnableRateLimiting("auth-login")]

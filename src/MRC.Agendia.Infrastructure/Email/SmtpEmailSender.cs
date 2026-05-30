@@ -22,7 +22,11 @@ namespace MRC.Agendia.Infrastructure.Email
             _configuration = configuration;
         }
 
-        public async Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken cancellationToken = default)
+        /// <inheritdoc />
+        public async Task SendAsync(string toEmail,
+                                    string subject,
+                                    string htmlBody,
+                                    CancellationToken cancellationToken = default)
         {
             var smtp = _configuration.GetSection("Email:Smtp");
             var host = smtp["Host"]!;

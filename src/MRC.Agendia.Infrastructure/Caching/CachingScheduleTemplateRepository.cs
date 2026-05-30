@@ -30,9 +30,11 @@ namespace MRC.Agendia.Infrastructure.Caching
 
         private static string Key(int businessId) => $"sched-templates:{businessId}";
 
+        /// <inheritdoc />
         public async Task<IEnumerable<ScheduleTemplate>> GetByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default)
             => await GetCachedByBusinessAsync(businessId, cancellationToken);
 
+        /// <inheritdoc />
         public async Task<ScheduleTemplate?> GetEffectiveTemplateAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default)
         {
             // Same selection rule as ScheduleResolver.SelectTemplate, served from cache.
@@ -55,18 +57,21 @@ namespace MRC.Agendia.Infrastructure.Caching
 
         // ----- Writes: evict the business's cached templates -----
 
+        /// <inheritdoc />
         public async Task AddAsync(ScheduleTemplate template, CancellationToken cancellationToken = default)
         {
             await _inner.AddAsync(template, cancellationToken);
             _cache.Remove(Key(template.BusinessId));
         }
 
+        /// <inheritdoc />
         public void Update(ScheduleTemplate template)
         {
             _inner.Update(template);
             _cache.Remove(Key(template.BusinessId));
         }
 
+        /// <inheritdoc />
         public void Delete(ScheduleTemplate template)
         {
             _inner.Delete(template);
@@ -75,13 +80,20 @@ namespace MRC.Agendia.Infrastructure.Caching
 
         // ----- Pass-through (not cached) -----
 
+        /// <inheritdoc />
         public Task<ScheduleTemplate?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
             => _inner.GetByIdAsync(id, cancellationToken);
 
+        /// <inheritdoc />
         public Task<ScheduleTemplate?> GetByIdWithSlotsAsync(int id, CancellationToken cancellationToken = default)
             => _inner.GetByIdWithSlotsAsync(id, cancellationToken);
 
-        public Task<bool> HasOverlappingTemplateAsync(int businessId, DateOnly from, DateOnly to, int? excludeId = null, CancellationToken cancellationToken = default)
+        /// <inheritdoc />
+        public Task<bool> HasOverlappingTemplateAsync(int businessId,
+                                                      DateOnly from,
+                                                      DateOnly to,
+                                                      int? excludeId = null,
+                                                      CancellationToken cancellationToken = default)
             => _inner.HasOverlappingTemplateAsync(businessId, from, to, excludeId, cancellationToken);
     }
 }

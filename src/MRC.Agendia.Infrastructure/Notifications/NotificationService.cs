@@ -47,18 +47,23 @@ namespace MRC.Agendia.Infrastructure.Notifications
             _logger = logger;
         }
 
+        /// <inheritdoc />
         public Task<bool> SendAppointmentConfirmationAsync(int appointmentId, CancellationToken cancellationToken = default)
             => SendAsync(appointmentId, "confirmation", BuildConfirmation, cancellationToken);
 
+        /// <inheritdoc />
         public Task<bool> SendAppointmentReminderAsync(int appointmentId, CancellationToken cancellationToken = default)
             => SendAsync(appointmentId, "reminder", BuildReminder, cancellationToken);
 
+        /// <inheritdoc />
         public Task<bool> SendAppointmentCancellationAsync(int appointmentId, CancellationToken cancellationToken = default)
             => SendAsync(appointmentId, "cancellation", BuildCancellation, cancellationToken);
 
+        /// <inheritdoc />
         public Task<bool> SendDelayNotificationAsync(int appointmentId, int delayMinutes, CancellationToken cancellationToken = default)
             => SendAsync(appointmentId, "delay", (a, culture) => BuildDelay(a, delayMinutes, culture), cancellationToken);
 
+        /// <inheritdoc />
         public async Task<bool> SendWaitlistAvailabilityAsync(int waitlistEntryId, CancellationToken cancellationToken = default)
         {
             WaitlistEntry? entry;

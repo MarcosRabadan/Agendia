@@ -7,6 +7,12 @@ namespace MRC.Agendia.Application.Auditing
     /// </summary>
     public interface IAuditLogger
     {
+        /// <summary>Writes one audit entry for the given action.</summary>
+        /// <param name="action">Action code being audited (see AuditActions).</param>
+        /// <param name="entityType">Optional type of the affected entity.</param>
+        /// <param name="entityId">Optional id of the affected entity.</param>
+        /// <param name="details">Optional extra data, serialized to JSON.</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
         Task LogAsync(
             string action,
             string? entityType = null,
