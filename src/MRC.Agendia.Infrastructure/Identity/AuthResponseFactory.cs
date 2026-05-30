@@ -36,7 +36,9 @@ namespace MRC.Agendia.Infrastructure.Identity
 
             var refreshToken = new RefreshToken
             {
-                Token = refreshTokenValue,
+                // Store only the hash; the cleartext value is returned to the client
+                // below, so a DB leak exposes no reusable tokens.
+                Token = RefreshTokenHasher.Hash(refreshTokenValue),
                 UserId = user.Id,
                 ExpiresAt = refreshExpires
             };

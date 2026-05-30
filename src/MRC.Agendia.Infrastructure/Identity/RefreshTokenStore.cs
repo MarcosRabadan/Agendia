@@ -12,7 +12,11 @@ namespace MRC.Agendia.Infrastructure.Identity
         }
 
         public async Task<RefreshToken?> GetByTokenAsync(string token, CancellationToken cancellationToken = default)
-            => await _context.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == token, cancellationToken);
+        {
+            // Tokens are stored hashed; hash the presented cleartext value to look it up.
+            var hash = RefreshTokenHasher.Hash(token);
+            return await _context.RefreshTokens.FirstOrDefaultAsync(rt => rt.Token == hash, cancellationToken);
+        }
 
         public async Task<IReadOnlyList<RefreshToken>> GetActiveByUserIdAsync(string userId, CancellationToken cancellationToken = default)
         {

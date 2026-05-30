@@ -80,6 +80,9 @@ namespace MRC.Agendia.Api.Configuration
                     ValidIssuer = jwtIssuer,
                     ValidAudience = jwtAudience,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                    // Pin the signing algorithm so a token forged with a different alg
+                    // (e.g. "none" or an asymmetric alg) cannot be accepted.
+                    ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
                     ClockSkew = TimeSpan.FromMinutes(1)
                 };
             });
@@ -105,10 +108,12 @@ namespace MRC.Agendia.Api.Configuration
                     "En produccion usa una variable de entorno Jwt__Key.\n" +
                     "Genera una clave fuerte (>=64 chars) con: openssl rand -base64 64");
             }
-            if (jwtKey.Length < 32)
+            // Validate the actual key size in bytes (HS256 needs >= 256 bits = 32 bytes),
+            // not just the character count, so a short multi-byte key cannot slip through.
+            if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
             {
                 throw new InvalidOperationException(
-                    "Jwt:Key es demasiado corta (minimo 32 caracteres recomendado para HS256).");
+                    "Jwt:Key es demasiado corta (minimo 32 bytes para HS256; genera >=64 con: openssl rand -base64 64).");
             }
             return jwtKey;
         }

@@ -123,7 +123,9 @@ namespace MRC.Agendia.Infrastructure.Identity
             // Rotation: revoke the current token and issue a new one.
             var newRefreshToken = _jwtTokenService.GenerateRefreshToken();
             stored.RevokedAt = DateTime.UtcNow;
-            stored.ReplacedByToken = newRefreshToken;
+            // ReplacedByToken only flags that this token was rotated (reuse detection
+            // null-checks it), so store the hash too - never the cleartext.
+            stored.ReplacedByToken = RefreshTokenHasher.Hash(newRefreshToken);
             _refreshTokenStore.Update(stored);
 
             return await _authResponseFactory.CreateAsync(user, newRefreshToken, cancellationToken);
@@ -221,7 +223,9 @@ namespace MRC.Agendia.Infrastructure.Identity
         public async Task ConfirmEmailAsync(ConfirmEmailDto dto, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByIdAsync(dto.UserId);
-            if (user is null)
+            // Re-check IsActive for consistency with login; the uniform message also keeps
+            // a missing/inactive account indistinguishable from a bad token.
+            if (user is null || !user.IsActive)
                 throw new InvalidOperationException("Token de confirmacion invalido o expirado.");
 
             var result = await _userManager.ConfirmEmailAsync(user, dto.Token);
