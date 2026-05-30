@@ -18,14 +18,13 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IScheduleResolver _scheduleResolver;
         private readonly IClock _clock;
 
-        public AppointmentSchedulingValidator(
-            IBusinessRepository businessRepository,
-            IClientRepository clientRepository,
-            IEmployeeRepository employeeRepository,
-            IServiceRepository serviceRepository,
-            IAppointmentRepository appointmentRepository,
-            IScheduleResolver scheduleResolver,
-            IClock clock)
+        public AppointmentSchedulingValidator(IBusinessRepository businessRepository,
+                                              IClientRepository clientRepository,
+                                              IEmployeeRepository employeeRepository,
+                                              IServiceRepository serviceRepository,
+                                              IAppointmentRepository appointmentRepository,
+                                              IScheduleResolver scheduleResolver,
+                                              IClock clock)
         {
             _businessRepository = businessRepository;
             _clientRepository = clientRepository;
@@ -37,15 +36,14 @@ namespace MRC.Agendia.Application.Appointments
         }
 
         /// <inheritdoc />
-        public async Task EnsureValidAsync(
-            int? appointmentId,
-            int clientId,
-            int employeeId,
-            int serviceId,
-            DateTime startDate,
-            DateTime endDate,
-            IReadOnlyCollection<int>? extraServiceIds = null,
-            CancellationToken cancellationToken = default)
+        public async Task EnsureValidAsync(int? appointmentId,
+                                           int clientId,
+                                           int employeeId,
+                                           int serviceId,
+                                           DateTime startDate,
+                                           DateTime endDate,
+                                           IReadOnlyCollection<int>? extraServiceIds = null,
+                                           CancellationToken cancellationToken = default)
         {
             // ---------- Basic input checks ----------
             if (startDate == default || endDate == default)

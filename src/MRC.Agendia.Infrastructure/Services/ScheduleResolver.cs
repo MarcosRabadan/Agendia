@@ -57,11 +57,10 @@ namespace MRC.Agendia.Infrastructure.Services
         }
 
         /// <inheritdoc />
-        public IEnumerable<EffectiveSchedule> ResolveRange(
-            IEnumerable<ScheduleTemplate> templates,
-            IEnumerable<ScheduleOverride> overrides,
-            DateOnly from,
-            DateOnly to)
+        public IEnumerable<EffectiveSchedule> ResolveRange(IEnumerable<ScheduleTemplate> templates,
+                                                           IEnumerable<ScheduleOverride> overrides,
+                                                           DateOnly from,
+                                                           DateOnly to)
         {
             var templateList = templates as IReadOnlyCollection<ScheduleTemplate> ?? templates.ToList();
 

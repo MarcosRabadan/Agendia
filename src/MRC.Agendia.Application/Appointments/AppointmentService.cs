@@ -27,18 +27,17 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public AppointmentService(
-            IAppointmentRepository repository,
-            IClientRepository clientRepository,
-            IAppointmentSchedulingValidator schedulingValidator,
-            IBookingConcurrencyGuard bookingGuard,
-            IClock clock,
-            INotificationService notificationService,
-            IWaitlistService waitlistService,
-            IAuditLogger auditLogger,
-            ICurrentUserContext currentUser,
-            IUnitOfWork unitOfWork,
-            IMapper mapper)
+        public AppointmentService(IAppointmentRepository repository,
+                                  IClientRepository clientRepository,
+                                  IAppointmentSchedulingValidator schedulingValidator,
+                                  IBookingConcurrencyGuard bookingGuard,
+                                  IClock clock,
+                                  INotificationService notificationService,
+                                  IWaitlistService waitlistService,
+                                  IAuditLogger auditLogger,
+                                  ICurrentUserContext currentUser,
+                                  IUnitOfWork unitOfWork,
+                                  IMapper mapper)
         {
             _repository = repository;
             _clientRepository = clientRepository;

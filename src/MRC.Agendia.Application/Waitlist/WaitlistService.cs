@@ -21,15 +21,14 @@ namespace MRC.Agendia.Application.Waitlist
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public WaitlistService(
-            IWaitlistRepository repository,
-            IClientRepository clientRepository,
-            IAvailabilityService availabilityService,
-            IAppointmentRepository appointmentRepository,
-            INotificationService notificationService,
-            IBookingConcurrencyGuard bookingGuard,
-            IUnitOfWork unitOfWork,
-            IMapper mapper)
+        public WaitlistService(IWaitlistRepository repository,
+                               IClientRepository clientRepository,
+                               IAvailabilityService availabilityService,
+                               IAppointmentRepository appointmentRepository,
+                               INotificationService notificationService,
+                               IBookingConcurrencyGuard bookingGuard,
+                               IUnitOfWork unitOfWork,
+                               IMapper mapper)
         {
             _repository = repository;
             _clientRepository = clientRepository;

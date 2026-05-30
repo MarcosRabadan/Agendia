@@ -16,12 +16,11 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IAuditLogger _auditLogger;
         private readonly IClock _clock;
 
-        public AppointmentDelayService(
-            IAppointmentRepository repository,
-            IScheduleResolver scheduleResolver,
-            INotificationService notificationService,
-            IAuditLogger auditLogger,
-            IClock clock)
+        public AppointmentDelayService(IAppointmentRepository repository,
+                                       IScheduleResolver scheduleResolver,
+                                       INotificationService notificationService,
+                                       IAuditLogger auditLogger,
+                                       IClock clock)
         {
             _repository = repository;
             _scheduleResolver = scheduleResolver;

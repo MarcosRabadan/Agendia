@@ -30,12 +30,11 @@ namespace MRC.Agendia.Infrastructure.Auditing
         }
 
         /// <inheritdoc />
-        public async Task LogAsync(
-            string action,
-            string? entityType = null,
-            string? entityId = null,
-            object? details = null,
-            CancellationToken cancellationToken = default)
+        public async Task LogAsync(string action,
+                                   string? entityType = null,
+                                   string? entityId = null,
+                                   object? details = null,
+                                   CancellationToken cancellationToken = default)
         {
             try
             {

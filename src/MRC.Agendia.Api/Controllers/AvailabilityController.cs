@@ -44,13 +44,12 @@ namespace MRC.Agendia.Api.Controllers
         [ProducesResponseType(typeof(AvailabilityDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<AvailabilityDto>> Get(
-            int businessId,
-            [FromQuery] DateOnly date,
-            [FromQuery] int serviceId,
-            [FromQuery] int? employeeId = null,
-            [FromQuery] int stepMinutes = 15,
-            [FromQuery] List<int>? extraServiceIds = null)
+        public async Task<ActionResult<AvailabilityDto>> Get(int businessId,
+                                                             [FromQuery] DateOnly date,
+                                                             [FromQuery] int serviceId,
+                                                             [FromQuery] int? employeeId = null,
+                                                             [FromQuery] int stepMinutes = 15,
+                                                             [FromQuery] List<int>? extraServiceIds = null)
         {
             var result = await _mediator.Send(
                 new GetAvailabilityQuery(businessId, date, serviceId, employeeId, stepMinutes, extraServiceIds));

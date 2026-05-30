@@ -26,14 +26,13 @@ namespace MRC.Agendia.Api.Controllers
         [ProducesResponseType(typeof(PagedResult<AuditLogDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<ActionResult<PagedResult<AuditLogDto>>> Get(
-            [FromQuery] string? userId,
-            [FromQuery] string? action,
-            [FromQuery] string? entityType,
-            [FromQuery] DateTime? from,
-            [FromQuery] DateTime? to,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 50)
+        public async Task<ActionResult<PagedResult<AuditLogDto>>> Get([FromQuery] string? userId,
+                                                                      [FromQuery] string? action,
+                                                                      [FromQuery] string? entityType,
+                                                                      [FromQuery] DateTime? from,
+                                                                      [FromQuery] DateTime? to,
+                                                                      [FromQuery] int page = 1,
+                                                                      [FromQuery] int pageSize = 50)
         {
             var result = await _mediator.Send(
                 new GetAuditLogsQuery(userId, action, entityType, from, to, page, pageSize));

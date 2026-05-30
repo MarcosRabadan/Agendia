@@ -18,11 +18,10 @@ namespace MRC.Agendia.Infrastructure.Identity
         }
 
         /// <inheritdoc />
-        public (string token, DateTime expiresAt) GenerateAccessToken(
-            string userId,
-            string email,
-            string fullName,
-            IEnumerable<string> roles)
+        public (string token, DateTime expiresAt) GenerateAccessToken(string userId,
+                                                                      string email,
+                                                                      string fullName,
+                                                                      IEnumerable<string> roles)
         {
             var jwtSection = _configuration.GetSection("Jwt");
             var key = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key not configured");

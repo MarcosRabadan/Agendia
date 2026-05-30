@@ -17,13 +17,12 @@ namespace MRC.Agendia.Application.Schedules
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public ScheduleGenerationService(
-            IScheduleTemplateRepository templateRepository,
-            IScheduleOverrideRepository overrideRepository,
-            IHolidayCalendarRepository holidayRepository,
-            IScheduleResolver scheduleResolver,
-            IUnitOfWork unitOfWork,
-            IMapper mapper)
+        public ScheduleGenerationService(IScheduleTemplateRepository templateRepository,
+                                         IScheduleOverrideRepository overrideRepository,
+                                         IHolidayCalendarRepository holidayRepository,
+                                         IScheduleResolver scheduleResolver,
+                                         IUnitOfWork unitOfWork,
+                                         IMapper mapper)
         {
             _templateRepository = templateRepository;
             _overrideRepository = overrideRepository;

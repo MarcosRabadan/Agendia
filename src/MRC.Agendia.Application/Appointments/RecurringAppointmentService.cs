@@ -25,15 +25,14 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public RecurringAppointmentService(
-            IServiceRepository serviceRepository,
-            IAppointmentRepository repository,
-            IAppointmentSchedulingValidator schedulingValidator,
-            IBookingConcurrencyGuard bookingGuard,
-            IAuditLogger auditLogger,
-            IClock clock,
-            IUnitOfWork unitOfWork,
-            IMapper mapper)
+        public RecurringAppointmentService(IServiceRepository serviceRepository,
+                                           IAppointmentRepository repository,
+                                           IAppointmentSchedulingValidator schedulingValidator,
+                                           IBookingConcurrencyGuard bookingGuard,
+                                           IAuditLogger auditLogger,
+                                           IClock clock,
+                                           IUnitOfWork unitOfWork,
+                                           IMapper mapper)
         {
             _serviceRepository = serviceRepository;
             _repository = repository;

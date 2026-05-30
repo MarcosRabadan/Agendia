@@ -48,10 +48,9 @@ namespace MRC.Agendia.Domain.Services
         /// <param name="from">Inclusive start of the range.</param>
         /// <param name="to">Inclusive end of the range.</param>
         /// <returns>One effective schedule per date in the range.</returns>
-        IEnumerable<EffectiveSchedule> ResolveRange(
-            IEnumerable<ScheduleTemplate> templates,
-            IEnumerable<ScheduleOverride> overrides,
-            DateOnly from,
-            DateOnly to);
+        IEnumerable<EffectiveSchedule> ResolveRange(IEnumerable<ScheduleTemplate> templates,
+                                                    IEnumerable<ScheduleOverride> overrides,
+                                                    DateOnly from,
+                                                    DateOnly to);
     }
 }

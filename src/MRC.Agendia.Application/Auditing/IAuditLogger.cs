@@ -13,11 +13,10 @@ namespace MRC.Agendia.Application.Auditing
         /// <param name="entityId">Optional id of the affected entity.</param>
         /// <param name="details">Optional extra data, serialized to JSON.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
-        Task LogAsync(
-            string action,
-            string? entityType = null,
-            string? entityId = null,
-            object? details = null,
-            CancellationToken cancellationToken = default);
+        Task LogAsync(string action,
+                      string? entityType = null,
+                      string? entityId = null,
+                      object? details = null,
+                      CancellationToken cancellationToken = default);
     }
 }
