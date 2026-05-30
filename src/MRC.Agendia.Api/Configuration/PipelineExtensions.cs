@@ -39,7 +39,6 @@ namespace MRC.Agendia.Api.Configuration
 
             if (app.Environment.IsDevelopment())
             {
-                app.MapOpenApi();
                 app.UseSwagger();
                 app.UseSwaggerUI(c =>
                 {

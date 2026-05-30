@@ -15,8 +15,6 @@ namespace MRC.Agendia.Api.Configuration
     /// </summary>
     public static class CorsSetup
     {
-        public const string DefaultPolicyName = "DefaultCors";
-
         public static IServiceCollection AddCorsForMobile(
             this IServiceCollection services,
             IConfiguration configuration,

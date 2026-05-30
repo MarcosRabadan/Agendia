@@ -138,7 +138,7 @@ namespace MRC.Agendia.Application.Appointments
             var affected = 0;
             foreach (var appointment in appointments)
             {
-                if (appointment.StartDate >= now && OccupiesSlot(appointment.Status))
+                if (appointment.StartDate >= now && appointment.Status.OccupiesCapacity())
                 {
                     appointment.Status = AppointmentStatus.Cancelled;
                     _repository.Update(appointment);
@@ -185,7 +185,7 @@ namespace MRC.Agendia.Application.Appointments
             foreach (var appointment in appointments)
             {
                 // Only future, still-active occurrences move; history is left intact.
-                if (appointment.StartDate < now || !OccupiesSlot(appointment.Status))
+                if (appointment.StartDate < now || !appointment.Status.OccupiesCapacity())
                     continue;
 
                 var originalDate = DateOnly.FromDateTime(appointment.StartDate);
@@ -277,11 +277,8 @@ namespace MRC.Agendia.Application.Appointments
             => series.Any(other =>
                 other.Id != moving.Id
                 && other.EmployeeId == moving.EmployeeId
-                && OccupiesSlot(other.Status)
+                && other.Status.OccupiesCapacity()
                 && newStart < other.EndDate && newEnd > other.StartDate);
-
-        private static bool OccupiesSlot(AppointmentStatus status)
-            => status is AppointmentStatus.Pending or AppointmentStatus.Confirmed;
 
         private List<AppointmentDto> ToDtosByDate(IEnumerable<Appointment> appointments)
             => appointments.OrderBy(a => a.StartDate).Select(a => _mapper.Map<AppointmentDto>(a)).ToList();

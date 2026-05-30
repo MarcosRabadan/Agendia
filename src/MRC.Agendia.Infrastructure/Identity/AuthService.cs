@@ -24,7 +24,6 @@ namespace MRC.Agendia.Infrastructure.Identity
         private readonly IRefreshTokenStore _refreshTokenStore;
         private readonly IConfiguration _configuration;
         private readonly IAuthResponseFactory _authResponseFactory;
-        private readonly IAuthEmailService _authEmailService;
         private readonly IAuditLogger _auditLogger;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<AuthService> _logger;
@@ -34,7 +33,6 @@ namespace MRC.Agendia.Infrastructure.Identity
                            IRefreshTokenStore refreshTokenStore,
                            IConfiguration configuration,
                            IAuthResponseFactory authResponseFactory,
-                           IAuthEmailService authEmailService,
                            IAuditLogger auditLogger,
                            IServiceScopeFactory scopeFactory,
                            ILogger<AuthService> logger)
@@ -44,7 +42,6 @@ namespace MRC.Agendia.Infrastructure.Identity
             _refreshTokenStore = refreshTokenStore;
             _configuration = configuration;
             _authResponseFactory = authResponseFactory;
-            _authEmailService = authEmailService;
             _auditLogger = auditLogger;
             _scopeFactory = scopeFactory;
             _logger = logger;

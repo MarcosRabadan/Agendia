@@ -13,7 +13,6 @@ namespace MRC.Agendia.Application.Schedules
     {
         private readonly IScheduleTemplateRepository _templateRepository;
         private readonly IScheduleOverrideRepository _overrideRepository;
-        private readonly IHolidayCalendarRepository _holidayRepository;
         private readonly IScheduleResolver _scheduleResolver;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
@@ -21,7 +20,6 @@ namespace MRC.Agendia.Application.Schedules
 
         public ScheduleService(IScheduleTemplateRepository templateRepository,
                                IScheduleOverrideRepository overrideRepository,
-                               IHolidayCalendarRepository holidayRepository,
                                IScheduleResolver scheduleResolver,
                                IUnitOfWork unitOfWork,
                                IMapper mapper,
@@ -29,7 +27,6 @@ namespace MRC.Agendia.Application.Schedules
         {
             _templateRepository = templateRepository;
             _overrideRepository = overrideRepository;
-            _holidayRepository = holidayRepository;
             _scheduleResolver = scheduleResolver;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
