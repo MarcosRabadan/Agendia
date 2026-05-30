@@ -20,6 +20,9 @@ namespace MRC.Agendia.Application.Schedules.Commands.Overrides
                     .NotEmpty()
                     .WithMessage("CustomHours requiere al menos un CustomSlot.");
                 RuleForEach(x => x.Dto.CustomSlots!).SetValidator(new CreateCustomTimeSlotDtoValidator());
+                RuleFor(x => x.Dto.CustomSlots)
+                    .Must(slots => !WeeklySlotRules.HasIntraDayOverlap(slots))
+                    .WithMessage("Hay franjas que se solapan en el mismo dia.");
             });
         }
     }

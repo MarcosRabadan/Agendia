@@ -199,8 +199,9 @@ namespace MRC.Agendia.Infrastructure.Identity
         public async Task ResetPasswordAsync(ResetPasswordDto dto, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByEmailAsync(dto.Email);
-            // Uniform message so a missing user is indistinguishable from a bad token.
-            if (user is null)
+            // Re-check IsActive for consistency with login and ConfirmEmail; the uniform
+            // message keeps a missing/inactive account indistinguishable from a bad token.
+            if (user is null || !user.IsActive)
                 throw new InvalidOperationException("Token de restablecimiento invalido o expirado.");
 
             var result = await _userManager.ResetPasswordAsync(user, dto.Token, dto.NewPassword);
