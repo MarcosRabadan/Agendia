@@ -290,7 +290,7 @@ SQL Server
                                                                      CancellationToken cancellationToken = default)
     ```
     - **Excepción: los records posicionales** (DTOs, `*Command`, `*Query`) se quedan con **salto-tras-`(`** (cada campo en su propia línea con sangría a +4, `)` al final), porque un record con muchos campos queda demasiado ancho paren-aligned.
-    - Las firmas de **≤3 parámetros** se dejan en **una sola línea**.
+    - Las firmas de **≤3 parámetros** van en **una sola línea** mientras quepan (~120 col); las pocas que ya estaban partidas por longitud se respetan.
     - Cuando documentes una interfaz con `<param>` y la implementación con `<inheritdoc/>`, aplica este formato en **ambas** (interfaz e impl) para que coincidan.
 
 ## Decisiones de diseño tomadas (no las cuestiones sin razón fuerte)
