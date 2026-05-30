@@ -31,7 +31,11 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="to">Range end (inclusive).</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The overrides in the range.</returns>
-        Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAndDateRangeAsync(int businessId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
+        Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAndDateRangeAsync(
+            int businessId,
+            DateOnly from,
+            DateOnly to,
+            CancellationToken cancellationToken = default);
 
         /// <summary>Gets a business's schedule override for a specific date with its custom slots. Untracked.</summary>
         /// <param name="businessId">Business id.</param>

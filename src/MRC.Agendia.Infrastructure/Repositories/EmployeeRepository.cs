@@ -35,7 +35,11 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
         /// <inheritdoc />
-        public Task<(IReadOnlyList<Employee> Items, int TotalCount)> GetPagedByOwnerUserIdAsync(string ownerUserId, int page, int pageSize, CancellationToken cancellationToken = default)
+        public Task<(IReadOnlyList<Employee> Items, int TotalCount)> GetPagedByOwnerUserIdAsync(
+            string ownerUserId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
                 .Where(e => e.Business.OwnerUserId == ownerUserId)

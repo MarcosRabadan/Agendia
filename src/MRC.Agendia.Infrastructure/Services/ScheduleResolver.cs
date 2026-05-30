@@ -31,7 +31,11 @@ namespace MRC.Agendia.Infrastructure.Services
         }
 
         /// <inheritdoc />
-        public async Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(int businessId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(
+            int businessId,
+            DateOnly from,
+            DateOnly to,
+            CancellationToken cancellationToken = default)
         {
             // Load the whole range once and resolve in memory instead of issuing
             // 1-2 queries per day. The old per-day loop was an N+1 that made the

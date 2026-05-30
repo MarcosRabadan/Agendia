@@ -30,7 +30,11 @@ namespace MRC.Agendia.Application.Employees
         }
 
         /// <inheritdoc />
-        public async Task<PagedResult<EmployeeDto>> GetPagedByOwnerUserIdAsync(string ownerUserId, int page, int pageSize, CancellationToken cancellationToken = default)
+        public async Task<PagedResult<EmployeeDto>> GetPagedByOwnerUserIdAsync(
+            string ownerUserId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
         {
             var (items, totalCount) = await _repository.GetPagedByOwnerUserIdAsync(ownerUserId, page, pageSize, cancellationToken);
             var dtos = _mapper.Map<List<EmployeeDto>>(items);

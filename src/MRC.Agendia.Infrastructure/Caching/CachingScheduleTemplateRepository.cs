@@ -89,7 +89,12 @@ namespace MRC.Agendia.Infrastructure.Caching
             => _inner.GetByIdWithSlotsAsync(id, cancellationToken);
 
         /// <inheritdoc />
-        public Task<bool> HasOverlappingTemplateAsync(int businessId, DateOnly from, DateOnly to, int? excludeId = null, CancellationToken cancellationToken = default)
+        public Task<bool> HasOverlappingTemplateAsync(
+            int businessId,
+            DateOnly from,
+            DateOnly to,
+            int? excludeId = null,
+            CancellationToken cancellationToken = default)
             => _inner.HasOverlappingTemplateAsync(businessId, from, to, excludeId, cancellationToken);
     }
 }

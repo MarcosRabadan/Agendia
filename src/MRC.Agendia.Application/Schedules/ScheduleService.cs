@@ -111,7 +111,11 @@ namespace MRC.Agendia.Application.Schedules
 
         #region Overrides
         /// <inheritdoc />
-        public async Task<IEnumerable<ScheduleOverrideDto>> GetOverridesByBusinessIdAsync(int businessId, DateOnly? from, DateOnly? to, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<ScheduleOverrideDto>> GetOverridesByBusinessIdAsync(
+            int businessId,
+            DateOnly? from,
+            DateOnly? to,
+            CancellationToken cancellationToken = default)
         {
             IEnumerable<ScheduleOverride> entities;
 
@@ -219,7 +223,11 @@ namespace MRC.Agendia.Application.Schedules
         }
 
         /// <inheritdoc />
-        public async Task<IEnumerable<CalendarDayDto>> GetCalendarAsync(int businessId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<CalendarDayDto>> GetCalendarAsync(
+            int businessId,
+            DateOnly from,
+            DateOnly to,
+            CancellationToken cancellationToken = default)
         {
             var days = await _scheduleResolver.GetEffectiveSchedulesAsync(businessId, from, to, cancellationToken);
             return days.Select(CalendarDayDto.FromEffective).ToList();

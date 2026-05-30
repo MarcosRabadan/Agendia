@@ -18,7 +18,11 @@ namespace MRC.Agendia.Application.Appointments
         /// <param name="pageSize">Number of items per page.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The requested page of the client's appointments.</returns>
-        Task<PagedResult<AppointmentDto>> GetPagedByClientUserIdAsync(string userId, int page, int pageSize, CancellationToken cancellationToken = default);
+        Task<PagedResult<AppointmentDto>> GetPagedByClientUserIdAsync(
+            string userId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default);
 
         /// <summary>Gets an appointment (with its extra services) by id.</summary>
         /// <param name="id">Appointment id.</param>
@@ -56,6 +60,10 @@ namespace MRC.Agendia.Application.Appointments
         /// <param name="endDate">Exclusive end of the range.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The appointments overlapping the range.</returns>
-        Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
+        Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(
+            int businessId,
+            DateTime startDate,
+            DateTime endDate,
+            CancellationToken cancellationToken = default);
     }
 }

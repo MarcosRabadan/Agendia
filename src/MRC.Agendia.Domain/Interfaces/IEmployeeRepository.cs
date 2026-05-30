@@ -48,7 +48,11 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="pageSize">Page size.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The page of the owner's employees and the total count.</returns>
-        Task<(IReadOnlyList<Employee> Items, int TotalCount)> GetPagedByOwnerUserIdAsync(string ownerUserId, int page, int pageSize, CancellationToken cancellationToken = default);
+        Task<(IReadOnlyList<Employee> Items, int TotalCount)> GetPagedByOwnerUserIdAsync(
+            string ownerUserId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default);
 
         /// <summary>Adds a new employee to the context.</summary>
         /// <param name="employee">The employee to add.</param>

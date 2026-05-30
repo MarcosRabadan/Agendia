@@ -44,7 +44,11 @@ namespace MRC.Agendia.Application.Schedules
         /// <param name="to">Inclusive end of the range, or null for no upper bound.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The matching schedule overrides.</returns>
-        Task<IEnumerable<ScheduleOverrideDto>> GetOverridesByBusinessIdAsync(int businessId, DateOnly? from, DateOnly? to, CancellationToken cancellationToken = default);
+        Task<IEnumerable<ScheduleOverrideDto>> GetOverridesByBusinessIdAsync(
+            int businessId,
+            DateOnly? from,
+            DateOnly? to,
+            CancellationToken cancellationToken = default);
 
         /// <summary>Gets a schedule override (with its custom slots) by id.</summary>
         /// <param name="id">Override id.</param>
@@ -85,6 +89,10 @@ namespace MRC.Agendia.Application.Schedules
         /// <param name="to">Inclusive end of the range.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>One calendar day per date in the range.</returns>
-        Task<IEnumerable<CalendarDayDto>> GetCalendarAsync(int businessId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
+        Task<IEnumerable<CalendarDayDto>> GetCalendarAsync(
+            int businessId,
+            DateOnly from,
+            DateOnly to,
+            CancellationToken cancellationToken = default);
     }
 }
