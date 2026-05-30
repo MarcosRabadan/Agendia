@@ -45,7 +45,7 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         [Authorize(Roles = RolePolicies.Staff)]
-        [HttpGet("business/{businessId}")]
+        [HttpGet("business/{businessId:int}")]
         [ProducesResponseType(typeof(IEnumerable<AppointmentDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]

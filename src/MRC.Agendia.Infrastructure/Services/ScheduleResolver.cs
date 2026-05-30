@@ -79,7 +79,7 @@ namespace MRC.Agendia.Infrastructure.Services
         private static ScheduleTemplate? SelectTemplate(IEnumerable<ScheduleTemplate> templates, DateOnly date)
             => templates
                 .Where(t => t.EffectiveFrom <= date && t.EffectiveTo >= date)
-                .OrderByDescending(t => t.IsDefault ? 0 : 1)
+                .OrderByDescending(t => t.IsDefault)
                 .FirstOrDefault();
 
         /// <summary>

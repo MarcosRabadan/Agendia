@@ -255,6 +255,33 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Services
             Assert.Equal("Sin horario definido", results[2].ClosedReason);
         }
 
+        [Fact]
+        public void Resolve_TwoTemplatesCoverDate_DefaultWinsTheTieBreak()
+        {
+            // Templates do not overlap in valid data, but the resolver must still be
+            // deterministic if two cover a date: the default one wins the tie-break.
+            var defaultTemplate = CreateTemplate(weeklySlots: new[]
+            {
+                CreateWeeklySlot(DayOfWeek.Monday, new TimeOnly(10, 0), new TimeOnly(14, 0)),
+            });
+            defaultTemplate.IsDefault = true;
+
+            var otherTemplate = CreateTemplate(weeklySlots: new[]
+            {
+                CreateWeeklySlot(DayOfWeek.Monday, new TimeOnly(16, 0), new TimeOnly(20, 0)),
+            });
+            otherTemplate.Id = 101;
+            otherTemplate.IsDefault = false;
+
+            // Non-default passed first: ordering, not input order, must decide.
+            var result = _sut.Resolve(
+                new[] { otherTemplate, defaultTemplate }, Array.Empty<ScheduleOverride>(), MondayDate);
+
+            Assert.True(result.IsOpen);
+            Assert.Single(result.TimeSlots);
+            Assert.Equal(new TimeOnly(10, 0), result.TimeSlots[0].StartTime); // the default template's slot
+        }
+
         // ----- helpers -----
 
         private static ScheduleTemplate CreateTemplate(IEnumerable<WeeklyTimeSlot> weeklySlots) => new()

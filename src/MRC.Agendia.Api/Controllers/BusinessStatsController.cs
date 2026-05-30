@@ -8,7 +8,7 @@ using MRC.Agendia.Domain.Constants;
 namespace MRC.Agendia.Api.Controllers
 {
     [ApiController]
-    [Route("api/businesses/{businessId}/stats")]
+    [Route("api/businesses/{businessId:int}/stats")]
     [Produces("application/json")]
     public class BusinessStatsController : ControllerBase
     {

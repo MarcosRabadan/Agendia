@@ -15,7 +15,7 @@ namespace MRC.Agendia.Application.Statistics.Queries
                 .GreaterThanOrEqualTo(x => x.From)
                 .WithMessage("To debe ser igual o posterior a From.");
             RuleFor(x => x)
-                .Must(q => q.To.DayNumber - q.From.DayNumber <= MaxRangeDays)
+                .Must(q => (q.To.DayNumber - q.From.DayNumber) + 1 <= MaxRangeDays)
                 .WithMessage($"El rango de estadisticas no puede superar {MaxRangeDays} dias.");
         }
     }

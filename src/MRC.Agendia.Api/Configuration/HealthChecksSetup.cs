@@ -23,16 +23,22 @@ namespace MRC.Agendia.Api.Configuration
             var connectionString = configuration.GetConnectionString("DefaultConnection") ?? string.Empty;
             var seqUrl = configuration["HealthChecks:SeqUrl"] ?? "http://localhost:5341";
 
-            services.AddHealthChecks()
-                .AddSqlServer(
-                    connectionString,
-                    name: "sql-server",
-                    tags: new[] { ReadyTag })
+            var healthChecks = services.AddHealthChecks()
                 .AddUrlGroup(
                     new Uri(seqUrl),
                     name: "seq",
                     failureStatus: HealthStatus.Degraded,
                     tags: new[] { ReadyTag });
+
+            // The integration host uses a placeholder connection string over EF InMemory,
+            // so a real SQL probe would always report Unhealthy there. Skip it in Testing.
+            if (!environment.IsEnvironment("Testing"))
+            {
+                healthChecks.AddSqlServer(
+                    connectionString,
+                    name: "sql-server",
+                    tags: new[] { ReadyTag });
+            }
 
             // The dashboard UI polls /health/ready for the detailed report, which is
             // only exposed in Development (elsewhere the health body is minimal), so

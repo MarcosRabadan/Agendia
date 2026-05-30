@@ -8,7 +8,7 @@ using MRC.Agendia.Domain.Constants;
 namespace MRC.Agendia.Api.Controllers
 {
     [ApiController]
-    [Route("api/businesses/{businessId}/notify-delay")]
+    [Route("api/businesses/{businessId:int}/notify-delay")]
     [Produces("application/json")]
     public class DelayNotificationController : ControllerBase
     {

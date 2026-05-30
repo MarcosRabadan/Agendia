@@ -18,6 +18,9 @@ namespace MRC.Agendia.Application.Schedules.Commands
             RuleFor(x => x.Dto.WeeklySlots)
                 .NotEmpty().WithMessage("Debe indicar al menos un slot semanal.");
             RuleForEach(x => x.Dto.WeeklySlots).SetValidator(new CreateWeeklyTimeSlotDtoValidator());
+            RuleFor(x => x.Dto.WeeklySlots)
+                .Must(slots => !WeeklySlotRules.HasIntraDayOverlap(slots))
+                .WithMessage("Hay franjas que se solapan en el mismo dia de la semana.");
         }
     }
 }
