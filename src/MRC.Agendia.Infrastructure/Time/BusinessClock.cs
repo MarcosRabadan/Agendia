@@ -31,6 +31,7 @@ namespace MRC.Agendia.Infrastructure.Time
             }
         }
 
+        /// <inheritdoc />
         public DateTime BusinessNow => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _timeZone);
     }
 }

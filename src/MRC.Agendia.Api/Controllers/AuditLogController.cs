@@ -21,7 +21,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
-        /// <summary>Lista paginada del audit log con filtros (solo Admin).</summary>
+        /// <summary>Paged audit-log listing with filters (Admin only).</summary>
         [HttpGet]
         [ProducesResponseType(typeof(PagedResult<AuditLogDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

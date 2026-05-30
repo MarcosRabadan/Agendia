@@ -36,6 +36,7 @@ namespace MRC.Agendia.Application.Availability
             _clock = clock;
         }
 
+        /// <inheritdoc />
         public async Task<AvailabilityDto> GetAvailabilityAsync(
             int businessId,
             DateOnly date,
@@ -205,6 +206,7 @@ namespace MRC.Agendia.Application.Availability
                 Slots: slots);
         }
 
+        /// <inheritdoc />
         public async Task<int?> GetSlotCapacityAsync(
             int businessId,
             DateOnly date,

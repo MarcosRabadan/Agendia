@@ -30,6 +30,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
         // ---------- BUSINESS ----------
 
+        /// <inheritdoc />
         public async Task EnsureCanManageBusinessAsync(int businessId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
@@ -43,6 +44,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 throw new UnauthorizedAccessException("No tienes permiso para gestionar este negocio.");
         }
 
+        /// <inheritdoc />
         public async Task EnsureCanManageBusinessResourcesAsync(int businessId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
@@ -65,6 +67,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
         // ---------- EMPLOYEE ----------
 
+        /// <inheritdoc />
         public async Task EnsureCanViewEmployeeAsync(int employeeId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
@@ -89,12 +92,14 @@ namespace MRC.Agendia.Infrastructure.Authorization
             throw new UnauthorizedAccessException("No tienes permiso para ver este empleado.");
         }
 
+        /// <inheritdoc />
         public async Task EnsureCanUpdateEmployeeAsync(int employeeId, CancellationToken cancellationToken = default)
         {
             // Same rules as view: admin, owner, or the employee themselves
             await EnsureCanViewEmployeeAsync(employeeId, cancellationToken);
         }
 
+        /// <inheritdoc />
         public async Task EnsureCanDeleteEmployeeAsync(int employeeId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
@@ -119,6 +124,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
         // ---------- CLIENT ----------
 
+        /// <inheritdoc />
         public async Task EnsureCanManageClientAsync(int clientId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
@@ -134,6 +140,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
         // ---------- APPOINTMENT ----------
 
+        /// <inheritdoc />
         public async Task EnsureCanManageAppointmentAsync(int appointmentId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
@@ -169,6 +176,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
             throw new UnauthorizedAccessException("No tienes permiso para gestionar esta cita.");
         }
 
+        /// <inheritdoc />
         public async Task EnsureCanCreateAppointmentAsync(int clientId, int employeeId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
@@ -208,6 +216,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
             throw new UnauthorizedAccessException("No tienes permiso para crear esta cita.");
         }
 
+        /// <inheritdoc />
         public async Task EnsureCanManageAppointmentSeriesAsync(Guid seriesId, CancellationToken cancellationToken = default)
         {
             // Resolve the owning business from any (live) appointment of the series.
@@ -226,6 +235,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
         // ---------- BUSINESS-SCOPED RESOURCES (with id lookup) ----------
 
+        /// <inheritdoc />
         public async Task EnsureCanManageServiceAsync(int serviceId, CancellationToken cancellationToken = default)
         {
             var businessId = await _context.Services
@@ -240,6 +250,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
             await EnsureCanManageBusinessResourcesAsync(businessId.Value, cancellationToken);
         }
 
+        /// <inheritdoc />
         public async Task EnsureCanManageScheduleTemplateAsync(int templateId, CancellationToken cancellationToken = default)
         {
             var businessId = await _context.ScheduleTemplates
@@ -254,6 +265,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
             await EnsureCanManageBusinessResourcesAsync(businessId.Value, cancellationToken);
         }
 
+        /// <inheritdoc />
         public async Task EnsureCanManageScheduleOverrideAsync(int overrideId, CancellationToken cancellationToken = default)
         {
             var businessId = await _context.ScheduleOverrides

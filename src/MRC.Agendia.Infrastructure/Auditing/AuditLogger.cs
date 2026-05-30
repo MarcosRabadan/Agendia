@@ -29,6 +29,7 @@ namespace MRC.Agendia.Infrastructure.Auditing
             _logger = logger;
         }
 
+        /// <inheritdoc />
         public async Task LogAsync(
             string action,
             string? entityType = null,

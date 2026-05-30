@@ -36,6 +36,7 @@ namespace MRC.Agendia.Application.Appointments
             _clock = clock;
         }
 
+        /// <inheritdoc />
         public async Task EnsureValidAsync(
             int? appointmentId,
             int clientId,

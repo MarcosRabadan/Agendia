@@ -24,6 +24,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
+        /// <summary>Gets all holiday calendar entries.</summary>
         [AllowAnonymous]
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<HolidayCalendarDto>), StatusCodes.Status200OK)]
@@ -33,6 +34,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Gets the holiday calendar entries for the given year.</summary>
         [AllowAnonymous]
         [HttpGet("year/{year}")]
         [ProducesResponseType(typeof(IEnumerable<HolidayCalendarDto>), StatusCodes.Status200OK)]
@@ -42,6 +44,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Gets a holiday calendar entry by its identifier.</summary>
         [AllowAnonymous]
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(HolidayCalendarDto), StatusCodes.Status200OK)]
@@ -53,6 +56,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Creates a new holiday calendar entry.</summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpPost]
         [ProducesResponseType(typeof(HolidayCalendarDto), StatusCodes.Status201Created)]
@@ -63,6 +67,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
+        /// <summary>Updates an existing holiday calendar entry.</summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(HolidayCalendarDto), StatusCodes.Status200OK)]
@@ -75,6 +80,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Deletes a holiday calendar entry by its identifier.</summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]

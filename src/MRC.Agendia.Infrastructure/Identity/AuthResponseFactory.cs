@@ -24,6 +24,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             _configuration = configuration;
         }
 
+        /// <inheritdoc />
         public async Task<AuthResponseDto> CreateAsync(ApplicationUser user, string? existingRefreshToken = null, CancellationToken cancellationToken = default)
         {
             var roles = await _userManager.GetRolesAsync(user);
@@ -49,6 +50,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             return new AuthResponseDto(accessToken, accessExpires, refreshTokenValue, refreshExpires, userDto);
         }
 
+        /// <inheritdoc />
         public async Task<AuthResponseDto> CreateWithoutSessionAsync(ApplicationUser user)
         {
             var roles = await _userManager.GetRolesAsync(user);

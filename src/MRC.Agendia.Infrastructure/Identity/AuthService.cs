@@ -51,6 +51,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             _logger = logger;
         }
 
+        /// <inheritdoc />
         public async Task<AuthResponseDto> LoginAsync(LoginDto dto, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByEmailAsync(dto.Email);
@@ -95,6 +96,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             return await _authResponseFactory.CreateAsync(user, cancellationToken: cancellationToken);
         }
 
+        /// <inheritdoc />
         public async Task<AuthResponseDto> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
         {
             var stored = await _refreshTokenStore.GetByTokenAsync(refreshToken, cancellationToken)
@@ -131,6 +133,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             return await _authResponseFactory.CreateAsync(user, newRefreshToken, cancellationToken);
         }
 
+        /// <inheritdoc />
         public async Task LogoutAsync(string refreshToken, string userId, CancellationToken cancellationToken = default)
         {
             var stored = await _refreshTokenStore.GetByTokenAsync(refreshToken, cancellationToken);
@@ -143,11 +146,13 @@ namespace MRC.Agendia.Infrastructure.Identity
             await _refreshTokenStore.SaveChangesAsync(cancellationToken);
         }
 
+        /// <inheritdoc />
         public async Task LogoutAllAsync(string userId, CancellationToken cancellationToken = default)
         {
             await RevokeAllSessionsAsync(userId, cancellationToken);
         }
 
+        /// <inheritdoc />
         public async Task ChangePasswordAsync(string userId, ChangePasswordDto dto, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByIdAsync(userId)
@@ -163,6 +168,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             await _auditLogger.LogAsync(AuditActions.PasswordChanged, "User", userId, cancellationToken: cancellationToken);
         }
 
+        /// <inheritdoc />
         public Task ForgotPasswordAsync(ForgotPasswordDto dto, CancellationToken cancellationToken = default)
         {
             // Anti-enumeration: respond in constant time regardless of whether the
@@ -193,6 +199,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             return Task.CompletedTask;
         }
 
+        /// <inheritdoc />
         public async Task ResetPasswordAsync(ResetPasswordDto dto, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByEmailAsync(dto.Email);
@@ -220,6 +227,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             await _auditLogger.LogAsync(AuditActions.PasswordReset, "User", user.Id, new { dto.Email }, cancellationToken);
         }
 
+        /// <inheritdoc />
         public async Task ConfirmEmailAsync(ConfirmEmailDto dto, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByIdAsync(dto.UserId);
@@ -233,6 +241,7 @@ namespace MRC.Agendia.Infrastructure.Identity
                 throw new InvalidOperationException("Token de confirmacion invalido o expirado.");
         }
 
+        /// <inheritdoc />
         public async Task<UserDto> GetCurrentUserAsync(string userId, CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByIdAsync(userId)

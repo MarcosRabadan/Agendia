@@ -10,9 +10,11 @@ namespace MRC.Agendia.Infrastructure.Repositories
         {
         }
 
+        /// <inheritdoc />
         public async Task<IEnumerable<HolidayCalendar>> GetAllAsync(CancellationToken cancellationToken = default)
             => await Set.AsNoTracking().OrderBy(h => h.Date).ToListAsync(cancellationToken);
 
+        /// <inheritdoc />
         public async Task<IEnumerable<HolidayCalendar>> GetByYearAsync(int year, CancellationToken cancellationToken = default)
             => await Set
                 .AsNoTracking()
@@ -20,6 +22,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderBy(h => h.Date)
                 .ToListAsync(cancellationToken);
 
+        /// <inheritdoc />
         public async Task<IEnumerable<HolidayCalendar>> GetByDateRangeAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
             => await Set
                 .AsNoTracking()
@@ -27,6 +30,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderBy(h => h.Date)
                 .ToListAsync(cancellationToken);
 
+        /// <inheritdoc />
         public async Task AddRangeAsync(IEnumerable<HolidayCalendar> holidays, CancellationToken cancellationToken = default)
             => await Set.AddRangeAsync(holidays, cancellationToken);
     }

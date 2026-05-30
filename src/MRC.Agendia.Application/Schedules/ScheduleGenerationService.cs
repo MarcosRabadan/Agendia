@@ -33,6 +33,7 @@ namespace MRC.Agendia.Application.Schedules
             _mapper = mapper;
         }
 
+        /// <inheritdoc />
         public async Task<GenerateScheduleResponseDto> GenerateScheduleAsync(GenerateScheduleRequestDto dto, CancellationToken cancellationToken = default)
         {
             var build = await BuildAsync(dto, cancellationToken);
@@ -54,6 +55,7 @@ namespace MRC.Agendia.Application.Schedules
                 Warnings: build.Warnings.Count > 0 ? build.Warnings : null);
         }
 
+        /// <inheritdoc />
         public async Task<IEnumerable<CalendarDayDto>> PreviewScheduleAsync(GenerateScheduleRequestDto dto, CancellationToken cancellationToken = default)
         {
             var build = await BuildAsync(dto, cancellationToken);

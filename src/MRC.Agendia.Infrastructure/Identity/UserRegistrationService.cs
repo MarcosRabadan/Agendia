@@ -48,6 +48,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             _dbContext = dbContext;
         }
 
+        /// <inheritdoc />
         public async Task<AuthResponseDto> RegisterClientAsync(RegisterClientDto dto, CancellationToken cancellationToken = default)
         {
             var existing = await _userManager.FindByEmailAsync(dto.Email);
@@ -92,6 +93,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             return response;
         }
 
+        /// <inheritdoc />
         public async Task<AuthResponseDto> RegisterOwnerAsync(RegisterOwnerDto dto, CancellationToken cancellationToken = default)
         {
             var existing = await _userManager.FindByEmailAsync(dto.Email);
@@ -155,6 +157,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             return response;
         }
 
+        /// <inheritdoc />
         public async Task<UserDto> RegisterEmployeeAsync(RegisterEmployeeDto dto, string currentOwnerUserId, CancellationToken cancellationToken = default)
         {
             // Validate the business exists and the caller owns it (before creating anything).

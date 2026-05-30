@@ -3,7 +3,7 @@ using System.Security.Claims;
 namespace MRC.Agendia.Api.Services
 {
     /// <summary>
-    /// Helpers para acceder al usuario actual desde los controllers.
+    /// Helpers to access the current user from the controllers.
     /// </summary>
     public static class CurrentUserService
     {

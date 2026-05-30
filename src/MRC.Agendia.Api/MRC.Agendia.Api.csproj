@@ -4,8 +4,13 @@
 		<TargetFramework>net9.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-	  <UserSecretsId>f8a626b6-ec42-4857-82e4-050594a31fa4</UserSecretsId>
-  </PropertyGroup>
+		<UserSecretsId>f8a626b6-ec42-4857-82e4-050594a31fa4</UserSecretsId>
+		<!-- Emit XML docs so Swagger can surface endpoint summaries. CS1591 (missing
+		     doc) is suppressed: only the public API surface (interfaces, endpoints) is
+		     documented by policy, not every internal helper. -->
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<NoWarn>$(NoWarn);CS1591</NoWarn>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />

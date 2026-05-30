@@ -25,6 +25,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
+        /// <summary>Gets a paged list of employees.</summary>
         [Authorize(Roles = RolePolicies.AdminOrOwner)]
         [HttpGet]
         [ProducesResponseType(typeof(PagedResult<EmployeeDto>), StatusCodes.Status200OK)]
@@ -37,6 +38,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Gets an employee by its identifier.</summary>
         [Authorize]
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(EmployeeDto), StatusCodes.Status200OK)]
@@ -48,6 +50,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Creates a new employee.</summary>
         [Authorize(Roles = RolePolicies.AdminOrOwner)]
         [HttpPost]
         [ProducesResponseType(typeof(EmployeeDto), StatusCodes.Status201Created)]
@@ -58,6 +61,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
+        /// <summary>Updates an existing employee.</summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(EmployeeDto), StatusCodes.Status200OK)]
@@ -70,6 +74,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Soft-deletes an employee by its identifier.</summary>
         [Authorize(Roles = RolePolicies.AdminOrOwner)]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -80,9 +85,7 @@ namespace MRC.Agendia.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Restaura un empleado previamente eliminado (soft delete). Solo Admin.
-        /// </summary>
+        /// <summary>Restores a previously soft-deleted employee. Admin only.</summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpPost("{id}/restore")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]

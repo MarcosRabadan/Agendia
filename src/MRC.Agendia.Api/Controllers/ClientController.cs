@@ -27,6 +27,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
+        /// <summary>Gets a paged list of clients.</summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpGet]
         [ProducesResponseType(typeof(PagedResult<ClientDto>), StatusCodes.Status200OK)]
@@ -39,6 +40,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Gets a client by its identifier.</summary>
         [Authorize]
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(ClientDto), StatusCodes.Status200OK)]
@@ -51,9 +53,9 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         /// <summary>
-        /// Devuelve las citas del cliente autenticado, paginadas y ordenadas
-        /// de mas reciente a mas antigua. La identidad del cliente se resuelve
-        /// desde el JWT, no se acepta clientId en la URL.
+        /// Gets the authenticated client's appointments, paged and ordered from
+        /// most recent to oldest. The client identity is resolved from the JWT;
+        /// no clientId is accepted in the URL.
         /// </summary>
         [Authorize(Roles = Roles.Client)]
         [HttpGet("me/appointments")]
@@ -69,6 +71,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Creates a new client.</summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpPost]
         [ProducesResponseType(typeof(ClientDto), StatusCodes.Status201Created)]
@@ -79,6 +82,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
+        /// <summary>Updates an existing client.</summary>
         [Authorize(Roles = RolePolicies.AdminOrSelfClient)]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(ClientDto), StatusCodes.Status200OK)]
@@ -91,6 +95,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Soft-deletes a client by its identifier.</summary>
         [Authorize(Roles = RolePolicies.AdminOrSelfClient)]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -101,9 +106,7 @@ namespace MRC.Agendia.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Restaura un cliente previamente eliminado (soft delete). Solo Admin.
-        /// </summary>
+        /// <summary>Restores a previously soft-deleted client. Admin only.</summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpPost("{id}/restore")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]

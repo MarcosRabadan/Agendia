@@ -11,9 +11,11 @@ namespace MRC.Agendia.Infrastructure
             _context = context;
         }
 
+        /// <inheritdoc />
         public async Task<int> Save(CancellationToken cancellationToken = default)
         => await _context.SaveChangesAsync(cancellationToken);
 
+        /// <inheritdoc />
         public void Dispose()
         {
             _context.Dispose();

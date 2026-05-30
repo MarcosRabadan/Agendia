@@ -11,6 +11,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         {
         }
 
+        /// <inheritdoc />
         public Task<Appointment?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default)
             => Set
                 .IgnoreQueryFilters()
@@ -23,6 +24,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         // from listings AND from the capacity/conflict count (enabling double-booking).
         // Appointments keep their own history; only soft-deleted appointments are hidden.
 
+        /// <inheritdoc />
         public Task<Appointment?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
@@ -34,6 +36,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                     .ThenInclude(e => e.Business)
                 .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
+        /// <inheritdoc />
         public Task<Appointment?> GetByIdWithExtrasAsync(int id, CancellationToken cancellationToken = default)
             // Only ExtraServices is included (no soft-deletable parent navigation),
             // so the global !IsDeleted filter on Appointment applies as wanted: a
@@ -43,6 +46,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .Include(a => a.ExtraServices)
                 .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
+        /// <inheritdoc />
         public Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
@@ -52,6 +56,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderByDescending(a => a.StartDate)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
+        /// <inheritdoc />
         public Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedByClientIdAsync(int clientId, int page, int pageSize, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
@@ -61,6 +66,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderByDescending(a => a.StartDate)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
+        /// <inheritdoc />
         public async Task<IEnumerable<Appointment>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
         {
             var appointments = await Set
@@ -75,6 +81,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
             return appointments;
         }
 
+        /// <inheritdoc />
         public async Task<IReadOnlyList<Appointment>> GetBySeriesIdAsync(Guid seriesId, CancellationToken cancellationToken = default)
             // Tracked (no AsNoTracking) because cancel/move/delete mutate the rows.
             // IgnoreQueryFilters + !IsDeleted keeps live appointments whose parent
@@ -85,6 +92,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderBy(a => a.StartDate)
                 .ToListAsync(cancellationToken);
 
+        /// <inheritdoc />
         public Task<int> CountOverlappingForEmployeeAsync(
             int employeeId,
             DateTime startDate,
@@ -105,6 +113,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                     && a.EndDate > startDate,
                     cancellationToken);
 
+        /// <inheritdoc />
         public async Task<IReadOnlyList<Appointment>> GetUpcomingForDelayAsync(
             int businessId,
             int? employeeId,
@@ -130,6 +139,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .OrderBy(a => a.StartDate)
                 .ToListAsync(cancellationToken);
 
+        /// <inheritdoc />
         public async Task<IReadOnlyList<int>> GetExtraServiceIdsAsync(int appointmentId, CancellationToken cancellationToken = default)
             // Service ids of the appointment's extra services, used to re-validate
             // the total duration on reschedule without loading the whole graph.
@@ -141,6 +151,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .Select(e => e.ServiceId)
                 .ToListAsync(cancellationToken);
 
+        /// <inheritdoc />
         public Task<int?> GetCancellationWindowHoursAsync(int appointmentId, CancellationToken cancellationToken = default)
             // Project the owning business's window through employee -> business.
             // IgnoreQueryFilters so a soft-deleted participant does not turn the

@@ -25,6 +25,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
+        /// <summary>Gets a paged list of active businesses.</summary>
         [AllowAnonymous]
         [HttpGet]
         [ProducesResponseType(typeof(PagedResult<BusinessPublicDto>), StatusCodes.Status200OK)]
@@ -37,6 +38,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Gets an active business by its identifier.</summary>
         [AllowAnonymous]
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(BusinessPublicDto), StatusCodes.Status200OK)]
@@ -48,6 +50,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Creates a new business.</summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpPost]
         [ProducesResponseType(typeof(BusinessDto), StatusCodes.Status201Created)]
@@ -58,6 +61,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
+        /// <summary>Updates an existing business.</summary>
         [Authorize(Roles = RolePolicies.AdminOrOwner)]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(BusinessDto), StatusCodes.Status200OK)]
@@ -70,6 +74,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Soft-deletes a business by its identifier.</summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -80,9 +85,7 @@ namespace MRC.Agendia.Api.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Restaura un negocio previamente eliminado (soft delete). Solo Admin.
-        /// </summary>
+        /// <summary>Restores a previously soft-deleted business. Admin only.</summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpPost("{id}/restore")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]

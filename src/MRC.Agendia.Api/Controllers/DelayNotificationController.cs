@@ -20,9 +20,9 @@ namespace MRC.Agendia.Api.Controllers
         }
 
         /// <summary>
-        /// Avisa a los clientes con cita proxima del mismo tramo de que el negocio
-        /// va con retraso (minutos indicados). Alcance: todo el negocio o un empleado
-        /// concreto. Solo personal del negocio.
+        /// Notifies the clients with an upcoming appointment in the same slot that the
+        /// business is running late (by the given minutes). Scope: the whole business
+        /// or a specific employee. Business staff only.
         /// </summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpPost]

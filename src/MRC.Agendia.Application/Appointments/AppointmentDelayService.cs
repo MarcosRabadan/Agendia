@@ -30,6 +30,7 @@ namespace MRC.Agendia.Application.Appointments
             _clock = clock;
         }
 
+        /// <inheritdoc />
         public async Task<DelayNotificationResultDto> NotifyDelayAsync(int businessId, NotifyDelayDto dto, CancellationToken cancellationToken = default)
         {
             var now = _clock.BusinessNow;

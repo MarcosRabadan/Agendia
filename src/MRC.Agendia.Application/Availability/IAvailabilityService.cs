@@ -20,6 +20,8 @@ namespace MRC.Agendia.Application.Availability
         /// Optional additional services booked in the same visit (#170). When
         /// present, slots are sized to fit the total duration (primary + extras).
         /// </param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>The day's availability: the open windows and the bookable slots with their capacity.</returns>
         Task<AvailabilityDto> GetAvailabilityAsync(
             int businessId,
             DateOnly date,
@@ -35,6 +37,13 @@ namespace MRC.Agendia.Application.Availability
         /// is not bookable at all (day closed, outside the open windows, no active
         /// employee); 0 means the slot exists but is full; &gt; 0 means it has room.
         /// </summary>
+        /// <param name="businessId">Business that offers the service.</param>
+        /// <param name="date">Day of the slot.</param>
+        /// <param name="startTime">Start time of the slot.</param>
+        /// <param name="serviceId">Service whose duration defines the slot length.</param>
+        /// <param name="employeeId">Optional: limit the capacity to this employee.</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>Free capacity of the slot; null when it is not bookable, 0 when full, &gt; 0 when it has room.</returns>
         Task<int?> GetSlotCapacityAsync(
             int businessId,
             DateOnly date,

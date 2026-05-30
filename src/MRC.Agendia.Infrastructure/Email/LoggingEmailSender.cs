@@ -18,6 +18,7 @@ namespace MRC.Agendia.Infrastructure.Email
             _logger = logger;
         }
 
+        /// <inheritdoc />
         public Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation(

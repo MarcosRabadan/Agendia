@@ -13,6 +13,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
             _context = context;
         }
 
+        /// <inheritdoc />
         public Task<(IReadOnlyList<AuditLog> Items, int TotalCount)> GetPagedFilteredAsync(
             string? userId,
             string? action,

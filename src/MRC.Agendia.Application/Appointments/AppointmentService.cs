@@ -54,6 +54,7 @@ namespace MRC.Agendia.Application.Appointments
         }
 
         #region CRUD
+        /// <inheritdoc />
         public async Task<PagedResult<AppointmentDto>> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
         {
             var (items, totalCount) = await _repository.GetPagedAsync(page, pageSize, cancellationToken);
@@ -61,6 +62,7 @@ namespace MRC.Agendia.Application.Appointments
             return PagedResult<AppointmentDto>.Create(dtos, totalCount, page, pageSize);
         }
 
+        /// <inheritdoc />
         public async Task<PagedResult<AppointmentDto>> GetPagedByClientUserIdAsync(string userId, int page, int pageSize, CancellationToken cancellationToken = default)
         {
             // Resolve the Client entity from the authenticated user. If the user has
@@ -77,6 +79,7 @@ namespace MRC.Agendia.Application.Appointments
             return PagedResult<AppointmentDto>.Create(dtos, totalCount, page, pageSize);
         }
 
+        /// <inheritdoc />
         public async Task<AppointmentDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             // WithExtras so the DTO echoes the booked extra services (#170). Read-only.
@@ -84,6 +87,7 @@ namespace MRC.Agendia.Application.Appointments
             return entity is null ? null : _mapper.Map<AppointmentDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<AppointmentDto> CreateAsync(CreateAppointmentDto dto, CancellationToken cancellationToken = default)
         {
             // Validate + insert inside a per-employee/day lock so two concurrent
@@ -124,6 +128,7 @@ namespace MRC.Agendia.Application.Appointments
             return _mapper.Map<AppointmentDto>(entity);
         }
 
+        /// <inheritdoc />
         public async Task<AppointmentDto> UpdateAsync(UpdateAppointmentDto dto, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(dto.Id, cancellationToken)
@@ -240,6 +245,7 @@ namespace MRC.Agendia.Application.Appointments
             return _mapper.Map<AppointmentDto>(refreshed ?? entity);
         }
 
+        /// <inheritdoc />
         public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken)
@@ -265,6 +271,7 @@ namespace MRC.Agendia.Application.Appointments
             return true;
         }
 
+        /// <inheritdoc />
         public async Task<bool> RestoreAsync(int id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdIncludingDeletedAsync(id, cancellationToken)
@@ -280,6 +287,7 @@ namespace MRC.Agendia.Application.Appointments
         }
         #endregion CRUD
 
+        /// <inheritdoc />
         public async Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(int businessId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
         {
             var entities = await _repository.GetByBusinessIdAndDateRangeAsync(businessId, startDate, endDate, cancellationToken);

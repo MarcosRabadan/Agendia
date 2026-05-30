@@ -17,6 +17,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             _configuration = configuration;
         }
 
+        /// <inheritdoc />
         public (string token, DateTime expiresAt) GenerateAccessToken(
             string userId,
             string email,
@@ -57,6 +58,7 @@ namespace MRC.Agendia.Infrastructure.Identity
             return (new JwtSecurityTokenHandler().WriteToken(token), expiresAt);
         }
 
+        /// <inheritdoc />
         public string GenerateRefreshToken()
         {
             var bytes = new byte[64];

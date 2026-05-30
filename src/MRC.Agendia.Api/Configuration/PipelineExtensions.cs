@@ -8,10 +8,10 @@ using MRC.Agendia.Api.Middleware;
 namespace MRC.Agendia.Api.Configuration
 {
     /// <summary>
-    /// Configura el HTTP request pipeline en el orden correcto.
+    /// Configures the HTTP request pipeline in the correct order.
     ///
-    /// Orden critico:
-    ///   1. ForwardedHeaders (solo fuera de Development/Testing)
+    /// Critical order:
+    ///   1. ForwardedHeaders (only outside Development/Testing)
     ///   2. HttpsRedirection
     ///   3. CORS
     ///   4. RateLimiter

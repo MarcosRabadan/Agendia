@@ -39,7 +39,7 @@ namespace MRC.Agendia.Application
             // FluentValidation: auto-discovers all AbstractValidator<T> in the assembly.
             services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
 
-            // Servicios de aplicacion (uno por agregado)
+            // Application services (one per aggregate)
             services.AddScoped<IAppointmentService, AppointmentService>();
             services.AddScoped<IRecurringAppointmentService, RecurringAppointmentService>();
             services.AddScoped<IAppointmentDelayService, AppointmentDelayService>();
