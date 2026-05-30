@@ -1,3 +1,5 @@
+using MRC.Agendia.Domain.Constants;
+
 namespace MRC.Agendia.Application.Business.DTO
 {
     public record UpdateBusinessDto(
@@ -8,5 +10,6 @@ namespace MRC.Agendia.Application.Business.DTO
         string Phone,
         string Email,
         bool IsActive,
-        int? CancellationWindowHours = null);
+        int? CancellationWindowHours = null,
+        string DefaultLanguage = SupportedLanguages.Spanish);
 }

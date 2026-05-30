@@ -27,10 +27,12 @@ namespace MRC.Agendia.Infrastructure.Repositories
         public Task<WaitlistEntry?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default)
             // Required Client/Service navigations keep their soft-delete filters, so a
             // soft-deleted participant makes this return null (the notification is skipped).
+            // Service.Business is loaded to resolve the business language for the email.
             => Set
                 .AsNoTracking()
                 .Include(w => w.Client)
                 .Include(w => w.Service)
+                    .ThenInclude(s => s.Business)
                 .FirstOrDefaultAsync(w => w.Id == id, cancellationToken);
 
         public Task<WaitlistEntry?> GetNextWaitingForSlotAsync(

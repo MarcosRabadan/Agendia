@@ -1,3 +1,5 @@
+using MRC.Agendia.Domain.Constants;
+
 namespace MRC.Agendia.Application.Auth.DTO
 {
     public record RegisterOwnerDto(
@@ -9,5 +11,6 @@ namespace MRC.Agendia.Application.Auth.DTO
         string BusinessAddress,
         string BusinessPhone,
         string BusinessEmail,
-        string? BusinessDescription);
+        string? BusinessDescription,
+        string BusinessDefaultLanguage = SupportedLanguages.Spanish);
 }

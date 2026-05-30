@@ -1,4 +1,5 @@
 using FluentValidation;
+using MRC.Agendia.Domain.Constants;
 
 namespace MRC.Agendia.Application.Auth.Commands
 {
@@ -29,6 +30,9 @@ namespace MRC.Agendia.Application.Auth.Commands
                 .NotEmpty().EmailAddress().MaximumLength(200);
             RuleFor(x => x.Dto.BusinessDescription)
                 .MaximumLength(2000);
+            RuleFor(x => x.Dto.BusinessDefaultLanguage)
+                .Must(lang => SupportedLanguages.IsSupported(lang))
+                .WithMessage("El idioma no esta soportado. Valores validos: es, en, fr.");
         }
     }
 }

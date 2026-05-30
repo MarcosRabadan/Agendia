@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Subject_Confirmation" xml:space="preserve">
+    <value>Appointment confirmed - Agendia</value>
+  </data>
+  <data name="Subject_Reminder" xml:space="preserve">
+    <value>Appointment reminder - Agendia</value>
+  </data>
+  <data name="Subject_Cancellation" xml:space="preserve">
+    <value>Appointment cancelled - Agendia</value>
+  </data>
+  <data name="Subject_Delay" xml:space="preserve">
+    <value>Your appointment is delayed - Agendia</value>
+  </data>
+  <data name="Subject_Waitlist" xml:space="preserve">
+    <value>A slot has opened up - Agendia</value>
+  </data>
+  <data name="Greeting" xml:space="preserve">
+    <value>Hello {0},</value>
+  </data>
+  <data name="Confirmation_Intro" xml:space="preserve">
+    <value>Your appointment has been confirmed:</value>
+  </data>
+  <data name="Confirmation_Outro" xml:space="preserve">
+    <value>We look forward to seeing you. If you need to cancel, do it from the app.</value>
+  </data>
+  <data name="Reminder_Intro" xml:space="preserve">
+    <value>This is a reminder of your upcoming appointment:</value>
+  </data>
+  <data name="Reminder_Outro" xml:space="preserve">
+    <value>If you can't make it, cancel in advance from the app.</value>
+  </data>
+  <data name="Cancellation_Intro" xml:space="preserve">
+    <value>Your appointment has been cancelled:</value>
+  </data>
+  <data name="Cancellation_Outro" xml:space="preserve">
+    <value>You can book a new one anytime from the app.</value>
+  </data>
+  <data name="Delay_Intro" xml:space="preserve">
+    <value>We wanted to let you know we are running about {0} behind for your appointment:</value>
+  </data>
+  <data name="Delay_Outro" xml:space="preserve">
+    <value>Sorry for the inconvenience. You can arrive a little later without losing your spot.</value>
+  </data>
+  <data name="Waitlist_Intro" xml:space="preserve">
+    <value>A slot you were waiting for has opened up:</value>
+  </data>
+  <data name="Waitlist_Outro" xml:space="preserve">
+    <value>Book as soon as possible from the app; spots are assigned on a first-come, first-served basis.</value>
+  </data>
+  <data name="Unit_Minutes" xml:space="preserve">
+    <value>minutes</value>
+  </data>
+  <data name="Label_Service" xml:space="preserve">
+    <value>Service:</value>
+  </data>
+  <data name="Label_Professional" xml:space="preserve">
+    <value>Professional:</value>
+  </data>
+  <data name="Label_Business" xml:space="preserve">
+    <value>Business:</value>
+  </data>
+  <data name="Label_Date" xml:space="preserve">
+    <value>Date:</value>
+  </data>
+  <data name="Waitlist_SlotFormat" xml:space="preserve">
+    <value>{0} at {1}</value>
+  </data>
+</root>

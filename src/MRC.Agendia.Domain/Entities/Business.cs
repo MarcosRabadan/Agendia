@@ -1,4 +1,5 @@
 using MRC.Agendia.Domain.Common;
+using MRC.Agendia.Domain.Constants;
 
 namespace MRC.Agendia.Domain.Entities
 {
@@ -20,6 +21,13 @@ namespace MRC.Agendia.Domain.Entities
         /// accepts 1..8760). Staff are never subject to this window.
         /// </summary>
         public int? CancellationWindowHours { get; set; }
+
+        /// <summary>
+        /// Two-letter language code (see <see cref="SupportedLanguages"/>) the
+        /// business sends its notifications in. Defaults to Spanish; selects the
+        /// localized email/push templates.
+        /// </summary>
+        public string DefaultLanguage { get; set; } = SupportedLanguages.Spanish;
 
         public ICollection<Employee> Employees { get; set; } = new List<Employee>();
         public ICollection<Service> Services { get; set; } = new List<Service>();

@@ -1,18 +1,25 @@
+using System.Globalization;
 using System.Net;
 using Microsoft.Extensions.Logging;
 using MRC.Agendia.Application.Common.Email;
 using MRC.Agendia.Application.Common.Push;
 using MRC.Agendia.Application.Notifications;
+using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Interfaces;
+using MRC.Agendia.Infrastructure.Notifications.Resources;
 
 namespace MRC.Agendia.Infrastructure.Notifications
 {
     /// <summary>
-    /// Email implementation of <see cref="INotificationService"/>. Loads the
-    /// appointment with its client/service/employee/business and sends a Spanish
-    /// HTML email via <see cref="IEmailSender"/>. Best-effort: any failure (no
-    /// recipient email, delivery error...) is logged and swallowed so it never
+    /// Email/push implementation of <see cref="INotificationService"/>. Loads the
+    /// appointment (or waitlist entry) with its client/service/employee/business and
+    /// sends an HTML email via <see cref="IEmailSender"/> plus a best-effort push.
+    /// The template language follows the business' <see cref="Business.DefaultLanguage"/>
+    /// (es/en/fr); the HTML structure stays here and the phrases come from the
+    /// NotificationStrings .resx set, resolved by an explicit culture (there is no
+    /// request/CurrentUICulture: sends are async/background). Best-effort: any failure
+    /// (no recipient email, delivery error...) is logged and swallowed so it never
     /// breaks the booking flow.
     /// </summary>
     public class NotificationService : INotificationService
@@ -50,7 +57,7 @@ namespace MRC.Agendia.Infrastructure.Notifications
             => SendAsync(appointmentId, "cancellation", BuildCancellation, cancellationToken);
 
         public Task<bool> SendDelayNotificationAsync(int appointmentId, int delayMinutes, CancellationToken cancellationToken = default)
-            => SendAsync(appointmentId, "delay", a => BuildDelay(a, delayMinutes), cancellationToken);
+            => SendAsync(appointmentId, "delay", (a, culture) => BuildDelay(a, delayMinutes, culture), cancellationToken);
 
         public async Task<bool> SendWaitlistAvailabilityAsync(int waitlistEntryId, CancellationToken cancellationToken = default)
         {
@@ -63,20 +70,26 @@ namespace MRC.Agendia.Infrastructure.Notifications
                     return true;
                 }
 
-                var subject = "Se ha liberado un hueco - Agendia";
+                var culture = ResolveCulture(entry.Service.Business?.DefaultLanguage);
+
+                var subject = NotificationText.Get("Subject_Waitlist", culture);
+                var slot = NotificationText.Format(
+                    "Waitlist_SlotFormat", culture,
+                    entry.Date.ToString("d", culture),
+                    entry.StartTime.ToString("t", culture));
                 var body =
-                    $"<p>Hola {Encode(entry.Client!.Name)},</p>" +
-                    "<p>Se ha liberado un hueco que estabas esperando:</p>" +
+                    $"<p>{NotificationText.Format("Greeting", culture, Encode(entry.Client!.Name))}</p>" +
+                    $"<p>{NotificationText.Get("Waitlist_Intro", culture)}</p>" +
                     "<ul>" +
-                    $"<li><strong>Servicio:</strong> {Encode(entry.Service.Name)}</li>" +
-                    $"<li><strong>Fecha:</strong> {entry.Date:dd/MM/yyyy} a las {entry.StartTime:HH:mm}</li>" +
+                    $"<li><strong>{NotificationText.Get("Label_Service", culture)}</strong> {Encode(entry.Service.Name)}</li>" +
+                    $"<li><strong>{NotificationText.Get("Label_Date", culture)}</strong> {slot}</li>" +
                     "</ul>" +
-                    "<p>Reserva cuanto antes desde la app; las plazas se asignan por orden de llegada.</p>";
+                    $"<p>{NotificationText.Get("Waitlist_Outro", culture)}</p>";
 
                 // Push first, best-effort and independent of email.
                 await TrySendPushAsync(
                     entry.Client?.UserId, subject,
-                    $"{entry.Service.Name} - {entry.Date:dd/MM} {entry.StartTime:HH:mm}",
+                    $"{entry.Service.Name} - {entry.Date.ToString("d", culture)} {entry.StartTime.ToString("t", culture)}",
                     new Dictionary<string, string> { ["waitlistEntryId"] = waitlistEntryId.ToString(), ["type"] = "waitlist" },
                     cancellationToken);
 
@@ -101,7 +114,7 @@ namespace MRC.Agendia.Infrastructure.Notifications
         private async Task<bool> SendAsync(
             int appointmentId,
             string kind,
-            Func<Appointment, (string Subject, string Body)> compose,
+            Func<Appointment, CultureInfo, (string Subject, string Body)> compose,
             CancellationToken cancellationToken)
         {
             try
@@ -113,12 +126,13 @@ namespace MRC.Agendia.Infrastructure.Notifications
                     return true;
                 }
 
-                var (subject, body) = compose(appointment);
+                var culture = ResolveCulture(appointment.Employee?.Business?.DefaultLanguage);
+                var (subject, body) = compose(appointment, culture);
 
                 // Push first, best-effort and independent of email: a client may have
                 // a device registered even without an email on file.
                 await TrySendPushAsync(
-                    appointment.Client?.UserId, subject, PushSummary(appointment),
+                    appointment.Client?.UserId, subject, PushSummary(appointment, culture),
                     new Dictionary<string, string> { ["appointmentId"] = appointmentId.ToString(), ["type"] = kind },
                     cancellationToken);
 
@@ -146,47 +160,50 @@ namespace MRC.Agendia.Infrastructure.Notifications
             }
         }
 
-        private static (string Subject, string Body) BuildConfirmation(Appointment a)
+        private static (string Subject, string Body) BuildConfirmation(Appointment a, CultureInfo culture)
         {
-            var subject = "Cita confirmada - Agendia";
+            var subject = NotificationText.Get("Subject_Confirmation", culture);
             var body =
-                $"<p>Hola {Encode(a.Client.Name)},</p>" +
-                $"<p>Tu cita ha sido confirmada:</p>" +
-                Details(a) +
-                "<p>Te esperamos. Si necesitas cancelarla, hazlo desde la app.</p>";
+                $"<p>{NotificationText.Format("Greeting", culture, Encode(a.Client.Name))}</p>" +
+                $"<p>{NotificationText.Get("Confirmation_Intro", culture)}</p>" +
+                Details(a, culture) +
+                $"<p>{NotificationText.Get("Confirmation_Outro", culture)}</p>";
             return (subject, body);
         }
 
-        private static (string Subject, string Body) BuildReminder(Appointment a)
+        private static (string Subject, string Body) BuildReminder(Appointment a, CultureInfo culture)
         {
-            var subject = "Recordatorio de tu cita - Agendia";
+            var subject = NotificationText.Get("Subject_Reminder", culture);
             var body =
-                $"<p>Hola {Encode(a.Client.Name)},</p>" +
-                "<p>Te recordamos tu proxima cita:</p>" +
-                Details(a) +
-                "<p>Si no puedes asistir, cancelala con antelacion desde la app.</p>";
+                $"<p>{NotificationText.Format("Greeting", culture, Encode(a.Client.Name))}</p>" +
+                $"<p>{NotificationText.Get("Reminder_Intro", culture)}</p>" +
+                Details(a, culture) +
+                $"<p>{NotificationText.Get("Reminder_Outro", culture)}</p>";
             return (subject, body);
         }
 
-        private static (string Subject, string Body) BuildCancellation(Appointment a)
+        private static (string Subject, string Body) BuildCancellation(Appointment a, CultureInfo culture)
         {
-            var subject = "Cita cancelada - Agendia";
+            var subject = NotificationText.Get("Subject_Cancellation", culture);
             var body =
-                $"<p>Hola {Encode(a.Client.Name)},</p>" +
-                "<p>Tu cita ha sido cancelada:</p>" +
-                Details(a) +
-                "<p>Puedes reservar una nueva cuando quieras desde la app.</p>";
+                $"<p>{NotificationText.Format("Greeting", culture, Encode(a.Client.Name))}</p>" +
+                $"<p>{NotificationText.Get("Cancellation_Intro", culture)}</p>" +
+                Details(a, culture) +
+                $"<p>{NotificationText.Get("Cancellation_Outro", culture)}</p>";
             return (subject, body);
         }
 
-        private static (string Subject, string Body) BuildDelay(Appointment a, int delayMinutes)
+        private static (string Subject, string Body) BuildDelay(Appointment a, int delayMinutes, CultureInfo culture)
         {
-            var subject = "Tu cita va con retraso - Agendia";
+            var subject = NotificationText.Get("Subject_Delay", culture);
+            // The minutes go bold inside the sentence; the unit word is localized and
+            // the surrounding phrase takes it as {0}, keeping HTML out of the resources.
+            var minutes = $"<strong>{delayMinutes} {NotificationText.Get("Unit_Minutes", culture)}</strong>";
             var body =
-                $"<p>Hola {Encode(a.Client.Name)},</p>" +
-                $"<p>Te avisamos de que vamos con aproximadamente <strong>{delayMinutes} minutos</strong> de retraso sobre tu cita:</p>" +
-                Details(a) +
-                "<p>Disculpa las molestias. Puedes venir un poco mas tarde sin perder tu turno.</p>";
+                $"<p>{NotificationText.Format("Greeting", culture, Encode(a.Client.Name))}</p>" +
+                $"<p>{NotificationText.Format("Delay_Intro", culture, minutes)}</p>" +
+                Details(a, culture) +
+                $"<p>{NotificationText.Get("Delay_Outro", culture)}</p>";
             return (subject, body);
         }
 
@@ -217,16 +234,19 @@ namespace MRC.Agendia.Infrastructure.Notifications
             }
         }
 
-        private static string PushSummary(Appointment a)
-            => $"{a.Service.Name} - {a.StartDate:dd/MM HH:mm}";
+        private static string PushSummary(Appointment a, CultureInfo culture)
+            => $"{a.Service.Name} - {a.StartDate.ToString("g", culture)}";
 
-        private static string Details(Appointment a)
+        private static string Details(Appointment a, CultureInfo culture)
             => "<ul>" +
-               $"<li><strong>Servicio:</strong> {Encode(a.Service.Name)}</li>" +
-               $"<li><strong>Profesional:</strong> {Encode(a.Employee.FullName)}</li>" +
-               $"<li><strong>Negocio:</strong> {Encode(a.Employee.Business.Name)}</li>" +
-               $"<li><strong>Fecha:</strong> {a.StartDate:dd/MM/yyyy HH:mm} - {a.EndDate:HH:mm}</li>" +
+               $"<li><strong>{NotificationText.Get("Label_Service", culture)}</strong> {Encode(a.Service.Name)}</li>" +
+               $"<li><strong>{NotificationText.Get("Label_Professional", culture)}</strong> {Encode(a.Employee.FullName)}</li>" +
+               $"<li><strong>{NotificationText.Get("Label_Business", culture)}</strong> {Encode(a.Employee.Business.Name)}</li>" +
+               $"<li><strong>{NotificationText.Get("Label_Date", culture)}</strong> {a.StartDate.ToString("g", culture)} - {a.EndDate.ToString("t", culture)}</li>" +
                "</ul>";
+
+        private static CultureInfo ResolveCulture(string? language)
+            => CultureInfo.GetCultureInfo(SupportedLanguages.Normalize(language));
 
         private static string Encode(string? value) => WebUtility.HtmlEncode(value ?? string.Empty);
     }

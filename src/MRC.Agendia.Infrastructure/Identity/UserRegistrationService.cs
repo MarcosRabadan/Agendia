@@ -123,7 +123,8 @@ namespace MRC.Agendia.Infrastructure.Identity
                     Phone = dto.BusinessPhone,
                     Email = dto.BusinessEmail,
                     IsActive = true,
-                    OwnerUserId = user.Id
+                    OwnerUserId = user.Id,
+                    DefaultLanguage = SupportedLanguages.Normalize(dto.BusinessDefaultLanguage)
                 };
                 await _businessRepository.AddAsync(business, cancellationToken);
                 await _unitOfWork.Save(cancellationToken);

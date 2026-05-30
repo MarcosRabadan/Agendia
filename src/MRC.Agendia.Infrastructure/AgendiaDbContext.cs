@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Application.Authorization;
+using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Infrastructure.Identity;
 
@@ -133,6 +134,14 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<Business>()
             .HasIndex(b => b.OwnerUserId)
             .HasDatabaseName("IX_Business_OwnerUserId");
+
+        // Notification language (es/en/fr). Column default backfills existing rows
+        // when the migration adds the NOT NULL column.
+        modelBuilder.Entity<Business>()
+            .Property(b => b.DefaultLanguage)
+            .HasMaxLength(10)
+            .HasDefaultValue(SupportedLanguages.Spanish)
+            .IsRequired();
 
         modelBuilder.Entity<Employee>()
             .HasIndex(e => e.UserId)
