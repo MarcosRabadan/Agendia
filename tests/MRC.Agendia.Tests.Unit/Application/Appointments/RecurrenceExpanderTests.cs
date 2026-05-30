@@ -42,6 +42,46 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         }
 
         [Fact]
+        public void Weekly_Biweekly_SingleDay_AnchorsToFirstOccurrence_NotFromsWeek()
+        {
+            // 'from' is a Saturday; the requested weekday (Sunday) first occurs the next
+            // day. A single-day series must start there and step by the interval (same as
+            // before the multi-day fix), not skip a whole fortnight.
+            var from = new DateOnly(2030, 1, 5); // Saturday
+            var until = from.AddDays(20);
+            var days = new[] { DayOfWeek.Sunday };
+
+            var result = RecurrenceExpander.Expand(
+                RecurrenceFrequency.Weekly, interval: 2, daysOfWeek: days, dayOfMonth: null, from, until);
+
+            Assert.Equal(new[] { new DateOnly(2030, 1, 6), new DateOnly(2030, 1, 20) }, result.Dates);
+        }
+
+        [Fact]
+        public void Weekly_Biweekly_MultipleDays_KeepsAllDaysInTheSameFortnight()
+        {
+            // 'from' is a Wednesday. Anchoring each weekday on its own first occurrence
+            // used to push Monday to the NEXT week, splitting the fortnight (Mon and Wed
+            // landing on alternating weeks). All requested days must stay in the same weeks.
+            var from = new DateOnly(2030, 1, 9); // Wednesday
+            var until = from.AddDays(27);
+            var days = new[] { DayOfWeek.Monday, DayOfWeek.Wednesday };
+
+            var result = RecurrenceExpander.Expand(
+                RecurrenceFrequency.Weekly, interval: 2, daysOfWeek: days, dayOfMonth: null, from, until);
+
+            Assert.Equal(
+                new[]
+                {
+                    new DateOnly(2030, 1, 9),   // Wed, base week
+                    new DateOnly(2030, 1, 21),  // Mon, two weeks later (same fortnight as 1/23)
+                    new DateOnly(2030, 1, 23),  // Wed
+                    new DateOnly(2030, 2, 4)    // Mon, next fortnight
+                },
+                result.Dates);
+        }
+
+        [Fact]
         public void Weekly_MultipleDays_ReturnsEachRequestedWeekdaySorted()
         {
             var from = new DateOnly(2030, 1, 1);

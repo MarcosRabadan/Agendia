@@ -18,7 +18,7 @@ namespace MRC.Agendia.Application.Schedules.Queries
                 .WithMessage("La fecha final debe ser posterior o igual a la inicial.");
 
             RuleFor(x => x)
-                .Must(x => x.To.DayNumber - x.From.DayNumber <= MaxRangeDays)
+                .Must(x => (x.To.DayNumber - x.From.DayNumber) + 1 <= MaxRangeDays)
                 .WithMessage($"El rango del calendario no puede superar {MaxRangeDays} dias.");
         }
     }

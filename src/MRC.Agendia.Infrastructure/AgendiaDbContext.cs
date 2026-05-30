@@ -232,6 +232,15 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
             .HasForeignKey(w => w.ServiceId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // BusinessId has no navigation on WaitlistEntry; configure the FK explicitly so
+        // the column is a real relationship (referential integrity + index). Restrict
+        // like the other waitlist FKs: Business is soft-deleted, never cascaded.
+        modelBuilder.Entity<WaitlistEntry>()
+            .HasOne<Business>()
+            .WithMany()
+            .HasForeignKey(w => w.BusinessId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<WaitlistEntry>()
             .Property(w => w.Status)
             .HasConversion<int>();

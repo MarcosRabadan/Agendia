@@ -51,13 +51,24 @@ namespace MRC.Agendia.Application.Appointments.Recurrence
         {
             if (daysOfWeek is null) return;
 
-            foreach (var day in daysOfWeek.Distinct())
+            var days = daysOfWeek.Distinct().ToList();
+            if (days.Count == 0) return;
+
+            // Anchor the whole pattern to the EARLIEST first occurrence (on/after 'from')
+            // among the requested weekdays, then step that base week by 'interval'. This
+            // keeps a multi-day biweekly pattern's days together in the same fortnight
+            // (anchoring each weekday on its own first occurrence let them drift to their
+            // own weeks), while a single weekday still starts at its own first occurrence.
+            var anchor = days.Min(day => from.AddDays(((int)day - (int)from.DayOfWeek + 7) % 7));
+            var weekStart = anchor.AddDays(-(int)anchor.DayOfWeek); // Sunday of the anchor's week
+            for (var ws = weekStart; ws <= until; ws = ws.AddDays(7 * interval))
             {
-                // First occurrence of this weekday on or after 'from', then step
-                // every 'interval' weeks (interval 2 == biweekly / quincenal).
-                var delta = ((int)day - (int)from.DayOfWeek + 7) % 7;
-                for (var d = from.AddDays(delta); d <= until; d = d.AddDays(7 * interval))
-                    dates.Add(d);
+                foreach (var day in days)
+                {
+                    var date = ws.AddDays((int)day);
+                    if (date >= from && date <= until)
+                        dates.Add(date);
+                }
             }
         }
 

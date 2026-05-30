@@ -71,6 +71,10 @@ namespace MRC.Agendia.Infrastructure.Persistence
             {
                 auditable.UpdatedAt = now;
                 auditable.UpdatedBy = userId;
+                // Never let an update rewrite the creation audit fields, even for a
+                // detached/over-posted entity whose CreatedAt/CreatedBy were changed.
+                entry.Property(nameof(IAuditable.CreatedAt)).IsModified = false;
+                entry.Property(nameof(IAuditable.CreatedBy)).IsModified = false;
             }
         }
     }

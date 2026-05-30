@@ -40,6 +40,17 @@ namespace MRC.Agendia.Api.Middleware
 
         private async Task HandleExceptionAsync(HttpContext context, Exception ex)
         {
+            // The client closed the connection mid-request: not a server error. Map to
+            // 499 (client closed request), skip the body (no one is listening) and log at
+            // Debug so it does not pollute the error dashboards as a 500.
+            if (ex is OperationCanceledException && context.RequestAborted.IsCancellationRequested)
+            {
+                _logger.LogDebug("Request aborted by the client.");
+                if (!context.Response.HasStarted)
+                    context.Response.StatusCode = 499;
+                return;
+            }
+
             // FluentValidation: return structured field-level errors.
             if (ex is ValidationException validationEx)
             {

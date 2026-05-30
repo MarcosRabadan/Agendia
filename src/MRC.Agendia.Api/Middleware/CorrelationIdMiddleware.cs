@@ -16,6 +16,10 @@ namespace MRC.Agendia.Api.Middleware
     {
         public const string HeaderName = "X-Correlation-Id";
 
+        // Cap the adopted id so a client cannot bloat every log line, and only accept a
+        // safe charset so a forged header cannot inject CRLF/control chars into the logs.
+        private const int MaxLength = 64;
+
         private readonly RequestDelegate _next;
 
         public CorrelationIdMiddleware(RequestDelegate next)
@@ -25,11 +29,9 @@ namespace MRC.Agendia.Api.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
-            var correlationId =
-                context.Request.Headers.TryGetValue(HeaderName, out var incoming)
-                && !string.IsNullOrWhiteSpace(incoming)
-                    ? incoming.ToString()
-                    : Guid.NewGuid().ToString();
+            var correlationId = context.Request.Headers.TryGetValue(HeaderName, out var incoming)
+                ? Sanitize(incoming.ToString())
+                : Guid.NewGuid().ToString();
 
             context.TraceIdentifier = correlationId;
 
@@ -43,6 +45,25 @@ namespace MRC.Agendia.Api.Middleware
             {
                 await _next(context);
             }
+        }
+
+        private static string Sanitize(string? incoming)
+        {
+            if (string.IsNullOrWhiteSpace(incoming))
+                return Guid.NewGuid().ToString();
+
+            var trimmed = incoming.Trim();
+            return trimmed.Length <= MaxLength && IsSafe(trimmed)
+                ? trimmed
+                : Guid.NewGuid().ToString();
+        }
+
+        private static bool IsSafe(string value)
+        {
+            foreach (var c in value)
+                if (!char.IsLetterOrDigit(c) && c != '-' && c != '_')
+                    return false;
+            return true;
         }
     }
 }

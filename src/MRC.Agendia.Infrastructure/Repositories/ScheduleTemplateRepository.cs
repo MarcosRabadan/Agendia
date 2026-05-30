@@ -30,7 +30,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .Where(st => st.BusinessId == businessId
                     && st.EffectiveFrom <= date
                     && st.EffectiveTo >= date)
-                .OrderByDescending(st => st.IsDefault ? 0 : 1)
+                .OrderByDescending(st => st.IsDefault)
                 .FirstOrDefaultAsync(cancellationToken);
 
         public async Task<bool> HasOverlappingTemplateAsync(int businessId, DateOnly from, DateOnly to, int? excludeId = null, CancellationToken cancellationToken = default)

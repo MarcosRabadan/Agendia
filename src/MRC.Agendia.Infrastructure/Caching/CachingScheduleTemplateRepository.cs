@@ -39,7 +39,7 @@ namespace MRC.Agendia.Infrastructure.Caching
             var templates = await GetCachedByBusinessAsync(businessId, cancellationToken);
             return templates
                 .Where(t => t.EffectiveFrom <= date && t.EffectiveTo >= date)
-                .OrderByDescending(t => t.IsDefault ? 0 : 1)
+                .OrderByDescending(t => t.IsDefault)
                 .FirstOrDefault();
         }
 

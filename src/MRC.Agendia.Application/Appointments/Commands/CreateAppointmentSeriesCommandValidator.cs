@@ -22,7 +22,7 @@ namespace MRC.Agendia.Application.Appointments.Commands
                 .GreaterThanOrEqualTo(x => x.Dto.StartDate)
                 .WithMessage("UntilDate debe ser igual o posterior a StartDate.");
             RuleFor(x => x.Dto)
-                .Must(d => d.UntilDate.DayNumber - d.StartDate.DayNumber <= MaxWindowDays)
+                .Must(d => (d.UntilDate.DayNumber - d.StartDate.DayNumber) + 1 <= MaxWindowDays)
                 .WithMessage($"El rango de la serie no puede superar {MaxWindowDays} dias.");
             RuleFor(x => x.Dto.Notes).MaximumLength(2000);
 
