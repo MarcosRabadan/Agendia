@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using MRC.Agendia.Api.Services;
+using MRC.Agendia.Api.Configuration;
 using MRC.Agendia.Application.Auth.DTO;
 using MRC.Agendia.Application.Auth.Queries;
 using MRC.Agendia.Domain.Constants;
@@ -32,7 +33,7 @@ namespace MRC.Agendia.Api.Controllers
         /// <summary>Public self-registration of a client.</summary>
         [HttpPost("register/client")]
         [AllowAnonymous]
-        [EnableRateLimiting("auth-register")]
+        [EnableRateLimiting(RateLimitingSetup.RegisterPolicy)]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
@@ -45,7 +46,7 @@ namespace MRC.Agendia.Api.Controllers
         /// <summary>Public self-registration of a BusinessOwner together with their Business and associated Employee.</summary>
         [HttpPost("register/owner")]
         [AllowAnonymous]
-        [EnableRateLimiting("auth-register")]
+        [EnableRateLimiting(RateLimitingSetup.RegisterPolicy)]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
@@ -72,7 +73,7 @@ namespace MRC.Agendia.Api.Controllers
         /// <summary>Authenticates with email and password and returns an access + refresh token pair.</summary>
         [HttpPost("login")]
         [AllowAnonymous]
-        [EnableRateLimiting("auth-login")]
+        [EnableRateLimiting(RateLimitingSetup.LoginPolicy)]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
@@ -85,7 +86,7 @@ namespace MRC.Agendia.Api.Controllers
         /// <summary>Exchanges a refresh token for a new access + refresh token pair (rotation).</summary>
         [HttpPost("refresh")]
         [AllowAnonymous]
-        [EnableRateLimiting("auth-refresh")]
+        [EnableRateLimiting(RateLimitingSetup.RefreshPolicy)]
         [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
@@ -144,7 +145,7 @@ namespace MRC.Agendia.Api.Controllers
         /// <summary>Requests a password-reset link. Always responds 204 (does not reveal whether the email exists).</summary>
         [HttpPost("forgot-password")]
         [AllowAnonymous]
-        [EnableRateLimiting("auth-register")]
+        [EnableRateLimiting(RateLimitingSetup.RegisterPolicy)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
@@ -157,7 +158,7 @@ namespace MRC.Agendia.Api.Controllers
         /// <summary>Resets the password using the token received by email.</summary>
         [HttpPost("reset-password")]
         [AllowAnonymous]
-        [EnableRateLimiting("auth-login")]
+        [EnableRateLimiting(RateLimitingSetup.LoginPolicy)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
@@ -170,7 +171,7 @@ namespace MRC.Agendia.Api.Controllers
         /// <summary>Confirms a user's email with the token sent at registration.</summary>
         [HttpPost("confirm-email")]
         [AllowAnonymous]
-        [EnableRateLimiting("auth-login")]
+        [EnableRateLimiting(RateLimitingSetup.LoginPolicy)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status429TooManyRequests)]

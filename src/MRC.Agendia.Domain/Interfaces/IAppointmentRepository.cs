@@ -17,13 +17,17 @@ namespace MRC.Agendia.Domain.Interfaces
         Task<Appointment?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Gets a live appointment by id with its client, service, extra services and
-        /// employee (plus the employee's business) loaded, for read-to-DTO. Untracked;
-        /// ignores soft-delete filters on the parents but excludes soft-deleted appointments.
+        /// Gets an appointment by id with its client, service, extra services and
+        /// employee (plus the employee's business) loaded, for read-to-DTO. Untracked.
+        /// Ignores ALL soft-delete filters, including the appointment's OWN: the
+        /// waitlist-on-delete flow looks the appointment up AFTER it has been
+        /// soft-deleted to learn which slot was freed, so a soft-deleted appointment
+        /// (or one with a soft-deleted parent) is still returned by design. Do NOT add
+        /// a !IsDeleted filter here or that notification path would receive null.
         /// </summary>
         /// <param name="id">Appointment id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
-        /// <returns>The appointment with details, or null when soft-deleted or missing.</returns>
+        /// <returns>The appointment with details, or null only when no row has that id.</returns>
         Task<Appointment?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default);
 
         /// <summary>

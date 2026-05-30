@@ -17,12 +17,15 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
-        // The reads below IgnoreQueryFilters and re-apply !a.IsDeleted explicitly:
+        // Most reads below IgnoreQueryFilters and re-apply !a.IsDeleted explicitly:
         // Client/Employee/Service are required navigations with a soft-delete filter,
         // so an Include without IgnoreQueryFilters turns into an INNER JOIN that drops
         // any appointment whose parent was soft-deleted. That would hide live bookings
         // from listings AND from the capacity/conflict count (enabling double-booking).
-        // Appointments keep their own history; only soft-deleted appointments are hidden.
+        // Appointments keep their own history; soft-deleted appointments are hidden.
+        // EXCEPTION: GetByIdWithDetailsAsync intentionally does NOT re-apply !a.IsDeleted
+        // (see its interface remarks) so the waitlist-on-delete flow can read a freed
+        // appointment back right after it has been soft-deleted.
 
         /// <inheritdoc />
         public Task<Appointment?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default)
