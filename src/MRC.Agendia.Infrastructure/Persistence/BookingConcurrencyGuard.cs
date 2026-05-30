@@ -27,11 +27,10 @@ namespace MRC.Agendia.Infrastructure.Persistence
         }
 
         /// <inheritdoc />
-        public async Task ExecuteSerializedAsync(
-            int employeeId,
-            DateOnly date,
-            Func<Task> action,
-            CancellationToken cancellationToken = default)
+        public async Task ExecuteSerializedAsync(int employeeId,
+                                                 DateOnly date,
+                                                 Func<Task> action,
+                                                 CancellationToken cancellationToken = default)
             => await ExecuteSerializedAsync(employeeId, date, async () =>
             {
                 await action();
@@ -39,11 +38,10 @@ namespace MRC.Agendia.Infrastructure.Persistence
             }, cancellationToken);
 
         /// <inheritdoc />
-        public async Task<T> ExecuteSerializedAsync<T>(
-            int employeeId,
-            DateOnly date,
-            Func<Task<T>> action,
-            CancellationToken cancellationToken = default)
+        public async Task<T> ExecuteSerializedAsync<T>(int employeeId,
+                                                       DateOnly date,
+                                                       Func<Task<T>> action,
+                                                       CancellationToken cancellationToken = default)
         {
             if (!_context.Database.IsSqlServer())
                 return await action();

@@ -37,12 +37,11 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .FirstOrDefaultAsync(cancellationToken);
 
         /// <inheritdoc />
-        public async Task<bool> HasOverlappingTemplateAsync(
-            int businessId,
-            DateOnly from,
-            DateOnly to,
-            int? excludeId = null,
-            CancellationToken cancellationToken = default)
+        public async Task<bool> HasOverlappingTemplateAsync(int businessId,
+                                                            DateOnly from,
+                                                            DateOnly to,
+                                                            int? excludeId = null,
+                                                            CancellationToken cancellationToken = default)
         {
             var query = Set
                 .Where(st => st.BusinessId == businessId

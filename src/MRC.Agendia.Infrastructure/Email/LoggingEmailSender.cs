@@ -19,11 +19,10 @@ namespace MRC.Agendia.Infrastructure.Email
         }
 
         /// <inheritdoc />
-        public Task SendAsync(
-            string toEmail,
-            string subject,
-            string htmlBody,
-            CancellationToken cancellationToken = default)
+        public Task SendAsync(string toEmail,
+                              string subject,
+                              string htmlBody,
+                              CancellationToken cancellationToken = default)
         {
             _logger.LogInformation(
                 "[DEV EMAIL] To: {ToEmail} | Subject: {Subject}\n{Body}",

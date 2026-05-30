@@ -39,12 +39,11 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="excludeId">Template id to ignore (e.g. the one being edited), or null.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>True when an overlapping template exists.</returns>
-        Task<bool> HasOverlappingTemplateAsync(
-            int businessId,
-            DateOnly from,
-            DateOnly to,
-            int? excludeId = null,
-            CancellationToken cancellationToken = default);
+        Task<bool> HasOverlappingTemplateAsync(int businessId,
+                                               DateOnly from,
+                                               DateOnly to,
+                                               int? excludeId = null,
+                                               CancellationToken cancellationToken = default);
 
         /// <summary>Adds a new schedule template to the context.</summary>
         /// <param name="template">The template to add.</param>

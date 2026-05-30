@@ -49,11 +49,10 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="pageSize">Page size.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The page of the client's appointments and the total count.</returns>
-        Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedByClientIdAsync(
-            int clientId,
-            int page,
-            int pageSize,
-            CancellationToken cancellationToken = default);
+        Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedByClientIdAsync(int clientId,
+                                                                                         int page,
+                                                                                         int pageSize,
+                                                                                         CancellationToken cancellationToken = default);
 
         /// <summary>Adds a new appointment to the context.</summary>
         /// <param name="appointment">The appointment to add.</param>

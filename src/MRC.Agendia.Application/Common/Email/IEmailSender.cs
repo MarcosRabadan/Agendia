@@ -12,10 +12,9 @@ namespace MRC.Agendia.Application.Common.Email
         /// <param name="subject">Email subject.</param>
         /// <param name="htmlBody">HTML body of the email.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
-        Task SendAsync(
-            string toEmail,
-            string subject,
-            string htmlBody,
-            CancellationToken cancellationToken = default);
+        Task SendAsync(string toEmail,
+                       string subject,
+                       string htmlBody,
+                       CancellationToken cancellationToken = default);
     }
 }

@@ -17,11 +17,10 @@ namespace MRC.Agendia.Domain.Services
         /// <param name="to">Inclusive end of the range.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>One effective schedule per date in the range.</returns>
-        Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(
-            int businessId,
-            DateOnly from,
-            DateOnly to,
-            CancellationToken cancellationToken = default);
+        Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(int businessId,
+                                                                        DateOnly from,
+                                                                        DateOnly to,
+                                                                        CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Pure, in-memory resolution from the supplied templates and overrides

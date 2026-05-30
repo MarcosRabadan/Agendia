@@ -11,11 +11,10 @@ namespace MRC.Agendia.Application.Common
         int TotalCount,
         int TotalPages)
     {
-        public static PagedResult<T> Create(
-            IReadOnlyList<T> items,
-            int totalCount,
-            int page,
-            int pageSize)
+        public static PagedResult<T> Create(IReadOnlyList<T> items,
+                                            int totalCount,
+                                            int page,
+                                            int pageSize)
         {
             var totalPages = pageSize <= 0
                 ? 0

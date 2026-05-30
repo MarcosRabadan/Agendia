@@ -26,11 +26,10 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
         /// <inheritdoc />
-        public async Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAndDateRangeAsync(
-            int businessId,
-            DateOnly from,
-            DateOnly to,
-            CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAndDateRangeAsync(int businessId,
+                                                                                          DateOnly from,
+                                                                                          DateOnly to,
+                                                                                          CancellationToken cancellationToken = default)
             => await Set
                 .AsNoTracking()
                 .Include(so => so.CustomSlots)

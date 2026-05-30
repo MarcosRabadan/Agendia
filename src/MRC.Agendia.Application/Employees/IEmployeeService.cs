@@ -18,11 +18,10 @@ namespace MRC.Agendia.Application.Employees
         /// <param name="pageSize">Number of items per page.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>A paged result of employee DTOs.</returns>
-        Task<PagedResult<EmployeeDto>> GetPagedByOwnerUserIdAsync(
-            string ownerUserId,
-            int page,
-            int pageSize,
-            CancellationToken cancellationToken = default);
+        Task<PagedResult<EmployeeDto>> GetPagedByOwnerUserIdAsync(string ownerUserId,
+                                                                  int page,
+                                                                  int pageSize,
+                                                                  CancellationToken cancellationToken = default);
 
         /// <summary>Gets an employee by its identifier.</summary>
         /// <param name="id">The employee identifier.</param>

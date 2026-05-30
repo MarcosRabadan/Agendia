@@ -63,11 +63,10 @@ namespace MRC.Agendia.Application.Appointments
         }
 
         /// <inheritdoc />
-        public async Task<PagedResult<AppointmentDto>> GetPagedByClientUserIdAsync(
-            string userId,
-            int page,
-            int pageSize,
-            CancellationToken cancellationToken = default)
+        public async Task<PagedResult<AppointmentDto>> GetPagedByClientUserIdAsync(string userId,
+                                                                                   int page,
+                                                                                   int pageSize,
+                                                                                   CancellationToken cancellationToken = default)
         {
             // Resolve the Client entity from the authenticated user. If the user has
             // the Client role but no Client row (e.g. row removed while the JWT is still
@@ -292,11 +291,10 @@ namespace MRC.Agendia.Application.Appointments
         #endregion CRUD
 
         /// <inheritdoc />
-        public async Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(
-            int businessId,
-            DateTime startDate,
-            DateTime endDate,
-            CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(int businessId,
+                                                                                        DateTime startDate,
+                                                                                        DateTime endDate,
+                                                                                        CancellationToken cancellationToken = default)
         {
             var entities = await _repository.GetByBusinessIdAndDateRangeAsync(businessId, startDate, endDate, cancellationToken);
             return _mapper.Map<IEnumerable<AppointmentDto>>(entities);

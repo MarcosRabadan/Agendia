@@ -57,11 +57,10 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
         /// <inheritdoc />
-        public Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedByClientIdAsync(
-            int clientId,
-            int page,
-            int pageSize,
-            CancellationToken cancellationToken = default)
+        public Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedByClientIdAsync(int clientId,
+                                                                                                int page,
+                                                                                                int pageSize,
+                                                                                                CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
                 .IgnoreQueryFilters()
@@ -71,11 +70,10 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
         /// <inheritdoc />
-        public async Task<IEnumerable<Appointment>> GetByBusinessIdAndDateRangeAsync(
-            int businessId,
-            DateTime startDate,
-            DateTime endDate,
-            CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<Appointment>> GetByBusinessIdAndDateRangeAsync(int businessId,
+                                                                                     DateTime startDate,
+                                                                                     DateTime endDate,
+                                                                                     CancellationToken cancellationToken = default)
         {
             var appointments = await Set
                  .AsNoTracking()
