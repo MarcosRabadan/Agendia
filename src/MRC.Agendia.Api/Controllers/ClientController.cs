@@ -2,12 +2,16 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MRC.Agendia.Application.Appointments.DTO;
-using MRC.Agendia.Application.Appointments.Queries;
-using MRC.Agendia.Application.Clients.Commands;
 using MRC.Agendia.Application.Clients.DTO;
-using MRC.Agendia.Application.Clients.Queries;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Application.Appointments.Queries.MyAppointments;
+using MRC.Agendia.Application.Clients.Commands.Create;
+using MRC.Agendia.Application.Clients.Commands.Delete;
+using MRC.Agendia.Application.Clients.Commands.Restore;
+using MRC.Agendia.Application.Clients.Commands.Update;
+using MRC.Agendia.Application.Clients.Queries.GetAll;
+using MRC.Agendia.Application.Clients.Queries.GetById;
 
 namespace MRC.Agendia.Api.Controllers
 {

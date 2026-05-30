@@ -2,10 +2,14 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Application.Employees.Commands;
 using MRC.Agendia.Application.Employees.DTO;
-using MRC.Agendia.Application.Employees.Queries;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Application.Employees.Commands.Create;
+using MRC.Agendia.Application.Employees.Commands.Delete;
+using MRC.Agendia.Application.Employees.Commands.Restore;
+using MRC.Agendia.Application.Employees.Commands.Update;
+using MRC.Agendia.Application.Employees.Queries.GetAll;
+using MRC.Agendia.Application.Employees.Queries.GetById;
 
 namespace MRC.Agendia.Api.Controllers
 {

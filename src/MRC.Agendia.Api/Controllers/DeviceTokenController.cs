@@ -1,8 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MRC.Agendia.Application.DeviceTokens.Commands;
 using MRC.Agendia.Application.DeviceTokens.DTO;
+using MRC.Agendia.Application.DeviceTokens.Commands.Register;
+using MRC.Agendia.Application.DeviceTokens.Commands.Remove;
 
 namespace MRC.Agendia.Api.Controllers
 {

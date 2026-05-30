@@ -3,10 +3,17 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using MRC.Agendia.Api.Services;
-using MRC.Agendia.Application.Auth.Commands;
 using MRC.Agendia.Application.Auth.DTO;
 using MRC.Agendia.Application.Auth.Queries;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Application.Auth.Commands.ChangePassword;
+using MRC.Agendia.Application.Auth.Commands.ConfirmEmail;
+using MRC.Agendia.Application.Auth.Commands.ForgotPassword;
+using MRC.Agendia.Application.Auth.Commands.Login;
+using MRC.Agendia.Application.Auth.Commands.Logout;
+using MRC.Agendia.Application.Auth.Commands.RefreshToken;
+using MRC.Agendia.Application.Auth.Commands.Registration;
+using MRC.Agendia.Application.Auth.Commands.ResetPassword;
 
 namespace MRC.Agendia.Api.Controllers
 {

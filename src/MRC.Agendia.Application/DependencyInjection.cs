@@ -1,7 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments;
-using MRC.Agendia.Application.Appointments.Commands;
+using MRC.Agendia.Application.Appointments.Commands.Crud;
 using MRC.Agendia.Application.Availability;
 using MRC.Agendia.Application.Behaviors;
 using MRC.Agendia.Application.Business;

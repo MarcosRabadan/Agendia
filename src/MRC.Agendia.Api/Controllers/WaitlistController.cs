@@ -1,10 +1,11 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MRC.Agendia.Application.Waitlist.Commands;
 using MRC.Agendia.Application.Waitlist.DTO;
 using MRC.Agendia.Application.Waitlist.Queries;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Application.Waitlist.Commands.Join;
+using MRC.Agendia.Application.Waitlist.Commands.Leave;
 
 namespace MRC.Agendia.Api.Controllers
 {

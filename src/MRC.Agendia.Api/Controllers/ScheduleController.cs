@@ -1,10 +1,16 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MRC.Agendia.Application.Schedules.Commands;
 using MRC.Agendia.Application.Schedules.DTO;
-using MRC.Agendia.Application.Schedules.Queries;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Application.Schedules.Commands.Generation;
+using MRC.Agendia.Application.Schedules.Commands.Overrides;
+using MRC.Agendia.Application.Schedules.Commands.Templates;
+using MRC.Agendia.Application.Schedules.Queries.Calendar;
+using MRC.Agendia.Application.Schedules.Queries.Effective;
+using MRC.Agendia.Application.Schedules.Queries.Overrides;
+using MRC.Agendia.Application.Schedules.Queries.Preview;
+using MRC.Agendia.Application.Schedules.Queries.Templates;
 
 namespace MRC.Agendia.Api.Controllers
 {

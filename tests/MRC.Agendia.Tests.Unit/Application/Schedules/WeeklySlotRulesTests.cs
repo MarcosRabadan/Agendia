@@ -1,5 +1,5 @@
-using MRC.Agendia.Application.Schedules.Commands;
 using MRC.Agendia.Application.Schedules.DTO;
+using MRC.Agendia.Application.Schedules.Commands.Slots;
 
 namespace MRC.Agendia.Tests.Unit.Application.Schedules
 {

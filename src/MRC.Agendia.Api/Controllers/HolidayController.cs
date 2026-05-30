@@ -1,10 +1,14 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MRC.Agendia.Application.Holidays.Commands;
 using MRC.Agendia.Application.Holidays.DTO;
-using MRC.Agendia.Application.Holidays.Queries;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Application.Holidays.Commands.Create;
+using MRC.Agendia.Application.Holidays.Commands.Delete;
+using MRC.Agendia.Application.Holidays.Commands.Update;
+using MRC.Agendia.Application.Holidays.Queries.GetAll;
+using MRC.Agendia.Application.Holidays.Queries.GetById;
+using MRC.Agendia.Application.Holidays.Queries.GetByYear;
 
 namespace MRC.Agendia.Api.Controllers
 {

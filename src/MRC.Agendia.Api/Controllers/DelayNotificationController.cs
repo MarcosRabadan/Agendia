@@ -1,9 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MRC.Agendia.Application.Appointments.Commands;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Application.Appointments.Commands.Delay;
 
 namespace MRC.Agendia.Api.Controllers
 {
