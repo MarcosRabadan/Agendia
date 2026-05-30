@@ -3,6 +3,7 @@ using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Common;
+using MRC.Agendia.Application.Waitlist;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Exceptions;
@@ -22,6 +23,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         private readonly IAppointmentRepository _repository = Substitute.For<IAppointmentRepository>();
         private readonly IAppointmentSchedulingValidator _validator = Substitute.For<IAppointmentSchedulingValidator>();
         private readonly IBookingConcurrencyGuard _bookingGuard = Substitute.For<IBookingConcurrencyGuard>();
+        private readonly IWaitlistService _waitlistService = Substitute.For<IWaitlistService>();
         private readonly IAuditLogger _auditLogger = Substitute.For<IAuditLogger>();
         private readonly IClock _clock = Substitute.For<IClock>();
         private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
@@ -45,7 +47,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             _sut = new RecurringAppointmentService(
                 _serviceRepository, _repository, _validator, _bookingGuard,
-                _auditLogger, _clock, _unitOfWork, _mapper);
+                _waitlistService, _auditLogger, _clock, _unitOfWork, _mapper);
         }
 
         [Fact]
@@ -119,6 +121,12 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             Assert.Equal(AppointmentStatus.Confirmed, past.Status);       // untouched (past)
             Assert.Equal(AppointmentStatus.Completed, futureCompleted.Status); // untouched (terminal)
             await _unitOfWork.Received(1).Save(Arg.Any<CancellationToken>());
+
+            // The two cancelled future occurrences free their slots -> waitlist notified;
+            // the past, already-cancelled and completed ones do not.
+            await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(2, Arg.Any<CancellationToken>());
+            await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(3, Arg.Any<CancellationToken>());
+            await _waitlistService.Received(2).NotifyForFreedAppointmentAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]
@@ -138,6 +146,12 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             Assert.Equal(3, result.Affected);
             _repository.Received(3).Delete(Arg.Any<Appointment>());
             await _unitOfWork.Received(1).Save(Arg.Any<CancellationToken>());
+
+            // Only the two future, still-occupying occurrences free a slot -> waitlist
+            // notified; the past completed occurrence does not.
+            await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(2, Arg.Any<CancellationToken>());
+            await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(3, Arg.Any<CancellationToken>());
+            await _waitlistService.Received(2).NotifyForFreedAppointmentAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]

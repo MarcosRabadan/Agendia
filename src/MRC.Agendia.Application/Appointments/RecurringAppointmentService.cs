@@ -3,6 +3,7 @@ using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Appointments.Recurrence;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Common;
+using MRC.Agendia.Application.Waitlist;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
@@ -20,6 +21,7 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IAppointmentRepository _repository;
         private readonly IAppointmentSchedulingValidator _schedulingValidator;
         private readonly IBookingConcurrencyGuard _bookingGuard;
+        private readonly IWaitlistService _waitlistService;
         private readonly IAuditLogger _auditLogger;
         private readonly IClock _clock;
         private readonly IUnitOfWork _unitOfWork;
@@ -29,6 +31,7 @@ namespace MRC.Agendia.Application.Appointments
                                            IAppointmentRepository repository,
                                            IAppointmentSchedulingValidator schedulingValidator,
                                            IBookingConcurrencyGuard bookingGuard,
+                                           IWaitlistService waitlistService,
                                            IAuditLogger auditLogger,
                                            IClock clock,
                                            IUnitOfWork unitOfWork,
@@ -38,6 +41,7 @@ namespace MRC.Agendia.Application.Appointments
             _repository = repository;
             _schedulingValidator = schedulingValidator;
             _bookingGuard = bookingGuard;
+            _waitlistService = waitlistService;
             _auditLogger = auditLogger;
             _clock = clock;
             _unitOfWork = unitOfWork;
@@ -135,32 +139,46 @@ namespace MRC.Agendia.Application.Appointments
             var appointments = await GetSeriesOrThrowAsync(seriesId, cancellationToken);
 
             var now = _clock.BusinessNow;
-            var affected = 0;
+            var freedAppointmentIds = new List<int>();
             foreach (var appointment in appointments)
             {
                 if (appointment.StartDate >= now && appointment.Status.OccupiesCapacity())
                 {
                     appointment.Status = AppointmentStatus.Cancelled;
                     _repository.Update(appointment);
-                    affected++;
+                    freedAppointmentIds.Add(appointment.Id);
                 }
             }
 
-            if (affected > 0)
+            if (freedAppointmentIds.Count > 0)
             {
                 await _unitOfWork.Save(cancellationToken);
                 await _auditLogger.LogAsync(
                     AuditActions.AppointmentSeriesCancelled, "AppointmentSeries", seriesId.ToString(),
-                    new { cancelled = affected }, cancellationToken);
+                    new { cancelled = freedAppointmentIds.Count }, cancellationToken);
+
+                // Each cancelled future occurrence frees its slot: notify the waitlist
+                // (best-effort, after the cancellation is persisted) exactly as the
+                // single-appointment cancel does.
+                foreach (var id in freedAppointmentIds)
+                    await _waitlistService.NotifyForFreedAppointmentAsync(id, cancellationToken);
             }
 
-            return new AppointmentSeriesCountResultDto(seriesId, affected);
+            return new AppointmentSeriesCountResultDto(seriesId, freedAppointmentIds.Count);
         }
 
         /// <inheritdoc />
         public async Task<AppointmentSeriesCountResultDto> DeleteSeriesAsync(Guid seriesId, CancellationToken cancellationToken = default)
         {
             var appointments = await GetSeriesOrThrowAsync(seriesId, cancellationToken);
+
+            // Future occurrences that still hold a slot free it on deletion: capture
+            // them before the soft delete so the waitlist can be notified afterwards.
+            var now = _clock.BusinessNow;
+            var freedAppointmentIds = appointments
+                .Where(a => a.StartDate >= now && a.Status.OccupiesCapacity())
+                .Select(a => a.Id)
+                .ToList();
 
             foreach (var appointment in appointments)
                 _repository.Delete(appointment); // interceptor converts this to a soft delete
@@ -169,6 +187,11 @@ namespace MRC.Agendia.Application.Appointments
             await _auditLogger.LogAsync(
                 AuditActions.AppointmentSeriesDeleted, "AppointmentSeries", seriesId.ToString(),
                 new { deleted = appointments.Count }, cancellationToken);
+
+            // Notify the waitlist for each freed slot (best-effort, after the delete is
+            // persisted) exactly as the single-appointment delete does.
+            foreach (var id in freedAppointmentIds)
+                await _waitlistService.NotifyForFreedAppointmentAsync(id, cancellationToken);
 
             return new AppointmentSeriesCountResultDto(seriesId, appointments.Count);
         }
