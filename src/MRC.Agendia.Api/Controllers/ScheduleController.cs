@@ -28,6 +28,7 @@ namespace MRC.Agendia.Api.Controllers
 
         #region Templates
 
+        /// <summary>Returns the schedule templates of a business.</summary>
         [Authorize]
         [HttpGet("templates")]
         [ProducesResponseType(typeof(IEnumerable<ScheduleTemplateDto>), StatusCodes.Status200OK)]
@@ -37,6 +38,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Gets a schedule template by id.</summary>
         [Authorize]
         [HttpGet("templates/{templateId}")]
         [ProducesResponseType(typeof(ScheduleTemplateDto), StatusCodes.Status200OK)]
@@ -48,6 +50,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Creates a schedule template. Staff only.</summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpPost("templates")]
         [ProducesResponseType(typeof(ScheduleTemplateDto), StatusCodes.Status201Created)]
@@ -59,6 +62,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetTemplateById), new { businessId, templateId = result.Id }, result);
         }
 
+        /// <summary>Updates a schedule template and replaces its weekly slots. Staff only.</summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpPut("templates/{templateId}")]
         [ProducesResponseType(typeof(ScheduleTemplateDto), StatusCodes.Status200OK)]
@@ -71,6 +75,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Deletes a schedule template. Staff only.</summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpDelete("templates/{templateId}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -85,6 +90,7 @@ namespace MRC.Agendia.Api.Controllers
 
         #region Generate
 
+        /// <summary>Generates the yearly schedule (templates + overrides) from a setup request. Staff only.</summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpPost("generate")]
         [ProducesResponseType(typeof(GenerateScheduleResponseDto), StatusCodes.Status201Created)]
@@ -96,7 +102,7 @@ namespace MRC.Agendia.Api.Controllers
             return Created($"api/businesses/{businessId}/schedules/templates", result);
         }
 
-        /// <summary>Previsualiza el calendario resultante de un generate sin persistir nada.</summary>
+        /// <summary>Previews the calendar a generate would produce, without persisting anything. Staff only.</summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpPost("preview")]
         [ProducesResponseType(typeof(IEnumerable<CalendarDayDto>), StatusCodes.Status200OK)]
@@ -112,6 +118,7 @@ namespace MRC.Agendia.Api.Controllers
 
         #region Overrides
 
+        /// <summary>Returns the schedule overrides of a business, optionally limited to a date range.</summary>
         [Authorize]
         [HttpGet("overrides")]
         [ProducesResponseType(typeof(IEnumerable<ScheduleOverrideDto>), StatusCodes.Status200OK)]
@@ -121,6 +128,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Gets a schedule override by id.</summary>
         [Authorize]
         [HttpGet("overrides/{overrideId}")]
         [ProducesResponseType(typeof(ScheduleOverrideDto), StatusCodes.Status200OK)]
@@ -132,6 +140,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Creates a schedule override for a specific day. Staff only.</summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpPost("overrides")]
         [ProducesResponseType(typeof(ScheduleOverrideDto), StatusCodes.Status201Created)]
@@ -143,6 +152,7 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetOverrideById), new { businessId, overrideId = result.Id }, result);
         }
 
+        /// <summary>Updates a schedule override. Staff only.</summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpPut("overrides/{overrideId}")]
         [ProducesResponseType(typeof(ScheduleOverrideDto), StatusCodes.Status200OK)]
@@ -155,6 +165,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Deletes a schedule override. Staff only.</summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpDelete("overrides/{overrideId}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -169,6 +180,7 @@ namespace MRC.Agendia.Api.Controllers
 
         #region Effective Schedule
 
+        /// <summary>Returns the effective schedule (template + overrides resolved) for a specific date.</summary>
         [Authorize]
         [HttpGet("effective")]
         [ProducesResponseType(typeof(EffectiveScheduleDto), StatusCodes.Status200OK)]
@@ -179,6 +191,7 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
+        /// <summary>Returns the resolved calendar for a date range.</summary>
         [Authorize]
         [HttpGet("calendar")]
         [ProducesResponseType(typeof(IEnumerable<CalendarDayDto>), StatusCodes.Status200OK)]
