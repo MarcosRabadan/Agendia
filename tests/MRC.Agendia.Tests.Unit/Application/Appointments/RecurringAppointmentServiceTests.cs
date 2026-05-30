@@ -179,6 +179,78 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             await Assert.ThrowsAsync<AppointmentSeriesNotFoundException>(() => _sut.CancelSeriesAsync(Guid.NewGuid()));
         }
 
+        [Fact]
+        public async Task MoveSeriesAsync_ChoqueConOtraDeLaSerie_ReportaCodigoDeColision()
+        {
+            var seriesId = Guid.NewGuid();
+            var a1 = Appt(1, new DateTime(2030, 2, 1, 10, 0, 0), AppointmentStatus.Confirmed, seriesId);
+            a1.EndDate = new DateTime(2030, 2, 1, 10, 30, 0);
+            var a2 = Appt(2, new DateTime(2030, 2, 8, 10, 0, 0), AppointmentStatus.Confirmed, seriesId);
+            a2.EndDate = new DateTime(2030, 2, 8, 10, 30, 0);
+            _repository.GetBySeriesIdAsync(seriesId, Arg.Any<CancellationToken>())
+                .Returns(new List<Appointment> { a1, a2 });
+
+            // Shift +7: a1 -> Feb 8 lands on a2 (still there) and the capacity check
+            // rejects it; a2 -> Feb 15 fits. The a1 skip must carry the collision code,
+            // not the generic conflict, so the silent collapse is visible.
+            _validator.EnsureValidAsync(
+                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(),
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+                .Returns(
+                    Task.FromException(new AppointmentConflictException("El empleado ya tiene otra cita.")),
+                    Task.CompletedTask);
+
+            var result = await _sut.MoveSeriesAsync(seriesId, new MoveAppointmentSeriesDto(NewStartTime: null, DayShift: 7));
+
+            var skip = Assert.Single(result.Skipped);
+            Assert.Equal("SERIES_MOVE_TARGET_COLLISION", skip.Code);
+            Assert.Single(result.Moved);
+            Assert.Equal(new DateTime(2030, 2, 1, 10, 0, 0), a1.StartDate);   // a1 stayed put
+            Assert.Equal(new DateTime(2030, 2, 15, 10, 0, 0), a2.StartDate);  // a2 shifted +7
+        }
+
+        [Fact]
+        public async Task CreateSeriesAsync_TodasOmitidas_RegistraAuditLog()
+        {
+            var dto = WeeklySeries(new DateOnly(2030, 1, 7), until: new DateOnly(2030, 1, 21)); // 3 occurrences
+
+            // Every occurrence is full -> all skipped, none created. The action must
+            // still be audited (skip-only is not "nothing happened").
+            _validator.EnsureValidAsync(
+                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(),
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromException(new AppointmentConflictException("Lleno.")));
+
+            var result = await _sut.CreateSeriesAsync(dto);
+
+            Assert.Empty(result.Created);
+            Assert.NotEmpty(result.Skipped);
+            await _auditLogger.Received(1).LogAsync(
+                Arg.Any<string>(), "AppointmentSeries", Arg.Any<string>(), Arg.Any<object>(), Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task MoveSeriesAsync_TodasOmitidas_RegistraAuditLog()
+        {
+            var seriesId = Guid.NewGuid();
+            var a1 = Appt(1, new DateTime(2030, 2, 1, 10, 0, 0), AppointmentStatus.Confirmed, seriesId);
+            a1.EndDate = new DateTime(2030, 2, 1, 10, 30, 0);
+            _repository.GetBySeriesIdAsync(seriesId, Arg.Any<CancellationToken>())
+                .Returns(new List<Appointment> { a1 });
+
+            _validator.EnsureValidAsync(
+                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(),
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromException(new AppointmentOutsideScheduleException("Cerrado.")));
+
+            var result = await _sut.MoveSeriesAsync(seriesId, new MoveAppointmentSeriesDto(NewStartTime: null, DayShift: 7));
+
+            Assert.Empty(result.Moved);
+            Assert.Single(result.Skipped);
+            await _auditLogger.Received(1).LogAsync(
+                Arg.Any<string>(), "AppointmentSeries", Arg.Any<string>(), Arg.Any<object>(), Arg.Any<CancellationToken>());
+        }
+
         private static CreateAppointmentSeriesDto WeeklySeries(DateOnly start, DateOnly until) => new(
             ClientId: 1, EmployeeId: 2, ServiceId: 3,
             StartTime: new TimeOnly(16, 0),
