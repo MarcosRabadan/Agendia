@@ -241,6 +241,18 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(w => new { w.BusinessId, w.ServiceId, w.Date, w.StartTime, w.Status })
             .HasDatabaseName("IX_WaitlistEntry_Slot");
 
+        // Dedup active waitlist entries at the DB level: JoinAsync is check-then-insert
+        // and can race. Filtered to Waiting (Status = 0) so a client can re-join after
+        // leaving (Cancelled) or being Notified. SQL Server treats equal NULLs as a
+        // duplicate, so "any employee" (EmployeeId NULL) entries are deduped per slot too.
+        // ClientId is placed last (the index is filtered, so leading with it would make
+        // EF drop the standalone FK index on ClientId that other reads still rely on).
+        modelBuilder.Entity<WaitlistEntry>()
+            .HasIndex(w => new { w.BusinessId, w.ServiceId, w.Date, w.StartTime, w.EmployeeId, w.ClientId })
+            .IsUnique()
+            .HasFilter("[Status] = 0")
+            .HasDatabaseName("IX_WaitlistEntry_UniqueWaiting");
+
         // Multiservice (#170): an appointment may include extra services beyond the
         // primary ServiceId. Cascade from the appointment (owned children); restrict
         // on Service so deleting/soft-deleting a service never cascades into bookings.

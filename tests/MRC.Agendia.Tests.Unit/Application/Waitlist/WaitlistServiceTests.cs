@@ -1,4 +1,5 @@
 using AutoMapper;
+using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Availability;
 using MRC.Agendia.Application.Notifications;
 using MRC.Agendia.Application.Waitlist;
@@ -25,6 +26,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         private readonly IAvailabilityService _availability = Substitute.For<IAvailabilityService>();
         private readonly IAppointmentRepository _appointmentRepository = Substitute.For<IAppointmentRepository>();
         private readonly INotificationService _notifications = Substitute.For<INotificationService>();
+        private readonly IBookingConcurrencyGuard _bookingGuard = Substitute.For<IBookingConcurrencyGuard>();
         private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
         private readonly IMapper _mapper = Substitute.For<IMapper>();
         private readonly WaitlistService _sut;
@@ -34,8 +36,11 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
             _clientRepository.GetByUserIdAsync(UserId, Arg.Any<CancellationToken>())
                 .Returns(new Client { Id = 1, Name = "Ana", UserId = UserId });
             _mapper.Map<WaitlistEntryDto>(Arg.Any<WaitlistEntry>()).Returns(ci => ToDto(ci.Arg<WaitlistEntry>()));
+            // The guard just runs the critical section directly in unit tests.
+            _bookingGuard.ExecuteSerializedAsync(Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
+                .Returns(ci => ci.Arg<Func<Task>>()());
             _sut = new WaitlistService(
-                _repository, _clientRepository, _availability, _appointmentRepository, _notifications, _unitOfWork, _mapper);
+                _repository, _clientRepository, _availability, _appointmentRepository, _notifications, _bookingGuard, _unitOfWork, _mapper);
         }
 
         private JoinWaitlistDto Dto() => new(BusinessId: 10, ServiceId: 3, Date: new DateOnly(2030, 6, 7), StartTime: new TimeOnly(16, 0), EmployeeId: 2);
@@ -141,6 +146,30 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
             Assert.Equal(WaitlistStatus.Notified, waiting.Status);
             await _unitOfWork.Received(1).Save(Arg.Any<CancellationToken>());
             await _notifications.Received(1).SendWaitlistAvailabilityAsync(7, Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task NotifyForFreedAppointment_SerializaElTriggerPorEmpleadoYDia()
+        {
+            _appointmentRepository.GetByIdWithDetailsAsync(50, Arg.Any<CancellationToken>())
+                .Returns(new Appointment
+                {
+                    Id = 50,
+                    EmployeeId = 2,
+                    ServiceId = 3,
+                    StartDate = new DateTime(2030, 6, 7, 16, 0, 0),
+                    Employee = new Employee { Id = 2, BusinessId = 10 }
+                });
+            _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
+                .Returns(new WaitlistEntry { Id = 7, ClientId = 1, Status = WaitlistStatus.Waiting });
+            SlotCapacity(1);
+            _notifications.SendWaitlistAvailabilityAsync(7, Arg.Any<CancellationToken>()).Returns(true);
+
+            await _sut.NotifyForFreedAppointmentAsync(50);
+
+            // The select-recheck-notify-mark section ran inside the per-employee/day lock.
+            await _bookingGuard.Received(1).ExecuteSerializedAsync(
+                2, new DateOnly(2030, 6, 7), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]

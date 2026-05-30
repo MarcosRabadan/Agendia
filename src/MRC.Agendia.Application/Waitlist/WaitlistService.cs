@@ -1,4 +1,5 @@
 using AutoMapper;
+using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Availability;
 using MRC.Agendia.Application.Notifications;
 using MRC.Agendia.Application.Waitlist.DTO;
@@ -16,6 +17,7 @@ namespace MRC.Agendia.Application.Waitlist
         private readonly IAvailabilityService _availabilityService;
         private readonly IAppointmentRepository _appointmentRepository;
         private readonly INotificationService _notificationService;
+        private readonly IBookingConcurrencyGuard _bookingGuard;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
@@ -25,6 +27,7 @@ namespace MRC.Agendia.Application.Waitlist
             IAvailabilityService availabilityService,
             IAppointmentRepository appointmentRepository,
             INotificationService notificationService,
+            IBookingConcurrencyGuard bookingGuard,
             IUnitOfWork unitOfWork,
             IMapper mapper)
         {
@@ -33,6 +36,7 @@ namespace MRC.Agendia.Application.Waitlist
             _availabilityService = availabilityService;
             _appointmentRepository = appointmentRepository;
             _notificationService = notificationService;
+            _bookingGuard = bookingGuard;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
@@ -111,35 +115,46 @@ namespace MRC.Agendia.Application.Waitlist
 
                 var date = DateOnly.FromDateTime(appointment.StartDate);
                 var startTime = TimeOnly.FromDateTime(appointment.StartDate);
+                var businessId = appointment.Employee.BusinessId;
+                var serviceId = appointment.ServiceId;
+                var employeeId = appointment.EmployeeId;
 
-                var entry = await _repository.GetNextWaitingForSlotAsync(
-                    appointment.Employee.BusinessId, appointment.ServiceId, date, startTime, appointment.EmployeeId, cancellationToken);
-                if (entry is null)
-                    return;
+                // Serialize select-recheck-notify-mark per employee+day (the same key
+                // booking uses) so two concurrent cancellations of the same slot cannot
+                // pick the same Waiting entry and notify it twice, nor interleave a Leave
+                // with the Notified write. On the in-memory test store the guard just runs
+                // the action (no shared DB to race against).
+                await _bookingGuard.ExecuteSerializedAsync(employeeId, date, async () =>
+                {
+                    var entry = await _repository.GetNextWaitingForSlotAsync(
+                        businessId, serviceId, date, startTime, employeeId, cancellationToken);
+                    if (entry is null)
+                        return;
 
-                // Re-check the slot actually has room now before notifying. The freed
-                // appointment may not have opened a seat (employee MaxConcurrentAppointments
-                // > 1), and an "any-employee" entry (EmployeeId null) only wants a slot that
-                // is genuinely free across the business. Skip if it is still full (0) or no
-                // longer schedulable (null) so we do not raise a false "hay hueco" alert.
-                var capacity = await _availabilityService.GetSlotCapacityAsync(
-                    entry.BusinessId, entry.Date, entry.StartTime, entry.ServiceId, entry.EmployeeId, cancellationToken);
-                if (capacity is null or <= 0)
-                    return;
+                    // Re-check the slot actually has room now before notifying. The freed
+                    // appointment may not have opened a seat (employee MaxConcurrentAppointments
+                    // > 1), and an "any-employee" entry (EmployeeId null) only wants a slot that
+                    // is genuinely free across the business. Skip if it is still full (0) or no
+                    // longer schedulable (null) so we do not raise a false "hay hueco" alert.
+                    var capacity = await _availabilityService.GetSlotCapacityAsync(
+                        entry.BusinessId, entry.Date, entry.StartTime, entry.ServiceId, entry.EmployeeId, cancellationToken);
+                    if (capacity is null or <= 0)
+                        return;
 
-                // Send first, then mark Notified only if it actually went out.
-                // Marking before sending (and swallowing a failed send) would leave
-                // the entry stuck on Notified -> GetNextWaitingForSlotAsync never
-                // re-selects it, so the freed slot is lost with no retry. If the send
-                // succeeds but the Save below fails, the worst case is a duplicate
-                // notification on a later freed slot - preferable to a lost one.
-                var notified = await _notificationService.SendWaitlistAvailabilityAsync(entry.Id, cancellationToken);
-                if (!notified)
-                    return;
+                    // Send first, then mark Notified only if it actually went out.
+                    // Marking before sending (and swallowing a failed send) would leave
+                    // the entry stuck on Notified -> GetNextWaitingForSlotAsync never
+                    // re-selects it, so the freed slot is lost with no retry. If the send
+                    // succeeds but the Save below fails, the worst case is a duplicate
+                    // notification on a later freed slot - preferable to a lost one.
+                    var notified = await _notificationService.SendWaitlistAvailabilityAsync(entry.Id, cancellationToken);
+                    if (!notified)
+                        return;
 
-                entry.Status = WaitlistStatus.Notified;
-                _repository.Update(entry);
-                await _unitOfWork.Save(cancellationToken);
+                    entry.Status = WaitlistStatus.Notified;
+                    _repository.Update(entry);
+                    await _unitOfWork.Save(cancellationToken);
+                }, cancellationToken);
             }
             catch
             {
