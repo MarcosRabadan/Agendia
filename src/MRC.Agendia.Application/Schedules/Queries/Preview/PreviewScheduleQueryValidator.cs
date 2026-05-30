@@ -1,5 +1,4 @@
 using FluentValidation;
-using MRC.Agendia.Application.Schedules.Commands;
 using MRC.Agendia.Application.Schedules.Commands.Generation;
 
 namespace MRC.Agendia.Application.Schedules.Queries.Preview
