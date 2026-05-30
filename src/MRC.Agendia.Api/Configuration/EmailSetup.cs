@@ -43,6 +43,25 @@ namespace MRC.Agendia.Api.Configuration
                     "Email__Smtp__User, Email__Smtp__Password, Email__Smtp__Port, Email__Smtp__EnableSsl.");
             }
 
+            // User and Password must be set together. A half-configured credential (one
+            // without the other) would silently fall back to an anonymous send that fails
+            // at delivery time (and is swallowed for best-effort emails). Both empty is a
+            // valid intentional anonymous relay; warn so it is a conscious choice.
+            var hasUser = !string.IsNullOrWhiteSpace(configuration["Email:Smtp:User"]);
+            var hasPassword = !string.IsNullOrWhiteSpace(configuration["Email:Smtp:Password"]);
+            if (hasUser != hasPassword)
+            {
+                throw new InvalidOperationException(
+                    "Email:Smtp:User y Email:Smtp:Password deben configurarse juntos, o ninguno para un relay anonimo. " +
+                    "Configura ambos via Email__Smtp__User / Email__Smtp__Password.");
+            }
+            if (!hasUser)
+            {
+                Log.Warning(
+                    "Email: SMTP sin credenciales (Email:Smtp:User vacio) -> envio anonimo contra {Host}. " +
+                    "Asegurate de que el relay acepta envio sin autenticacion.", host);
+            }
+
             services.AddScoped<IEmailSender, SmtpEmailSender>();
             return services;
         }
