@@ -127,7 +127,7 @@ namespace MRC.Agendia.Infrastructure.Notifications
 
             try
             {
-                await _emailSender.SendAsync(email, subject, body);
+                await _emailSender.SendAsync(email, subject, body, cancellationToken);
                 _logger.LogInformation("Notification waitlist email sent for entry {Id} to {Email}.", waitlistEntryId, email);
                 return true;
             }
@@ -198,7 +198,7 @@ namespace MRC.Agendia.Infrastructure.Notifications
 
             try
             {
-                await _emailSender.SendAsync(email, subject, body);
+                await _emailSender.SendAsync(email, subject, body, cancellationToken);
                 _logger.LogInformation(
                     "Notification {Kind} email sent for appointment {Id} to {Email}.", kind, appointmentId, email);
                 return true;

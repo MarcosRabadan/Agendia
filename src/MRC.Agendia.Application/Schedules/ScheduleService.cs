@@ -203,7 +203,13 @@ namespace MRC.Agendia.Application.Schedules
             var effective = await _scheduleResolver.GetEffectiveScheduleAsync(businessId, date, cancellationToken);
             var templateEntities = await _templateRepository.GetByBusinessIdAsync(businessId, cancellationToken);
             var templates = _mapper.Map<List<ScheduleTemplateDto>>(templateEntities);
-            var activeTemplate = templates.FirstOrDefault(t => t.EffectiveFrom <= date && t.EffectiveTo >= date);
+            // Same tie-break as ScheduleResolver/repository when ranges overlap: a
+            // default template wins. Normally ranges do not overlap and exactly one
+            // matches, so this only disambiguates the (guarded) overlap edge case.
+            var activeTemplate = templates
+                .Where(t => t.EffectiveFrom <= date && t.EffectiveTo >= date)
+                .OrderByDescending(t => t.IsDefault)
+                .FirstOrDefault();
 
             return new EffectiveScheduleDto(
                 Date: effective.Date,
