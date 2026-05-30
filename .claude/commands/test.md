@@ -9,7 +9,7 @@ Añade tests al código indicado en `$ARGUMENTS` (ruta de fichero o nombre de cl
 ## Reglas
 
 1. **Framework:** xUnit (es el estándar de .NET para tests).
-2. **Mocking:** Moq o NSubstitute (revisa qué hay ya en `tests/MRC.Agendia.API.Tests` y mantén consistencia).
+2. **Mocking:** NSubstitute (es el que usa el proyecto; revisa `tests/MRC.Agendia.Tests.Unit` y mantén consistencia).
 3. **Cobertura mínima por clase pública:**
    - Happy path
    - Validaciones que lanzan excepción

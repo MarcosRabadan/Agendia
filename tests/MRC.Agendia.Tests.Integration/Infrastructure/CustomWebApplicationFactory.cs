@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -102,6 +103,11 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
                 // Capture push notifications instead of logging them.
                 services.RemoveAll<IPushSender>();
                 services.AddSingleton<IPushSender>(PushSender);
+
+                // Ephemeral DataProtection keys: never touch the on-disk key ring
+                // (DataProtection-Keys), so the suite is portable to a locked-down CI.
+                // Reset/confirm tokens are generated and consumed within the same run.
+                services.AddSingleton<IDataProtectionProvider, EphemeralDataProtectionProvider>();
             });
         }
     }
