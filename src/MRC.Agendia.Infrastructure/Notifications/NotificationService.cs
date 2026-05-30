@@ -61,23 +61,37 @@ namespace MRC.Agendia.Infrastructure.Notifications
 
         public async Task<bool> SendWaitlistAvailabilityAsync(int waitlistEntryId, CancellationToken cancellationToken = default)
         {
+            WaitlistEntry? entry;
             try
             {
-                var entry = await _waitlistRepository.GetByIdWithDetailsAsync(waitlistEntryId, cancellationToken);
-                if (entry is null)
-                {
-                    _logger.LogWarning("Notification waitlist: entry {Id} not found or participant deleted; skipping.", waitlistEntryId);
-                    return true;
-                }
+                entry = await _waitlistRepository.GetByIdWithDetailsAsync(waitlistEntryId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Loading failed (DB hiccup): transient, let the caller retry.
+                _logger.LogError(ex, "Notification waitlist: loading entry {Id} failed.", waitlistEntryId);
+                return false;
+            }
 
+            if (entry is null)
+            {
+                _logger.LogWarning("Notification waitlist: entry {Id} not found or participant deleted; skipping.", waitlistEntryId);
+                return true;
+            }
+
+            // Compose OUTSIDE the delivery try (see SendAsync): a build error is permanent,
+            // reported as handled so the freed-slot trigger does not re-select it forever.
+            string subject, body, pushSummary;
+            string? clientUserId, email;
+            try
+            {
                 var culture = ResolveCulture(entry.Service.Business?.DefaultLanguage);
-
-                var subject = NotificationText.Get("Subject_Waitlist", culture);
+                subject = NotificationText.Get("Subject_Waitlist", culture);
                 var slot = NotificationText.Format(
                     "Waitlist_SlotFormat", culture,
                     entry.Date.ToString("d", culture),
                     entry.StartTime.ToString("t", culture));
-                var body =
+                body =
                     $"<p>{NotificationText.Format("Greeting", culture, Encode(entry.Client!.Name))}</p>" +
                     $"<p>{NotificationText.Get("Waitlist_Intro", culture)}</p>" +
                     "<ul>" +
@@ -85,28 +99,38 @@ namespace MRC.Agendia.Infrastructure.Notifications
                     $"<li><strong>{NotificationText.Get("Label_Date", culture)}</strong> {slot}</li>" +
                     "</ul>" +
                     $"<p>{NotificationText.Get("Waitlist_Outro", culture)}</p>";
+                pushSummary = $"{entry.Service.Name} - {entry.Date.ToString("d", culture)} {entry.StartTime.ToString("t", culture)}";
+                clientUserId = entry.Client?.UserId;
+                email = entry.Client?.Email;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Notification waitlist: building the message for entry {Id} failed.", waitlistEntryId);
+                return true;
+            }
 
-                // Push first, best-effort and independent of email.
-                await TrySendPushAsync(
-                    entry.Client?.UserId, subject,
-                    $"{entry.Service.Name} - {entry.Date.ToString("d", culture)} {entry.StartTime.ToString("t", culture)}",
-                    new Dictionary<string, string> { ["waitlistEntryId"] = waitlistEntryId.ToString(), ["type"] = "waitlist" },
-                    cancellationToken);
+            // Push first, best-effort and independent of email.
+            await TrySendPushAsync(
+                clientUserId, subject, pushSummary,
+                new Dictionary<string, string> { ["waitlistEntryId"] = waitlistEntryId.ToString(), ["type"] = "waitlist" },
+                cancellationToken);
 
-                var email = entry.Client?.Email;
-                if (string.IsNullOrWhiteSpace(email))
-                {
-                    _logger.LogWarning("Notification waitlist: entry {Id} client has no email; skipping email.", waitlistEntryId);
-                    return true;
-                }
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                _logger.LogWarning("Notification waitlist: entry {Id} client has no email; skipping email.", waitlistEntryId);
+                return true;
+            }
 
+            try
+            {
                 await _emailSender.SendAsync(email, subject, body);
                 _logger.LogInformation("Notification waitlist email sent for entry {Id} to {Email}.", waitlistEntryId, email);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Notification waitlist failed for entry {Id}.", waitlistEntryId);
+                // Delivery failure is transient: report it so the trigger can retry later.
+                _logger.LogError(ex, "Notification waitlist: sending email for entry {Id} failed.", waitlistEntryId);
                 return false;
             }
         }
@@ -117,45 +141,70 @@ namespace MRC.Agendia.Infrastructure.Notifications
             Func<Appointment, CultureInfo, (string Subject, string Body)> compose,
             CancellationToken cancellationToken)
         {
+            Appointment? appointment;
             try
             {
-                var appointment = await _appointmentRepository.GetByIdWithDetailsAsync(appointmentId, cancellationToken);
-                if (appointment is null)
-                {
-                    _logger.LogWarning("Notification {Kind}: appointment {Id} not found.", kind, appointmentId);
-                    return true;
-                }
+                appointment = await _appointmentRepository.GetByIdWithDetailsAsync(appointmentId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Loading failed (DB hiccup): transient, let the caller retry.
+                _logger.LogError(ex, "Notification {Kind}: loading appointment {Id} failed.", kind, appointmentId);
+                return false;
+            }
 
+            if (appointment is null)
+            {
+                _logger.LogWarning("Notification {Kind}: appointment {Id} not found.", kind, appointmentId);
+                return true;
+            }
+
+            // Compose OUTSIDE the delivery try. A build error (e.g. a required
+            // navigation is missing) is a permanent data problem, not a transient
+            // delivery failure, so it is reported as handled (return true) to avoid the
+            // reminder job retrying it forever - and logged so it can be triaged.
+            string subject, body, pushSummary;
+            string? clientUserId, email;
+            try
+            {
                 var culture = ResolveCulture(appointment.Employee?.Business?.DefaultLanguage);
-                var (subject, body) = compose(appointment, culture);
+                (subject, body) = compose(appointment, culture);
+                pushSummary = PushSummary(appointment, culture);
+                clientUserId = appointment.Client?.UserId;
+                email = appointment.Client?.Email;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Notification {Kind}: building the message for appointment {Id} failed.", kind, appointmentId);
+                return true;
+            }
 
-                // Push first, best-effort and independent of email: a client may have
-                // a device registered even without an email on file.
-                await TrySendPushAsync(
-                    appointment.Client?.UserId, subject, PushSummary(appointment, culture),
-                    new Dictionary<string, string> { ["appointmentId"] = appointmentId.ToString(), ["type"] = kind },
-                    cancellationToken);
+            // Push first, best-effort and independent of email: a client may have
+            // a device registered even without an email on file.
+            await TrySendPushAsync(
+                clientUserId, subject, pushSummary,
+                new Dictionary<string, string> { ["appointmentId"] = appointmentId.ToString(), ["type"] = kind },
+                cancellationToken);
 
-                var email = appointment.Client?.Email;
-                if (string.IsNullOrWhiteSpace(email))
-                {
-                    _logger.LogWarning(
-                        "Notification {Kind}: appointment {Id} client has no email; skipping email.", kind, appointmentId);
-                    return true;
-                }
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                _logger.LogWarning(
+                    "Notification {Kind}: appointment {Id} client has no email; skipping email.", kind, appointmentId);
+                return true;
+            }
 
+            try
+            {
                 await _emailSender.SendAsync(email, subject, body);
-
                 _logger.LogInformation(
                     "Notification {Kind} email sent for appointment {Id} to {Email}.", kind, appointmentId, email);
                 return true;
             }
             catch (Exception ex)
             {
-                // Unexpected/transient failure: report it so callers (e.g. the
-                // reminder job) can avoid marking the notification as delivered.
-                _logger.LogError(
-                    ex, "Notification {Kind} failed for appointment {Id}.", kind, appointmentId);
+                // Delivery failure is transient: report it so callers (e.g. the reminder
+                // job) avoid marking the notification as delivered and retry later.
+                _logger.LogError(ex, "Notification {Kind}: sending email for appointment {Id} failed.", kind, appointmentId);
                 return false;
             }
         }

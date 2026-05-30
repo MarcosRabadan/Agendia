@@ -32,11 +32,15 @@ namespace MRC.Agendia.Infrastructure.Email
             var enableSsl = !bool.TryParse(smtp["EnableSsl"], out var ssl) || ssl;
             var from = smtp["From"]!;
             var fromName = smtp["FromName"] ?? "Agendia";
+            // Bound the wait on a hung relay (SmtpClient defaults to 100s). Matters most
+            // for the reset/confirm emails, awaited on the request thread (not best-effort).
+            var timeoutSeconds = int.TryParse(smtp["TimeoutSeconds"], out var ts) && ts > 0 ? ts : 15;
 
             using var client = new SmtpClient(host, port)
             {
                 EnableSsl = enableSsl,
-                DeliveryMethod = SmtpDeliveryMethod.Network
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                Timeout = timeoutSeconds * 1000
             };
 
             if (!string.IsNullOrWhiteSpace(user))
@@ -51,7 +55,12 @@ namespace MRC.Agendia.Infrastructure.Email
             };
             message.To.Add(toEmail);
 
-            await client.SendMailAsync(message, cancellationToken);
+            // SmtpClient.Timeout governs the synchronous internals; for SendMailAsync the
+            // token is what actually bounds a hung relay. Link the caller's token with a
+            // CancelAfter so a stuck send fails within the timeout instead of waiting ~100s.
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
+            await client.SendMailAsync(message, timeoutCts.Token);
         }
     }
 }

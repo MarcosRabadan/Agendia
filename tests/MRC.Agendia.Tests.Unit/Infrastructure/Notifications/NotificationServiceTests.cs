@@ -242,5 +242,28 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Notifications
                 Arg.Any<string>(),
                 Arg.Is<string>(b => b.Contains("Bonjour")));
         }
+
+        [Fact]
+        public async Task Reminder_SiLaComposicionFalla_DevuelveTrue_YNoEnvia()
+        {
+            // Required navigation missing (Business) -> building the body throws. That is
+            // a permanent data error, not a transient delivery failure: it must be handled
+            // (true) so the reminder job does not retry it forever, and no email is sent.
+            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>())
+                .Returns(new Appointment
+                {
+                    Id = 5,
+                    StartDate = new DateTime(2027, 1, 4, 9, 0, 0, DateTimeKind.Utc),
+                    EndDate = new DateTime(2027, 1, 4, 9, 30, 0, DateTimeKind.Utc),
+                    Client = new Client { Name = "Ana", Email = "ana@test.com" },
+                    Service = new Service { Name = "Corte" },
+                    Employee = new Employee { FullName = "Luis", Business = null! }
+                });
+
+            var handled = await _sut.SendAppointmentReminderAsync(5);
+
+            Assert.True(handled);
+            await _emailSender.DidNotReceiveWithAnyArgs().SendAsync(default!, default!, default!);
+        }
     }
 }
