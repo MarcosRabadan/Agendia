@@ -14,6 +14,7 @@ namespace MRC.Agendia.Application.Appointments
     public class RecurringAppointmentService : IRecurringAppointmentService
     {
         private const string MonthWithoutDayCode = "RECURRENCE_MONTH_WITHOUT_DAY";
+        private const string SeriesMoveTargetCollisionCode = "SERIES_MOVE_TARGET_COLLISION";
 
         private readonly IServiceRepository _serviceRepository;
         private readonly IAppointmentRepository _repository;
@@ -115,7 +116,9 @@ namespace MRC.Agendia.Application.Appointments
                 }
             }
 
-            if (created.Count > 0)
+            // Audit even a skip-only outcome: the staff acted on the series and every
+            // occurrence being rejected (closed/full/past) must still leave a trace.
+            if (created.Count > 0 || skipped.Count > 0)
             {
                 await _auditLogger.LogAsync(
                     AuditActions.AppointmentSeriesCreated, "AppointmentSeries", seriesId.ToString(),
@@ -211,13 +214,32 @@ namespace MRC.Agendia.Application.Appointments
 
                     moved.Add(appointment);
                 }
+                catch (AppointmentConflictException ex)
+                {
+                    // A capacity conflict whose target overlaps another still-active
+                    // occurrence of THIS series is the series colliding with itself (the
+                    // shift landed it on a sibling). Surface that with a distinct code so
+                    // the collapse is not lost inside a generic external conflict. This is
+                    // an order-dependent signal: with a uniform shift the final state has
+                    // no real overlap, so it flags an occurrence stranded because a sibling
+                    // had not been moved out of the way yet, not a persistent double-book.
+                    var collidesWithSibling = OverlapsActiveSibling(appointments, appointment, newStart, newEnd);
+                    skipped.Add(new SkippedOccurrenceDto(
+                        originalDate,
+                        collidesWithSibling ? SeriesMoveTargetCollisionCode : ex.Code,
+                        collidesWithSibling
+                            ? $"La ocurrencia del {originalDate:yyyy-MM-dd} choca con otra cita de la misma serie en la fecha destino."
+                            : ex.Message));
+                }
                 catch (DomainException ex) when (IsDateSpecific(ex))
                 {
                     skipped.Add(new SkippedOccurrenceDto(originalDate, ex.Code, ex.Message));
                 }
             }
 
-            if (moved.Count > 0)
+            // Audit even a skip-only outcome: a move that rejected every occurrence is
+            // still a staff action on the series and must leave a trace.
+            if (moved.Count > 0 || skipped.Count > 0)
             {
                 await _auditLogger.LogAsync(
                     AuditActions.AppointmentSeriesMoved, "AppointmentSeries", seriesId.ToString(),
@@ -243,6 +265,17 @@ namespace MRC.Agendia.Application.Appointments
             => ex is AppointmentOutsideScheduleException
                or AppointmentConflictException
                or InvalidAppointmentTimeException;
+
+        // True when the moved occurrence's new slot overlaps another still-active
+        // occurrence of the same series for the same employee. Uses each sibling's
+        // current position, which already reflects earlier moves in this run.
+        private static bool OverlapsActiveSibling(
+            IEnumerable<Appointment> series, Appointment moving, DateTime newStart, DateTime newEnd)
+            => series.Any(other =>
+                other.Id != moving.Id
+                && other.EmployeeId == moving.EmployeeId
+                && OccupiesSlot(other.Status)
+                && newStart < other.EndDate && newEnd > other.StartDate);
 
         private static bool OccupiesSlot(AppointmentStatus status)
             => status is AppointmentStatus.Pending or AppointmentStatus.Confirmed;
