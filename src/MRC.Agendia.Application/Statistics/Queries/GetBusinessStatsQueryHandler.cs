@@ -18,8 +18,8 @@ namespace MRC.Agendia.Application.Statistics.Queries
 
         public async Task<BusinessStatsDto> Handle(GetBusinessStatsQuery request, CancellationToken cancellationToken)
         {
-            // Only the business owner (or an admin) can see its statistics.
-            await _auth.EnsureCanManageBusinessAsync(request.BusinessId, cancellationToken);
+            // The business staff (owner or an active employee) or an admin can see its statistics.
+            await _auth.EnsureCanManageBusinessResourcesAsync(request.BusinessId, cancellationToken);
 
             // [From, To] inclusive -> [from 00:00, (to+1) 00:00) half-open window.
             var fromInclusive = request.From.ToDateTime(TimeOnly.MinValue);

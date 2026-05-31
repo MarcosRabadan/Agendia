@@ -69,6 +69,19 @@ namespace MRC.Agendia.Tests.Integration.Statistics
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
+        [Fact]
+        public async Task GetStats_ComoEmpleado_DevuelveMetricas()
+        {
+            var owner = await RegisterOwnerAsync("stats-emp");
+            await SeedAppointmentsAsync(owner.Business.Id);
+            var employeeToken = await RegisterEmployeeAndGetTokenAsync(owner, "stats-emp");
+
+            var stats = await GetStatsAsync(employeeToken, owner.Business.Id, "2026-05-01", "2026-05-31");
+
+            Assert.Equal(3, stats.TotalAppointments);
+            Assert.Equal(30m, stats.TotalRevenue);
+        }
+
         // ----- Helpers -----
 
         private async Task SeedAppointmentsAsync(int businessId)
@@ -125,6 +138,29 @@ namespace MRC.Agendia.Tests.Integration.Statistics
             var response = await _client.PostAsJsonAsync("/api/auth/register/client", dto);
             response.EnsureSuccessStatusCode();
             var auth = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
+            Assert.NotNull(auth);
+            return auth!.AccessToken;
+        }
+
+        private async Task<string> RegisterEmployeeAndGetTokenAsync(RegisteredOwner owner, string slug)
+        {
+            var unique = Guid.NewGuid().ToString("N");
+            var email = $"{slug}-emp-{unique}@test.local";
+            const string password = "Employee1234!";
+
+            // The owner creates the employee account, then the employee logs in.
+            var dto = new RegisterEmployeeDto(owner.Business.Id, email, password, $"Empleado {slug}", "600222333");
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/register/employee")
+            {
+                Content = JsonContent.Create(dto)
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
+            var response = await _client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var login = await _client.PostAsJsonAsync("/api/auth/login", new { email, password });
+            login.EnsureSuccessStatusCode();
+            var auth = await login.Content.ReadFromJsonAsync<AuthResponseDto>();
             Assert.NotNull(auth);
             return auth!.AccessToken;
         }
