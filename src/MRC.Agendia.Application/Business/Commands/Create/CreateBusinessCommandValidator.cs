@@ -1,5 +1,6 @@
 using FluentValidation;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Domain.Enums;
 
 namespace MRC.Agendia.Application.Business.Commands.Create
 {
@@ -20,6 +21,9 @@ namespace MRC.Agendia.Application.Business.Commands.Create
             RuleFor(x => x.Dto.DefaultLanguage)
                 .Must(lang => SupportedLanguages.IsSupported(lang))
                 .WithMessage("El idioma no esta soportado. Valores validos: es, en, fr.");
+            RuleFor(x => x.Dto.DefaultAppointmentStatus)
+                .Must(s => s.IsValidInitialStatus())
+                .WithMessage("El estado inicial por defecto solo puede ser Pending o Confirmed.");
         }
     }
 }

@@ -1,4 +1,5 @@
 using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Domain.Enums;
 
 namespace MRC.Agendia.Domain.Interfaces
 {
@@ -148,5 +149,14 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The cancellation window in hours, or null when missing or not configured.</returns>
         Task<int?> GetCancellationWindowHoursAsync(int appointmentId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// The owning business's default initial appointment status, resolved through
+        /// the employee. Falls back to Pending when the employee or business is missing.
+        /// </summary>
+        /// <param name="employeeId">Employee the appointment is booked with.</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>The business's configured default initial status (Pending as fallback).</returns>
+        Task<AppointmentStatus> GetBusinessDefaultStatusByEmployeeAsync(int employeeId, CancellationToken cancellationToken = default);
     }
 }

@@ -110,6 +110,11 @@ namespace MRC.Agendia.Application.Appointments
                         cancellationToken: cancellationToken);
 
                     var created = _mapper.Map<Appointment>(dto);
+                    // Initial status: staff may choose it per booking (Pending/Confirmed
+                    // only); anyone else (a client self-booking) gets the business default.
+                    created.Status = IsStaff() && dto.Status is { } chosen && chosen.IsValidInitialStatus()
+                        ? chosen
+                        : await _repository.GetBusinessDefaultStatusByEmployeeAsync(dto.EmployeeId, cancellationToken);
                     // Multiservice (#170): attach the extra services so EF inserts
                     // them with the appointment (cascade via the navigation).
                     if (dto.ExtraServiceIds is { Count: > 0 })

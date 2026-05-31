@@ -1,4 +1,5 @@
 using FluentValidation;
+using MRC.Agendia.Domain.Enums;
 
 namespace MRC.Agendia.Application.Appointments.Commands.Crud
 {
@@ -17,6 +18,9 @@ namespace MRC.Agendia.Application.Appointments.Commands.Crud
                 .GreaterThan(x => x.Dto.StartDate)
                 .WithMessage("EndDate debe ser posterior a StartDate.");
             RuleFor(x => x.Dto.Notes).MaximumLength(2000);
+            RuleFor(x => x.Dto.Status)
+                .Must(s => !s.HasValue || s.Value.IsValidInitialStatus())
+                .WithMessage("El estado inicial solo puede ser Pending o Confirmed.");
             When(x => x.Dto.ExtraServiceIds is { Count: > 0 }, () =>
             {
                 RuleForEach(x => x.Dto.ExtraServiceIds).GreaterThan(0);

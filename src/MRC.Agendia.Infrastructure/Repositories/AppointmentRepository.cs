@@ -171,5 +171,17 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .Where(a => a.Id == appointmentId)
                 .Select(a => a.Employee.Business.CancellationWindowHours)
                 .FirstOrDefaultAsync(cancellationToken);
+
+        /// <inheritdoc />
+        public Task<AppointmentStatus> GetBusinessDefaultStatusByEmployeeAsync(int employeeId, CancellationToken cancellationToken = default)
+            // Resolve through employee -> business. IgnoreQueryFilters so a soft-deleted
+            // business does not drop the row; a missing employee falls back to
+            // default(AppointmentStatus) == Pending.
+            => Context.Employees
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Where(e => e.Id == employeeId)
+                .Select(e => e.Business.DefaultAppointmentStatus)
+                .FirstOrDefaultAsync(cancellationToken);
     }
 }

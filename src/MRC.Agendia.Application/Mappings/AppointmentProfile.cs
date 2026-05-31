@@ -16,7 +16,8 @@ namespace MRC.Agendia.Application.Mappings
                 .ForCtorParam("ExtraServiceIds",
                     opt => opt.MapFrom(src => src.ExtraServices.Select(e => e.ServiceId).ToList()));
             CreateMap<CreateAppointmentDto, Appointment>()
-                .ForMember(dest => dest.Status, opt => opt.MapFrom(_ => AppointmentStatus.Pending))
+                // Status is resolved in the service (business default or staff override).
+                .ForMember(dest => dest.Status, opt => opt.Ignore())
                 .ForMember(dest => dest.ExtraServices, opt => opt.Ignore());
             CreateMap<UpdateAppointmentDto, Appointment>()
                 .ForMember(dest => dest.ExtraServices, opt => opt.Ignore());

@@ -1,5 +1,6 @@
 using MRC.Agendia.Domain.Common;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Domain.Enums;
 
 namespace MRC.Agendia.Domain.Entities
 {
@@ -28,6 +29,12 @@ namespace MRC.Agendia.Domain.Entities
         /// localized email/push templates.
         /// </summary>
         public string DefaultLanguage { get; set; } = SupportedLanguages.Spanish;
+
+        /// <summary>
+        /// Initial status applied to new appointments of this business (Pending or
+        /// Confirmed). Staff may override it per booking; clients always get this default.
+        /// </summary>
+        public AppointmentStatus DefaultAppointmentStatus { get; set; } = AppointmentStatus.Pending;
 
         public ICollection<Employee> Employees { get; set; } = new List<Employee>();
         public ICollection<Service> Services { get; set; } = new List<Service>();
