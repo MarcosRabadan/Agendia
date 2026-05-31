@@ -104,6 +104,72 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         }
 
         [Fact]
+        public async Task CreateAsync_StaffEligeEstadoInicial_UsaEseEstado()
+        {
+            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = 11 });
+            _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
+            // Default caller is staff (Employee).
+
+            var dto = new CreateAppointmentDto(
+                ClientId: 1, EmployeeId: 2, ServiceId: 3,
+                StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
+                EndDate: new DateTime(2030, 1, 1, 9, 30, 0, DateTimeKind.Utc),
+                Notes: null,
+                Status: AppointmentStatus.Confirmed);
+
+            await _sut.CreateAsync(dto);
+
+            await _repository.Received(1).AddAsync(
+                Arg.Is<Appointment>(a => a.Status == AppointmentStatus.Confirmed), Arg.Any<CancellationToken>());
+            // Staff override wins, so the business default is not consulted.
+            await _repository.DidNotReceive().GetBusinessDefaultStatusByEmployeeAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task CreateAsync_ClienteSinEstado_UsaElDefaultDelNegocio()
+        {
+            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = 11 });
+            _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
+            _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a client
+            _repository.GetBusinessDefaultStatusByEmployeeAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(AppointmentStatus.Confirmed);
+
+            var dto = new CreateAppointmentDto(
+                ClientId: 1, EmployeeId: 2, ServiceId: 3,
+                StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
+                EndDate: new DateTime(2030, 1, 1, 9, 30, 0, DateTimeKind.Utc),
+                Notes: null);
+
+            await _sut.CreateAsync(dto);
+
+            await _repository.Received(1).AddAsync(
+                Arg.Is<Appointment>(a => a.Status == AppointmentStatus.Confirmed), Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task CreateAsync_ClienteIntentaElegirEstado_SeIgnoraYUsaElDefault()
+        {
+            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = 11 });
+            _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
+            _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a client
+            _repository.GetBusinessDefaultStatusByEmployeeAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(AppointmentStatus.Pending);
+
+            // The client tries to self-confirm; it must be ignored and the business default used.
+            var dto = new CreateAppointmentDto(
+                ClientId: 1, EmployeeId: 2, ServiceId: 3,
+                StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
+                EndDate: new DateTime(2030, 1, 1, 9, 30, 0, DateTimeKind.Utc),
+                Notes: null,
+                Status: AppointmentStatus.Confirmed);
+
+            await _sut.CreateAsync(dto);
+
+            await _repository.Received(1).AddAsync(
+                Arg.Is<Appointment>(a => a.Status == AppointmentStatus.Pending), Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
         public async Task UpdateAsync_StatusOnlyChangeOnPastAppointment_DoesNotRevalidateScheduling()
         {
             var entity = PastAppointment();

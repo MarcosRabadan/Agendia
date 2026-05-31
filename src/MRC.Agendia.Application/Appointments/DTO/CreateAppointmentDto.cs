@@ -1,3 +1,5 @@
+using MRC.Agendia.Domain.Enums;
+
 namespace MRC.Agendia.Application.Appointments.DTO
 {
     public record CreateAppointmentDto(
@@ -7,5 +9,6 @@ namespace MRC.Agendia.Application.Appointments.DTO
         DateTime StartDate,
         DateTime EndDate,
         string? Notes,
-        IReadOnlyList<int>? ExtraServiceIds = null);
+        IReadOnlyList<int>? ExtraServiceIds = null,
+        AppointmentStatus? Status = null);
 }

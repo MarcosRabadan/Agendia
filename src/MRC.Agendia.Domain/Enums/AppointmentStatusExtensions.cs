@@ -18,5 +18,13 @@ namespace MRC.Agendia.Domain.Enums
         /// </summary>
         public static bool IsTerminal(this AppointmentStatus status)
             => status is AppointmentStatus.Completed or AppointmentStatus.NoShow or AppointmentStatus.Cancelled;
+
+        /// <summary>
+        /// Statuses an appointment may be created in: a booking can only start as
+        /// Pending or Confirmed (never directly Completed/NoShow/Cancelled). Used by
+        /// the per-business default and the staff override at creation time.
+        /// </summary>
+        public static bool IsValidInitialStatus(this AppointmentStatus status)
+            => status is AppointmentStatus.Pending or AppointmentStatus.Confirmed;
     }
 }
