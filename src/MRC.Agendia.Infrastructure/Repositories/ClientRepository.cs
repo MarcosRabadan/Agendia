@@ -28,5 +28,16 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .AsNoTracking()
                 .OrderBy(c => c.Id)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
+
+        /// <inheritdoc />
+        public Task<(IReadOnlyList<Client> Items, int TotalCount)> GetPagedByBusinessIdAsync(int businessId,
+                                                                                             int page,
+                                                                                             int pageSize,
+                                                                                             CancellationToken cancellationToken = default)
+            => Set
+                .AsNoTracking()
+                .Where(c => c.BusinessId == businessId)
+                .OrderBy(c => c.Id)
+                .ToPagedListAsync(page, pageSize, cancellationToken);
     }
 }

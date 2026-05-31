@@ -46,6 +46,24 @@ namespace MRC.Agendia.Application.Clients
         }
 
         /// <inheritdoc />
+        public async Task<ClientDto> CreateForBusinessAsync(int businessId, CreateClientDto dto, CancellationToken cancellationToken = default)
+        {
+            var entity = _mapper.Map<Client>(dto);
+            entity.BusinessId = businessId; // owned by the business; no user account
+            await _repository.AddAsync(entity, cancellationToken);
+            await _unitOfWork.Save(cancellationToken);
+            return _mapper.Map<ClientDto>(entity);
+        }
+
+        /// <inheritdoc />
+        public async Task<PagedResult<ClientDto>> GetPagedByBusinessAsync(int businessId, int page, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var (items, totalCount) = await _repository.GetPagedByBusinessIdAsync(businessId, page, pageSize, cancellationToken);
+            var dtos = _mapper.Map<List<ClientDto>>(items);
+            return PagedResult<ClientDto>.Create(dtos, totalCount, page, pageSize);
+        }
+
+        /// <inheritdoc />
         public async Task<ClientDto> UpdateAsync(UpdateClientDto dto, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(dto.Id, cancellationToken)

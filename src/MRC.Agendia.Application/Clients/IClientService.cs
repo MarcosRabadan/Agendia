@@ -24,6 +24,24 @@ namespace MRC.Agendia.Application.Clients
         /// <returns>The created client DTO.</returns>
         Task<ClientDto> CreateAsync(CreateClientDto dto, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// Creates a client owned by a business (a walk-in/phone record with no user
+        /// account). The new client's BusinessId is set; its UserId stays null.
+        /// </summary>
+        /// <param name="businessId">The owning business id.</param>
+        /// <param name="dto">The data used to create the client.</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>The created client DTO.</returns>
+        Task<ClientDto> CreateForBusinessAsync(int businessId, CreateClientDto dto, CancellationToken cancellationToken = default);
+
+        /// <summary>Gets a paged list of the clients owned by a business.</summary>
+        /// <param name="businessId">The owning business id.</param>
+        /// <param name="page">One-based page number.</param>
+        /// <param name="pageSize">Number of items per page.</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>A paged result of the business's client DTOs.</returns>
+        Task<PagedResult<ClientDto>> GetPagedByBusinessAsync(int businessId, int page, int pageSize, CancellationToken cancellationToken = default);
+
         /// <summary>Updates an existing client.</summary>
         /// <param name="dto">The data used to update the client, including its identifier.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
