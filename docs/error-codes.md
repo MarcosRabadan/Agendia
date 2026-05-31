@@ -47,6 +47,7 @@ El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan 
 | `DUPLICATE_EMAIL` | `DuplicateEmailException` | Ya existe una cuenta con ese email. |
 | `SCHEDULE_TEMPLATES_OVERLAP` | `TemplatesOverlapException` | Plantillas de horario con fechas solapadas. |
 | `SCHEDULE_OVERRIDE_CONFLICT` | `ScheduleOverrideConflictException` | Ya existe una excepción de horario para esa fecha en el negocio. |
+| `SCHEDULE_YEAR_ALREADY_EXISTS` | `ScheduleAlreadyExistsForYearException` | Se intenta generar el horario de un año que el negocio ya tiene configurado sin confirmar el reemplazo. Reenviar con `replaceExisting: true` para rehacerlo. |
 | `APPOINTMENT_OUTSIDE_SCHEDULE` | `AppointmentOutsideScheduleException` | La cita cae en día cerrado o fuera de las franjas abiertas. |
 | `APPOINTMENT_CONFLICT` | `AppointmentConflictException` | Se supera la capacidad (`MaxConcurrentAppointments`) del empleado. |
 | `INVALID_APPOINTMENT_TIME` | `InvalidAppointmentTimeException` | Fechas de la cita ausentes, invertidas o en el pasado. |
