@@ -82,8 +82,11 @@ namespace MRC.Agendia.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
-        /// <summary>Updates an existing client.</summary>
-        [Authorize(Roles = RolePolicies.AdminOrSelfClient)]
+        /// <summary>
+        /// Updates an existing client. Allowed for an admin, the client's own user, or
+        /// the staff of the client's business (resolved by resource authorization).
+        /// </summary>
+        [Authorize]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(ClientDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -95,8 +98,11 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>Soft-deletes a client by its identifier.</summary>
-        [Authorize(Roles = RolePolicies.AdminOrSelfClient)]
+        /// <summary>
+        /// Soft-deletes a client by its identifier. Allowed for an admin, the client's
+        /// own user, or the staff of the client's business (resource authorization).
+        /// </summary>
+        [Authorize]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

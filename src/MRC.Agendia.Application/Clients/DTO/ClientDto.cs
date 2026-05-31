@@ -4,5 +4,6 @@ namespace MRC.Agendia.Application.Clients.DTO
         int Id,
         string Name,
         string Phone,
-        string? Email);
+        string? Email,
+        int? BusinessId);
 }

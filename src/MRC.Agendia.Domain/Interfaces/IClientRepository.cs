@@ -29,6 +29,17 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <returns>The page of clients and the total count.</returns>
         Task<(IReadOnlyList<Client> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default);
 
+        /// <summary>Gets a page of the clients owned by a business, ordered by id. Untracked.</summary>
+        /// <param name="businessId">Owning business id.</param>
+        /// <param name="page">1-based page number.</param>
+        /// <param name="pageSize">Page size.</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>The page of the business's clients and the total count.</returns>
+        Task<(IReadOnlyList<Client> Items, int TotalCount)> GetPagedByBusinessIdAsync(int businessId,
+                                                                                      int page,
+                                                                                      int pageSize,
+                                                                                      CancellationToken cancellationToken = default);
+
         /// <summary>Adds a new client to the context.</summary>
         /// <param name="client">The client to add.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>

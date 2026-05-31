@@ -151,6 +151,18 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(c => c.UserId)
             .HasDatabaseName("IX_Client_UserId");
 
+        // Optional owning business for business-managed clients. No cascade: deleting
+        // a business never deletes its clients (history is kept, like the other entities).
+        modelBuilder.Entity<Client>()
+            .HasOne<Business>()
+            .WithMany()
+            .HasForeignKey(c => c.BusinessId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Client>()
+            .HasIndex(c => c.BusinessId)
+            .HasDatabaseName("IX_Client_BusinessId");
+
         // AuditLog
         modelBuilder.Entity<AuditLog>()
             .Property(a => a.Action)

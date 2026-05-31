@@ -130,12 +130,35 @@ namespace MRC.Agendia.Infrastructure.Authorization
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
 
-            var isOwnClient = await _context.Clients
+            var client = await _context.Clients
                 .AsNoTracking()
-                .AnyAsync(c => c.Id == clientId && c.UserId == userId, cancellationToken);
+                .Where(c => c.Id == clientId)
+                .Select(c => new { c.UserId, c.BusinessId })
+                .FirstOrDefaultAsync(cancellationToken);
 
-            if (!isOwnClient)
-                throw new UnauthorizedAccessException("Solo puedes gestionar tu propia cuenta de cliente.");
+            // Missing client: no access (kept as 403, as before).
+            if (client is null)
+                throw new UnauthorizedAccessException("No tienes permiso para gestionar este cliente.");
+
+            // The client's own user
+            if (client.UserId == userId) return;
+
+            // Staff (owner or active employee) of the client's business, for
+            // business-managed clients (BusinessId set).
+            if (client.BusinessId is int businessId)
+            {
+                var isOwner = await _context.Businesses
+                    .AsNoTracking()
+                    .AnyAsync(b => b.Id == businessId && b.OwnerUserId == userId, cancellationToken);
+                if (isOwner) return;
+
+                var isEmployee = await _context.Employees
+                    .AsNoTracking()
+                    .AnyAsync(e => e.BusinessId == businessId && e.UserId == userId && e.IsActive, cancellationToken);
+                if (isEmployee) return;
+            }
+
+            throw new UnauthorizedAccessException("No tienes permiso para gestionar este cliente.");
         }
 
         // ---------- APPOINTMENT ----------

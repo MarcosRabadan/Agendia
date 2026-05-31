@@ -38,6 +38,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         private const int EmployeeOtherBusinessId = 20;
         private const int Client1Id = 100;
         private const int OtherClientId = 101;
+        private const int BusinessClientId = 102;
         private const int Service1Id = 1000;
         private const int Appointment1Id = 10000;
         private const int ScheduleTemplate1Id = 200;
@@ -330,7 +331,31 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             var (sut, _) = await BuildAsync(AsUser(OtherClientUserId));
             var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
                 () => sut.EnsureCanManageClientAsync(Client1Id));
-            Assert.Equal("Solo puedes gestionar tu propia cuenta de cliente.", ex.Message);
+            Assert.Equal("No tienes permiso para gestionar este cliente.", ex.Message);
+        }
+
+        [Fact]
+        public async Task ManageClient_BusinessOwner_OfBusinessClient_Passes()
+        {
+            // A business-owned client (BusinessId set, no user account) can be managed
+            // by the owner of that business.
+            var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
+            await sut.EnsureCanManageClientAsync(BusinessClientId);
+        }
+
+        [Fact]
+        public async Task ManageClient_ActiveEmployee_OfBusinessClient_Passes()
+        {
+            var (sut, _) = await BuildAsync(AsUser(EmployeeUserId));
+            await sut.EnsureCanManageClientAsync(BusinessClientId);
+        }
+
+        [Fact]
+        public async Task ManageClient_OtherOwner_OfBusinessClient_Throws()
+        {
+            var (sut, _) = await BuildAsync(AsUser(OtherOwnerUserId));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(
+                () => sut.EnsureCanManageClientAsync(BusinessClientId));
         }
 
         #endregion
@@ -633,6 +658,14 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
                 Phone = "101",
                 UserId = OtherClientUserId,
             };
+            var clientBusiness = new Client
+            {
+                Id = BusinessClientId,
+                Name = "Walk-in Client",
+                Phone = "102",
+                BusinessId = Business1Id,
+                // No UserId: an account-less client managed by the business.
+            };
 
             var service1 = new Service
             {
@@ -675,7 +708,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
 
             await db.Businesses.AddRangeAsync(business1, business2);
             await db.Employees.AddRangeAsync(employeeActive, employeeInactive, employeeOther);
-            await db.Clients.AddRangeAsync(client1, client2);
+            await db.Clients.AddRangeAsync(client1, client2, clientBusiness);
             await db.Services.AddAsync(service1);
             await db.Appointments.AddAsync(appointment1);
             await db.ScheduleTemplates.AddAsync(scheduleTemplate1);
