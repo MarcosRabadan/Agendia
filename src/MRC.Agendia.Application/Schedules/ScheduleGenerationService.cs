@@ -35,15 +35,53 @@ namespace MRC.Agendia.Application.Schedules
         /// <inheritdoc />
         public async Task<GenerateScheduleResponseDto> GenerateScheduleAsync(GenerateScheduleRequestDto dto, CancellationToken cancellationToken = default)
         {
-            var build = await BuildAsync(dto, cancellationToken);
+            var yearFrom = new DateOnly(dto.Year, 1, 1);
+            var yearTo = new DateOnly(dto.Year, 12, 31);
 
-            foreach (var template in build.Templates)
-                await _templateRepository.AddAsync(template, cancellationToken);
+            // The schedule the business already has for this year: templates that
+            // overlap the year plus overrides whose date falls within it.
+            var existingTemplates = (await _templateRepository.GetByBusinessIdAsync(dto.BusinessId, cancellationToken))
+                .Where(t => t.EffectiveFrom <= yearTo && t.EffectiveTo >= yearFrom)
+                .ToList();
+            var existingOverrides = (await _overrideRepository.GetByBusinessIdAndDateRangeAsync(dto.BusinessId, yearFrom, yearTo, cancellationToken))
+                .ToList();
+            bool hasExisting = existingTemplates.Count > 0 || existingOverrides.Count > 0;
 
-            if (build.Overrides.Count > 0)
-                await _overrideRepository.AddRangeAsync(build.Overrides, cancellationToken);
+            // Warn-before-overwrite: regenerating a year that already has a schedule
+            // must be confirmed. Otherwise we refuse instead of silently piling new
+            // overrides on top of the old ones (which left stale "ghost" days behind).
+            if (hasExisting && !dto.ReplaceExisting)
+                throw new ScheduleAlreadyExistsForYearException(dto.Year);
 
-            await _unitOfWork.Save(cancellationToken);
+            // When replacing, the existing schedule is about to be deleted, so build
+            // ignoring it (no overlap check against it, no claimed dates seeded from it).
+            var build = await BuildAsync(dto, ignoreExisting: dto.ReplaceExisting, cancellationToken);
+
+            if (hasExisting)
+            {
+                // Replace = delete the year's schedule and recreate it, atomically.
+                // The delete is committed BEFORE the insert because (BusinessId, Date)
+                // is unique: a single SaveChanges could otherwise insert a date before
+                // deleting the old row for the same date and trip the unique index.
+                await _unitOfWork.ExecuteInTransactionAsync(async () =>
+                {
+                    foreach (var template in existingTemplates) _templateRepository.Delete(template);
+                    foreach (var scheduleOverride in existingOverrides) _overrideRepository.Delete(scheduleOverride);
+                    await _unitOfWork.Save(cancellationToken);
+
+                    await PersistAsync(build, cancellationToken);
+                    await _unitOfWork.Save(cancellationToken);
+                }, cancellationToken);
+
+                build.Warnings.Insert(0,
+                    $"Se reemplazo el horario existente del ano {dto.Year}: se eliminaron " +
+                    $"{existingTemplates.Count} plantilla(s) y {existingOverrides.Count} dia(s) especial(es).");
+            }
+            else
+            {
+                await PersistAsync(build, cancellationToken);
+                await _unitOfWork.Save(cancellationToken);
+            }
 
             return new GenerateScheduleResponseDto(
                 TemplateIds: build.Templates.Select(t => t.Id).ToList(),
@@ -54,18 +92,33 @@ namespace MRC.Agendia.Application.Schedules
                 Warnings: build.Warnings.Count > 0 ? build.Warnings : null);
         }
 
+        private async Task PersistAsync(ScheduleBuild build, CancellationToken cancellationToken)
+        {
+            foreach (var template in build.Templates)
+                await _templateRepository.AddAsync(template, cancellationToken);
+
+            if (build.Overrides.Count > 0)
+                await _overrideRepository.AddRangeAsync(build.Overrides, cancellationToken);
+        }
+
         /// <inheritdoc />
         public async Task<IEnumerable<CalendarDayDto>> PreviewScheduleAsync(GenerateScheduleRequestDto dto, CancellationToken cancellationToken = default)
         {
-            var build = await BuildAsync(dto, cancellationToken);
+            var build = await BuildAsync(dto, ignoreExisting: dto.ReplaceExisting, cancellationToken);
 
             var yearFrom = new DateOnly(dto.Year, 1, 1);
             var yearTo = new DateOnly(dto.Year, 12, 31);
 
-            // Merge the (unpersisted) request with the business's existing schedule
-            // so the preview reflects what the calendar would actually look like.
-            var existingTemplates = await _templateRepository.GetByBusinessIdAsync(dto.BusinessId, cancellationToken);
-            var existingOverrides = await _overrideRepository.GetByBusinessIdAndDateRangeAsync(dto.BusinessId, yearFrom, yearTo, cancellationToken);
+            // Merge the (unpersisted) request with the business's existing schedule so
+            // the preview reflects what the calendar would actually look like. When the
+            // request would replace the year, ignore the existing templates/overrides
+            // so the preview shows the post-replace result, not old + new mixed.
+            var existingTemplates = dto.ReplaceExisting
+                ? Enumerable.Empty<ScheduleTemplate>()
+                : await _templateRepository.GetByBusinessIdAsync(dto.BusinessId, cancellationToken);
+            var existingOverrides = dto.ReplaceExisting
+                ? Enumerable.Empty<ScheduleOverride>()
+                : await _overrideRepository.GetByBusinessIdAndDateRangeAsync(dto.BusinessId, yearFrom, yearTo, cancellationToken);
 
             var allTemplates = existingTemplates.Concat(build.Templates).ToList();
             var allOverrides = existingOverrides.Concat(build.Overrides).ToList();
@@ -81,7 +134,7 @@ namespace MRC.Agendia.Application.Schedules
         /// (no persistence). Shared by generate (which then saves) and preview
         /// (which resolves them against the existing schedule).
         /// </summary>
-        private async Task<ScheduleBuild> BuildAsync(GenerateScheduleRequestDto dto, CancellationToken cancellationToken = default)
+        private async Task<ScheduleBuild> BuildAsync(GenerateScheduleRequestDto dto, bool ignoreExisting, CancellationToken cancellationToken = default)
         {
             if (dto.Templates is null || dto.Templates.Count == 0)
                 throw new InvalidOperationException("Debe proporcionar al menos una plantilla de horario.");
@@ -89,11 +142,15 @@ namespace MRC.Agendia.Application.Schedules
             // 1. Validate the requested templates do not overlap each other.
             ValidateTemplatesDoNotOverlap(dto.Templates);
 
-            // 2. Validate against templates already in the DB.
-            foreach (var templateInput in dto.Templates)
+            // 2. Validate against templates already in the DB (skipped when replacing,
+            // since those existing templates are about to be deleted).
+            if (!ignoreExisting)
             {
-                if (await _templateRepository.HasOverlappingTemplateAsync(dto.BusinessId, templateInput.EffectiveFrom, templateInput.EffectiveTo, cancellationToken: cancellationToken))
-                    throw new TemplatesOverlapException($"La plantilla '{templateInput.Name}' se solapa con una plantilla existente del negocio.");
+                foreach (var templateInput in dto.Templates)
+                {
+                    if (await _templateRepository.HasOverlappingTemplateAsync(dto.BusinessId, templateInput.EffectiveFrom, templateInput.EffectiveTo, cancellationToken: cancellationToken))
+                        throw new TemplatesOverlapException($"La plantilla '{templateInput.Name}' se solapa con una plantilla existente del negocio.");
+                }
             }
 
             var warnings = new List<string>();
@@ -118,7 +175,11 @@ namespace MRC.Agendia.Application.Schedules
             // overrides for the same (BusinessId, Date) - the unique index
             // IX_ScheduleOverride_BusinessId_Date would otherwise throw (HTTP 500).
             var overrides = new List<ScheduleOverride>();
-            var existingOverrides = await _overrideRepository.GetByBusinessIdAndDateRangeAsync(dto.BusinessId, yearFrom, yearTo, cancellationToken);
+            // When replacing, the existing overrides are about to be deleted, so do not
+            // seed claimed dates from them - the new vacations/closures must apply.
+            var existingOverrides = ignoreExisting
+                ? Enumerable.Empty<ScheduleOverride>()
+                : await _overrideRepository.GetByBusinessIdAndDateRangeAsync(dto.BusinessId, yearFrom, yearTo, cancellationToken);
             var claimedDates = new HashSet<DateOnly>(existingOverrides.Select(o => o.Date));
             int holidayCount = 0;
 

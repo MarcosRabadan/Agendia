@@ -7,5 +7,6 @@ namespace MRC.Agendia.Application.Schedules.DTO
         bool IncludeNationalHolidays,
         bool IncludeLocalHolidays,
         List<VacationPeriodDto>? VacationPeriods,
-        List<ClosedDateDto>? CustomClosedDates);
+        List<ClosedDateDto>? CustomClosedDates,
+        bool ReplaceExisting = false);
 }
