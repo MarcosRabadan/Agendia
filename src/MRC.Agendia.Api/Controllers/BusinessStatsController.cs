@@ -22,9 +22,10 @@ namespace MRC.Agendia.Api.Controllers
         /// <summary>
         /// Business statistics over a date range: bookings per month and week,
         /// most and least used services (with revenue), no-shows and cancellations,
-        /// and revenue per hour and per weekday. Owner only (or an admin).
+        /// and revenue per hour and per weekday. Business staff only (owner, an active
+        /// employee of the business, or an admin).
         /// </summary>
-        [Authorize(Roles = RolePolicies.AdminOrOwner)]
+        [Authorize(Roles = RolePolicies.Staff)]
         [HttpGet]
         [ProducesResponseType(typeof(BusinessStatsDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
