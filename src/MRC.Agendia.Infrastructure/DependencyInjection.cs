@@ -5,7 +5,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Auditing;
-using MRC.Agendia.Application.Auth;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Application.Notifications;
@@ -14,7 +13,6 @@ using MRC.Agendia.Domain.Services;
 using MRC.Agendia.Infrastructure.Auditing;
 using MRC.Agendia.Infrastructure.Authorization;
 using MRC.Agendia.Infrastructure.Caching;
-using MRC.Agendia.Infrastructure.Identity;
 using MRC.Agendia.Infrastructure.Notifications;
 using MRC.Agendia.Infrastructure.Persistence;
 using MRC.Agendia.Infrastructure.Repositories;
@@ -25,8 +23,7 @@ namespace MRC.Agendia.Infrastructure
 {
     /// <summary>
     /// Single entry point to register the Infrastructure layer:
-    /// DbContext, repositories, domain services, identity helpers,
-    /// JWT and resource-based authorization.
+    /// DbContext, repositories, domain services and resource-based authorization.
     /// </summary>
     public static class DependencyInjection
     {
@@ -83,14 +80,6 @@ namespace MRC.Agendia.Infrastructure
             // Domain services
             services.AddScoped<IScheduleResolver, ScheduleResolver>();
 
-            // Identity helpers (JWT and refresh tokens)
-            services.AddScoped<IJwtTokenService, JwtTokenService>();
-            services.AddScoped<IRefreshTokenStore, RefreshTokenStore>();
-            services.AddScoped<IAuthResponseFactory, AuthResponseFactory>();
-            services.AddScoped<IAuthEmailService, AuthEmailService>();
-            services.AddScoped<IAuthService, AuthService>();
-            services.AddScoped<IUserRegistrationService, UserRegistrationService>();
-
             // Resource-based authorization (more setup in the API project because
             // it depends on IHttpContextAccessor; here just the infrastructural service)
             services.AddScoped<IResourceAuthorizationService, ResourceAuthorizationService>();
@@ -105,7 +94,6 @@ namespace MRC.Agendia.Infrastructure
             services.AddScoped<IAuditLogger, AuditLogger>();
 
             // Hosted services
-            services.AddHostedService<RefreshTokenCleanupService>();
             services.AddHostedService<AppointmentReminderService>();
 
             return services;

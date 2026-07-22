@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Infrastructure;
-using MRC.Agendia.Infrastructure.Identity;
 using MRC.Agendia.Tests.Integration.Infrastructure;
 // The sibling "...Integration.Business" namespace (a test folder) shadows the entity.
 using BusinessEntity = MRC.Agendia.Domain.Entities.Business;
@@ -83,23 +82,6 @@ namespace MRC.Agendia.Tests.Integration.Database
 
                 db.WaitlistEntries.Add(Entry(WaitlistStatus.Waiting));
                 await db.SaveChangesAsync(); // must NOT throw
-            });
-        }
-
-        [SkippableFact]
-        public async Task RefreshToken_DuplicateTokenValue_IsRejected()
-        {
-            await WithLocalDbAsync(async db =>
-            {
-                var user = await SeedUserAsync(db);
-                const string token = "duplicate-token-value";
-
-                db.RefreshTokens.Add(new RefreshToken { Token = token, UserId = user.Id, ExpiresAt = DateTime.UtcNow.AddDays(7) });
-                await db.SaveChangesAsync();
-
-                // IX_RefreshToken_Token is unique: the duplicate value is rejected.
-                db.RefreshTokens.Add(new RefreshToken { Token = token, UserId = user.Id, ExpiresAt = DateTime.UtcNow.AddDays(7) });
-                await AssertUniqueViolationAsync(() => db.SaveChangesAsync());
             });
         }
 
@@ -188,14 +170,6 @@ namespace MRC.Agendia.Tests.Integration.Database
             db.Clients.Add(client);
             await db.SaveChangesAsync();
             return client;
-        }
-
-        private static async Task<ApplicationUser> SeedUserAsync(AgendiaDbContext db)
-        {
-            var user = new ApplicationUser { UserName = $"u-{Guid.NewGuid():N}", Email = "u@test", FullName = "U", IsActive = true };
-            db.Users.Add(user);
-            await db.SaveChangesAsync();
-            return user;
         }
     }
 }

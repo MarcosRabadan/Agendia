@@ -1,16 +1,10 @@
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using MRC.Agendia.Application.Auth.DTO;
-using MRC.Agendia.Application.Business.DTO;
-using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Services.DTO;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Infrastructure;
-using MRC.Agendia.Infrastructure.Identity;
 using MRC.Agendia.Tests.Integration.Infrastructure;
 
 namespace MRC.Agendia.Tests.Integration.SoftDelete
@@ -22,8 +16,6 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
     /// </summary>
     public class SoftDeleteIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
-        private const string OwnerPassword = "Owner1234!";
-
         private readonly CustomWebApplicationFactory _factory;
         private readonly HttpClient _client;
 
@@ -74,7 +66,7 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
             Assert.Equal(HttpStatusCode.NotFound,
                 (await _client.GetAsync($"/api/Service/{service.Id}")).StatusCode);
 
-            var adminToken = await SeedAdminAndGetTokenAsync();
+            var adminToken = NewAdminToken();
             using (var restore = new HttpRequestMessage(HttpMethod.Post, $"/api/Service/{service.Id}/restore"))
             {
                 restore.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
@@ -106,7 +98,7 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
             var owner = await RegisterOwnerAsync("sd-avail");
             var service = await CreateServiceAsAsync(owner, "Corte");
 
-            var adminToken = await SeedAdminAndGetTokenAsync();
+            var adminToken = NewAdminToken();
             using (var del = new HttpRequestMessage(HttpMethod.Delete, $"/api/Business/{owner.Business.Id}"))
             {
                 del.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
@@ -138,7 +130,7 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
 
         // ----- Helpers -----
 
-        private async Task<ServiceDto> CreateServiceAsAsync(RegisteredOwner owner, string name)
+        private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner, string name)
         {
             var dto = new CreateServiceDto(
                 BusinessId: owner.Business.Id,
@@ -147,82 +139,15 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
                 DurationMinutes: 30,
                 Price: 20m);
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Service")
-            {
-                Content = JsonContent.Create(dto)
-            };
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
-
-            var response = await _client.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-            var created = await response.Content.ReadFromJsonAsync<ServiceDto>();
-            Assert.NotNull(created);
-            return created!;
+            return await TestProvisioning.PostAsync<CreateServiceDto, ServiceDto>(
+                _client, "/api/Service", dto, owner.Token);
         }
 
-        private async Task<RegisteredOwner> RegisterOwnerAsync(string slug)
-        {
-            var unique = Guid.NewGuid().ToString("N");
-            var email = $"{slug}-{unique}@test.local";
-            var businessName = $"{slug}-{unique}";
+        private Task<ProvisionedOwner> RegisterOwnerAsync(string slug) =>
+            TestProvisioning.ProvisionOwnerAsync(_client, slug);
 
-            var registration = new RegisterOwnerDto(
-                Email: email,
-                Password: OwnerPassword,
-                FullName: $"Owner {slug}",
-                Phone: "600000000",
-                BusinessName: businessName,
-                BusinessAddress: "Calle Test 1",
-                BusinessPhone: "910000000",
-                BusinessEmail: $"info-{unique}@test.local",
-                BusinessDescription: null);
-
-            var registerResponse = await _client.PostAsJsonAsync("/api/auth/register/owner", registration);
-            registerResponse.EnsureSuccessStatusCode();
-            var auth = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
-            Assert.NotNull(auth);
-
-            var businessesResponse = await _client.GetAsync("/api/Business?page=1&pageSize=200");
-            businessesResponse.EnsureSuccessStatusCode();
-            var paged = await businessesResponse.Content.ReadFromJsonAsync<PagedResult<BusinessPublicDto>>();
-            Assert.NotNull(paged);
-            var business = paged!.Items.First(b => b.Name == businessName);
-
-            return new RegisteredOwner(auth!.AccessToken, business);
-        }
-
-        private async Task<string> SeedAdminAndGetTokenAsync()
-        {
-            var email = $"admin-{Guid.NewGuid():N}@agendia.test";
-            const string password = "Admin1234!";
-
-            using (var scope = _factory.Services.CreateScope())
-            {
-                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-                var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
-                if (!await roleManager.RoleExistsAsync(Roles.Admin))
-                    await roleManager.CreateAsync(new IdentityRole(Roles.Admin));
-
-                var admin = new ApplicationUser
-                {
-                    UserName = email,
-                    Email = email,
-                    EmailConfirmed = true,
-                    FullName = "Admin"
-                };
-                var created = await userManager.CreateAsync(admin, password);
-                Assert.True(created.Succeeded);
-                await userManager.AddToRoleAsync(admin, Roles.Admin);
-            }
-
-            var login = await _client.PostAsJsonAsync("/api/auth/login", new LoginDto(email, password));
-            login.EnsureSuccessStatusCode();
-            var auth = await login.Content.ReadFromJsonAsync<AuthResponseDto>();
-            Assert.NotNull(auth);
-            return auth!.AccessToken;
-        }
-
-        private sealed record RegisteredOwner(string Token, BusinessPublicDto Business);
+        // Agendia no longer stores users, so an Admin is just a forged Harmony token.
+        private static string NewAdminToken() =>
+            TestTokenFactory.Create($"harmony-admin-{Guid.NewGuid():N}", Roles.Admin);
     }
 }

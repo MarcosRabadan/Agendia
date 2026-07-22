@@ -1,13 +1,13 @@
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
-using MRC.Agendia.Infrastructure.Identity;
 
 namespace MRC.Agendia.Infrastructure;
 
-public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
+// Users and credentials live in the Harmony identity service, so this context
+// holds no identity tables: the *UserId columns store Harmony's opaque user id.
+public class AgendiaDbContext : DbContext
 {
     private readonly ICurrentBusinessScope _businessScope;
 
@@ -28,9 +28,6 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ScheduleOverride> ScheduleOverrides => Set<ScheduleOverride>();
     public DbSet<CustomTimeSlot> CustomTimeSlots => Set<CustomTimeSlot>();
     public DbSet<HolidayCalendar> HolidayCalendars => Set<HolidayCalendar>();
-
-    // Auth
-    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     // Audit
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -118,18 +115,6 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
             .IsUnique()
             .HasDatabaseName("IX_ScheduleOverride_BusinessId_Date");
 
-        // RefreshToken
-        modelBuilder.Entity<RefreshToken>()
-            .HasOne(rt => rt.User)
-            .WithMany()
-            .HasForeignKey(rt => rt.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<RefreshToken>()
-            .HasIndex(rt => rt.Token)
-            .IsUnique()
-            .HasDatabaseName("IX_RefreshToken_Token");
-
         // Indexes for fast user lookup
         modelBuilder.Entity<Business>()
             .HasIndex(b => b.OwnerUserId)
@@ -192,8 +177,8 @@ public class AgendiaDbContext : IdentityDbContext<ApplicationUser>
         // NOT scoped here (deliberate): Appointment (no direct BusinessId; filtering
         // via Employee.BusinessId would fight the IgnoreQueryFilters reads that keep
         // appointments whose parent is soft-deleted, #127/#133), ScheduleTemplate/
-        // ScheduleOverride (cross-tenant calendar reads are an accepted decision) and
-        // RefreshToken (user-scoped). Those stay protected by resource authorization.
+        // ScheduleOverride (cross-tenant calendar reads are an accepted decision).
+        // Those stay protected by resource authorization.
         modelBuilder.Entity<Business>().HasQueryFilter(b => !b.IsDeleted
             && (!_businessScope.IsRestricted || _businessScope.BusinessIds.Contains(b.Id)));
         modelBuilder.Entity<Client>().HasQueryFilter(c => !c.IsDeleted);

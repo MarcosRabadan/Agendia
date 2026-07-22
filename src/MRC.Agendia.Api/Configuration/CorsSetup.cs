@@ -10,8 +10,14 @@ namespace MRC.Agendia.Api.Configuration
     /// <list type="bullet">
     ///   <item><description>Origins defined: restricted policy bound to those hosts.</description></item>
     ///   <item><description>Empty list in Development or Testing: permissive fallback (AllowAnyOrigin) with warning.</description></item>
-    ///   <item><description>Empty list in any other environment (Production, Staging, ...): fail-fast (app does not start).</description></item>
+    ///   <item><description>Empty list anywhere else: no cross-origin access at all.</description></item>
     /// </list>
+    ///
+    /// An empty list outside Development is the EXPECTED setup: Agendia is called
+    /// backend-to-backend by Harmony, and a server-side caller is not subject to
+    /// CORS. This used to fail-fast, back when a browser talked to this API
+    /// directly. Origins are still honoured if configured, so exposing the service
+    /// to a browser again only takes config, not a code change.
     /// </summary>
     public static class CorsSetup
     {
@@ -41,10 +47,15 @@ namespace MRC.Agendia.Api.Configuration
 
                     if (!isNonProdEnv)
                     {
-                        throw new InvalidOperationException(
-                            "Cors:AllowedOrigins esta vacio en un entorno distinto de Development/Testing. " +
-                            "Configura la lista de origenes permitidos via variable de entorno " +
-                            "Cors__AllowedOrigins__0, Cors__AllowedOrigins__1, ... o en appsettings.<Env>.json.");
+                        // No origins: the policy allows nothing cross-origin, which is
+                        // what a backend-only service wants. Logged so an operator who
+                        // DID expect browser traffic sees why it is being blocked.
+                        Log.Information(
+                            "CORS: sin origenes configurados en {Environment}. No se permite acceso cross-origin " +
+                            "(Agendia se llama backend-to-backend desde Harmony). Si necesitas exponerla a un " +
+                            "navegador, define Cors__AllowedOrigins__0, Cors__AllowedOrigins__1, ...",
+                            environment.EnvironmentName);
+                        return;
                     }
 
                     // Development / Testing fallback: permissive policy with a clear warning so

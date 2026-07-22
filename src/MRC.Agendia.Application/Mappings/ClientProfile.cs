@@ -10,7 +10,10 @@ namespace MRC.Agendia.Application.Mappings
         {
             CreateMap<Client, ClientDto>();
             CreateMap<CreateClientDto, Client>();
-            CreateMap<UpdateClientDto, Client>();
+            // UserId is not mappable on update: repointing an existing client to
+            // another Harmony user would hand that user the client's appointments.
+            CreateMap<UpdateClientDto, Client>()
+                .ForMember(dest => dest.UserId, opt => opt.Ignore());
         }
     }
 }

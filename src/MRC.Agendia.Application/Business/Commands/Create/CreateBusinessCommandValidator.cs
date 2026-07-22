@@ -14,6 +14,9 @@ namespace MRC.Agendia.Application.Business.Commands.Create
             RuleFor(x => x.Dto.Phone).NotEmpty().MaximumLength(50);
             RuleFor(x => x.Dto.Email).NotEmpty().EmailAddress().MaximumLength(200);
             RuleFor(x => x.Dto.Description).MaximumLength(2000);
+            RuleFor(x => x.Dto.OwnerUserId)
+                .NotEmpty().MaximumLength(450)
+                .WithMessage("El identificador de usuario del propietario (OwnerUserId) es obligatorio.");
             RuleFor(x => x.Dto.CancellationWindowHours)
                 .InclusiveBetween(1, 8760)
                 .When(x => x.Dto.CancellationWindowHours.HasValue)

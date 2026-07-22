@@ -1,7 +1,6 @@
 using AutoMapper;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Domain.Entities;
-using MRC.Agendia.Domain.Enums;
 
 namespace MRC.Agendia.Application.Mappings
 {

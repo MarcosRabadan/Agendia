@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Api.Configuration;
 using MRC.Agendia.Application;
 using MRC.Agendia.Infrastructure;
-using MRC.Agendia.Infrastructure.Identity;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,10 +13,9 @@ builder.ConfigureSerilog();
 builder.Services.AddControllers();
 builder.Services.AddAppHealthChecks(builder.Configuration, builder.Environment);
 
-// Cross-cutting (CORS, rate limiting, Swagger)
+// Cross-cutting (CORS, Swagger)
 builder.Services
     .AddCorsForMobile(builder.Configuration, builder.Environment)
-    .AddAuthRateLimiting()
     .AddSwaggerWithJwt();
 
 // App layers (each one self-registers)
@@ -30,8 +28,8 @@ builder.Services.AddEmailSender(builder.Configuration, builder.Environment);
 // Push sender (#51): only Logging in every environment for now (FCM pending)
 builder.Services.AddPushSender(builder.Environment);
 
-// Identity + JWT (depends on Infrastructure for the DbContext)
-builder.Services.AddIdentityAndJwt(builder.Configuration);
+// JWT validation (tokens are issued by the Harmony identity service)
+builder.Services.AddJwtAuthentication(builder.Configuration);
 
 var app = builder.Build();
 
@@ -71,20 +69,8 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-// Initial seed of roles and admin
-try
-{
-    Log.Information("Agendia: aplicando seed de roles y admin...");
-    await DbInitializer.SeedRolesAndAdminAsync(app.Services);
-    Log.Information("Agendia: seed completado.");
-}
-catch (Exception ex)
-{
-    // Re-throw: without the roles/admin seed the Admin-only endpoints are
-    // unusable, so fail fast with a clear log instead of starting broken.
-    Log.Fatal(ex, "Error durante el seed inicial. La aplicacion no arrancara.");
-    throw;
-}
+// No role/admin seed: users and roles live in the Harmony identity service,
+// which puts them in the token as claims. Agendia stores no credentials.
 
 try
 {

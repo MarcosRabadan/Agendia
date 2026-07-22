@@ -12,6 +12,13 @@ namespace MRC.Agendia.Infrastructure.Authorization
     /// for them). The business-id lookup runs on a separate DI scope with filters
     /// off, because the request's own DbContext filter calls back into this service
     /// (querying that same context here would re-enter it).
+    ///
+    /// Restriction is decided by ROLE, not by whether the lookup found rows: an
+    /// Owner/Employee with no rows is restricted to nothing rather than to
+    /// everything. That distinction did not matter while Agendia minted its own
+    /// accounts alongside the business row, but Harmony issues roles independently,
+    /// so a token can now legitimately carry BusinessOwner before (or without) the
+    /// matching row ever being provisioned here.
     /// </summary>
     public class CurrentBusinessScope : ICurrentBusinessScope
     {
@@ -45,13 +52,25 @@ namespace MRC.Agendia.Infrastructure.Authorization
             if (_resolved) return;
             _resolved = true;
 
-            // Unauthenticated and Admin callers see everything -> no restriction.
-            if (!_currentUser.IsAuthenticated
-                || string.IsNullOrEmpty(_currentUser.UserId)
-                || _currentUser.IsInRole(Roles.Admin))
+            // Anonymous and Admin callers see everything -> no restriction.
+            if (!_currentUser.IsAuthenticated || _currentUser.IsInRole(Roles.Admin))
                 return;
 
-            var userId = _currentUser.UserId!;
+            // Only tenant-bound roles are scoped. A Client browses the public
+            // catalogue and belongs to no business, so it stays unrestricted.
+            var isTenantBound = _currentUser.IsInRole(Roles.BusinessOwner)
+                || _currentUser.IsInRole(Roles.Employee);
+            if (!isTenantBound)
+                return;
+
+            // From here on the caller IS restricted, whatever the lookup returns.
+            _isRestricted = true;
+
+            // An authenticated token with no subject cannot be matched to any
+            // business, so it gets the empty scope rather than a free pass.
+            var userId = _currentUser.UserId;
+            if (string.IsNullOrEmpty(userId))
+                return;
 
             // Resolve on a separate scope/context with filters OFF: the request's
             // own DbContext filter calls into this service, so querying it here
@@ -71,10 +90,6 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .Select(e => e.BusinessId);
 
             _businessIds = ownerBusinessIds.Union(employeeBusinessIds).ToArray();
-
-            // Only Owner/Employee callers (who actually belong to a business) are
-            // restricted; a Client has no business and stays unrestricted.
-            _isRestricted = _businessIds.Length > 0;
         }
     }
 }
