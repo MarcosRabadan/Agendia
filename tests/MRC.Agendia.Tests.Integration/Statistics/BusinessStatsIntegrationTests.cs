@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
-using MRC.Agendia.Application.Clients.DTO;
 using MRC.Agendia.Application.Employees.DTO;
 using MRC.Agendia.Application.Statistics.DTO;
 using MRC.Agendia.Domain.Constants;
@@ -59,7 +58,7 @@ namespace MRC.Agendia.Tests.Integration.Statistics
         public async Task GetStats_ComoCliente_DevuelveForbidden()
         {
             var owner = await RegisterOwnerAsync("stats-cli");
-            var clientToken = await CreateClientAccountAsync("stats-c");
+            var clientToken = (await TestProvisioning.ProvisionClientAsync(_client, "stats-c")).Token;
 
             var response = await SendStatsAsync(clientToken, owner.Business.Id, "2026-05-01", "2026-05-31");
 
@@ -125,21 +124,6 @@ namespace MRC.Agendia.Tests.Integration.Statistics
                 HttpMethod.Get, $"/api/businesses/{businessId}/stats?from={from}&to={to}");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             return await _client.SendAsync(request);
-        }
-
-        private async Task<string> CreateClientAccountAsync(string slug)
-        {
-            var unique = Guid.NewGuid().ToString("N");
-            var clientUserId = $"harmony-client-{unique}";
-            var adminToken = TestTokenFactory.Create($"admin-{unique}", Roles.Admin);
-
-            await TestProvisioning.PostAsync<CreateClientDto, ClientDto>(
-                _client,
-                "/api/Client",
-                new CreateClientDto($"Cliente {slug}", "600999888", $"{slug}-{unique}@test.local", clientUserId),
-                adminToken);
-
-            return TestTokenFactory.Create(clientUserId, Roles.Client);
         }
 
         /// <summary>

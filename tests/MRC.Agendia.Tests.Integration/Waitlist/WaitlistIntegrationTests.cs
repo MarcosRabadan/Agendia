@@ -3,11 +3,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments.DTO;
-using MRC.Agendia.Application.Clients.DTO;
 using MRC.Agendia.Application.Schedules.DTO;
 using MRC.Agendia.Application.Services.DTO;
 using MRC.Agendia.Application.Waitlist.DTO;
-using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Infrastructure;
@@ -45,7 +43,7 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
             await GenerateScheduleAsync(owner);
             var service = await CreateServiceAsAsync(owner, "Corte");
             var clientAId = await SeedClientAsync();
-            var clientBToken = await CreateClientAccountAsync("wl-b");
+            var clientBToken = (await TestProvisioning.ProvisionClientAsync(_client, "wl-b")).Token;
 
             // Client A's booking fills the slot (employee MaxConcurrent = 1).
             var appointment = await BookAppointmentAsync(owner, clientAId, owner.EmployeeId, service.Id);
@@ -72,7 +70,7 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
             var owner = await RegisterOwnerAsync("wl-cap");
             await GenerateScheduleAsync(owner);
             var service = await CreateServiceAsAsync(owner, "Corte");
-            var clientToken = await CreateClientAccountAsync("wl-c");
+            var clientToken = (await TestProvisioning.ProvisionClientAsync(_client, "wl-c")).Token;
 
             // No appointment booked -> the slot has capacity -> joining is rejected.
             var response = await JoinAsync(clientToken, new JoinWaitlistDto(owner.Business.Id, service.Id, SlotDate, SlotTime, EmployeeId: null));
@@ -184,21 +182,6 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
         /// Creates a client row bound to a Harmony user id and returns a token for
         /// that same user id, so the waitlist can resolve the client from the JWT.
         /// </summary>
-        private async Task<string> CreateClientAccountAsync(string slug)
-        {
-            var unique = Guid.NewGuid().ToString("N");
-            var clientUserId = $"harmony-client-{unique}";
-            var adminToken = TestTokenFactory.Create($"admin-{unique}", Roles.Admin);
-
-            await TestProvisioning.PostAsync<CreateClientDto, ClientDto>(
-                _client,
-                "/api/Client",
-                new CreateClientDto($"Cliente {slug}", "600999888", $"{slug}-{unique}@test.local", clientUserId),
-                adminToken);
-
-            return TestTokenFactory.Create(clientUserId, Roles.Client);
-        }
-
         private Task<ProvisionedOwner> RegisterOwnerAsync(string slug) =>
             TestProvisioning.ProvisionOwnerAsync(_client, slug);
     }

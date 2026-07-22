@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using MRC.Agendia.Application.Business.DTO;
+using MRC.Agendia.Application.Clients.DTO;
 using MRC.Agendia.Application.Employees.DTO;
 using MRC.Agendia.Domain.Constants;
 
@@ -48,6 +49,31 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
             return new ProvisionedOwner(ownerUserId, ownerToken, business, employee.Id);
         }
 
+        /// <summary>
+        /// Creates a client that has a Harmony account, the way Harmony would after
+        /// registering an end user: an Admin-authorized POST carrying the user id.
+        /// The returned token's "sub" is that same id, so the ownership checks
+        /// (waitlist, self-service booking, my-appointments) resolve the row.
+        /// </summary>
+        public static async Task<ProvisionedClient> ProvisionClientAsync(HttpClient client, string slug)
+        {
+            var unique = Guid.NewGuid().ToString("N");
+            var clientUserId = $"harmony-client-{slug}-{unique}";
+            var adminToken = TestTokenFactory.Create($"admin-{unique}", Roles.Admin);
+
+            var created = await PostAsync<CreateClientDto, ClientDto>(client,
+                "/api/Client",
+                new CreateClientDto(Name: $"Cliente {slug}",
+                                    Phone: "600999888",
+                                    Email: $"{slug}-{unique}@test.local",
+                                    UserId: clientUserId),
+                adminToken);
+
+            return new ProvisionedClient(clientUserId,
+                                         TestTokenFactory.Create(clientUserId, Roles.Client),
+                                         created.Id);
+        }
+
         /// <summary>Posts with an explicit bearer token, leaving the shared client's headers untouched.</summary>
         public static async Task<TResponse> PostAsync<TRequest, TResponse>(HttpClient client,
                                                                            string url,
@@ -68,6 +94,4 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
             return result!;
         }
     }
-
-    public sealed record ProvisionedOwner(string OwnerUserId, string Token, BusinessDto Business, int EmployeeId);
 }

@@ -128,7 +128,7 @@ namespace MRC.Agendia.Tests.Integration.Auth
 
             var response = await GetAsync("/api/Employee?page=1&pageSize=50", token);
 
-            Assert.NotEqual(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
         private async Task<HttpResponseMessage> GetAsync(string url, string token)

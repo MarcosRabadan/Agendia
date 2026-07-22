@@ -4,10 +4,8 @@ using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments.DTO;
-using MRC.Agendia.Application.Clients.DTO;
 using MRC.Agendia.Application.Schedules.DTO;
 using MRC.Agendia.Application.Services.DTO;
-using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Tests.Integration.Infrastructure;
@@ -111,7 +109,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await GenerateScheduleAsync(owner);
             var service = await CreateServiceAsAsync(owner, "Corte");
             var employeeId = owner.EmployeeId;
-            var (clientToken, clientId) = await RegisterClientWithRowAsync(slug);
+            var (_, clientToken, clientId) = await TestProvisioning.ProvisionClientAsync(_client, slug);
             var appointment = await BookAppointmentAsync(owner, clientId, employeeId, service.Id);
             return (owner, clientToken, appointment);
         }
@@ -143,29 +141,6 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             var created = await response.Content.ReadFromJsonAsync<AppointmentDto>();
             Assert.NotNull(created);
             return created!;
-        }
-
-        /// <summary>
-        /// Creates the Client row (as Admin) linked to a Harmony user id, and returns
-        /// that user's Client token. Replaces the old /api/auth/register/client call:
-        /// the token now comes from Harmony, the row from Agendia's own endpoint.
-        /// </summary>
-        private async Task<(string Token, int ClientId)> RegisterClientWithRowAsync(string slug)
-        {
-            var unique = Guid.NewGuid().ToString("N");
-            var clientUserId = $"harmony-cli-{slug}-{unique}";
-            var adminToken = TestTokenFactory.Create($"admin-{unique}", Roles.Admin);
-
-            var created = await TestProvisioning.PostAsync<CreateClientDto, ClientDto>(
-                _client,
-                "/api/Client",
-                new CreateClientDto(Name: $"Cliente {slug}",
-                                    Phone: "600999888",
-                                    Email: $"{slug}-{unique}@test.local",
-                                    UserId: clientUserId),
-                adminToken);
-
-            return (TestTokenFactory.Create(clientUserId, Roles.Client), created.Id);
         }
 
         private async Task GenerateScheduleAsync(ProvisionedOwner owner)

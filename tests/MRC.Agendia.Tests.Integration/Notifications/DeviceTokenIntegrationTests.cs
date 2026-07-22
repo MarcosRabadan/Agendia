@@ -4,11 +4,9 @@ using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments.DTO;
-using MRC.Agendia.Application.Clients.DTO;
 using MRC.Agendia.Application.DeviceTokens.DTO;
 using MRC.Agendia.Application.Schedules.DTO;
 using MRC.Agendia.Application.Services.DTO;
-using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Tests.Integration.Infrastructure;
@@ -45,7 +43,7 @@ namespace MRC.Agendia.Tests.Integration.Notifications
             var owner = await RegisterOwnerAsync("push-ok");
             await GenerateScheduleAsync(owner);
             var service = await CreateServiceAsync(owner, "Corte", 30, 20m);
-            var (clientToken, clientId) = await CreateClientAccountAsync("push-c");
+            var (_, clientToken, clientId) = await TestProvisioning.ProvisionClientAsync(_client, "push-c");
 
             var deviceToken = $"tok-{Guid.NewGuid():N}";
             var reg = await RegisterDeviceTokenAsync(clientToken, deviceToken, DevicePlatform.Android);
@@ -64,7 +62,7 @@ namespace MRC.Agendia.Tests.Integration.Notifications
         [Fact]
         public async Task RegistrarYDarDeBajaToken_ActualizaLaBaseDeDatos()
         {
-            var (clientToken, _) = await CreateClientAccountAsync("push-rm");
+            var clientToken = (await TestProvisioning.ProvisionClientAsync(_client, "push-rm")).Token;
             var deviceToken = $"tok-{Guid.NewGuid():N}";
 
             (await RegisterDeviceTokenAsync(clientToken, deviceToken, DevicePlatform.Ios)).EnsureSuccessStatusCode();
@@ -121,25 +119,6 @@ namespace MRC.Agendia.Tests.Integration.Notifications
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Appointment") { Content = JsonContent.Create(dto) };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", clientToken);
             return await _client.SendAsync(request);
-        }
-
-        /// <summary>
-        /// Creates a client row bound to a Harmony user id and returns a token minted
-        /// for that same user id, so the client can act on their own records.
-        /// </summary>
-        private async Task<(string Token, int ClientId)> CreateClientAccountAsync(string slug)
-        {
-            var unique = Guid.NewGuid().ToString("N");
-            var clientUserId = $"harmony-client-{unique}";
-            var adminToken = TestTokenFactory.Create($"admin-{unique}", Roles.Admin);
-
-            var created = await TestProvisioning.PostAsync<CreateClientDto, ClientDto>(
-                _client,
-                "/api/Client",
-                new CreateClientDto($"Cliente {slug}", "600999888", $"{slug}-{unique}@test.local", clientUserId),
-                adminToken);
-
-            return (TestTokenFactory.Create(clientUserId, Roles.Client), created.Id);
         }
 
         private async Task GenerateScheduleAsync(ProvisionedOwner owner)
