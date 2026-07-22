@@ -4,9 +4,6 @@ using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments.DTO;
-using MRC.Agendia.Application.Auth.DTO;
-using MRC.Agendia.Application.Business.DTO;
-using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Schedules.DTO;
 using MRC.Agendia.Application.Services.DTO;
 using MRC.Agendia.Domain.Enums;
@@ -28,7 +25,6 @@ namespace MRC.Agendia.Tests.Integration.Appointments
     public class CancellationWindowIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
         private const int Year = 2035;
-        private const string OwnerPassword = "Owner1234!";
         private static readonly DateOnly SlotDate = new(Year, 6, 4);
         private static readonly TimeOnly SlotTime = new(10, 0);
 
@@ -107,13 +103,13 @@ namespace MRC.Agendia.Tests.Integration.Appointments
 
         // ----- Flow helpers -----
 
-        private async Task<(RegisteredOwner Owner, string ClientToken, AppointmentDto Appointment)> BookForClientAsync(string slug)
+        private async Task<(ProvisionedOwner Owner, string ClientToken, AppointmentDto Appointment)> BookForClientAsync(string slug)
         {
             var owner = await RegisterOwnerAsync(slug);
             await GenerateScheduleAsync(owner);
             var service = await CreateServiceAsAsync(owner, "Corte");
-            var employeeId = await GetOwnerEmployeeIdAsync(owner.Business.Id);
-            var (clientToken, clientId) = await RegisterClientWithRowAsync(slug);
+            var employeeId = owner.EmployeeId;
+            var (_, clientToken, clientId) = await TestProvisioning.ProvisionClientAsync(_client, slug);
             var appointment = await BookAppointmentAsync(owner, clientId, employeeId, service.Id);
             return (owner, clientToken, appointment);
         }
@@ -134,14 +130,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await db.SaveChangesAsync();
         }
 
-        private async Task<int> GetOwnerEmployeeIdAsync(int businessId)
-        {
-            using var scope = _factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
-            return (await db.Employees.FirstAsync(e => e.BusinessId == businessId)).Id;
-        }
-
-        private async Task<AppointmentDto> BookAppointmentAsync(RegisteredOwner owner, int clientId, int employeeId, int serviceId)
+        private async Task<AppointmentDto> BookAppointmentAsync(ProvisionedOwner owner, int clientId, int employeeId, int serviceId)
         {
             var start = SlotDate.ToDateTime(SlotTime);
             var dto = new CreateAppointmentDto(clientId, employeeId, serviceId, start, start.AddMinutes(30), Notes: null);
@@ -154,23 +143,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             return created!;
         }
 
-        private async Task<(string Token, int ClientId)> RegisterClientWithRowAsync(string slug)
-        {
-            var unique = Guid.NewGuid().ToString("N");
-            var email = $"{slug}-{unique}@test.local";
-            var dto = new RegisterClientDto(email, "Client1234!", $"Cliente {slug}", "600999888");
-            var response = await _client.PostAsJsonAsync("/api/auth/register/client", dto);
-            response.EnsureSuccessStatusCode();
-            var auth = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
-            Assert.NotNull(auth);
-
-            using var scope = _factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
-            var clientId = (await db.Clients.FirstAsync(c => c.Email == email)).Id;
-            return (auth!.AccessToken, clientId);
-        }
-
-        private async Task GenerateScheduleAsync(RegisteredOwner owner)
+        private async Task GenerateScheduleAsync(ProvisionedOwner owner)
         {
             var request = new GenerateScheduleRequestDto(
                 BusinessId: owner.Business.Id,
@@ -199,7 +172,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             (await _client.SendAsync(gen)).EnsureSuccessStatusCode();
         }
 
-        private async Task<ServiceDto> CreateServiceAsAsync(RegisteredOwner owner, string name)
+        private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner, string name)
         {
             var dto = new CreateServiceDto(owner.Business.Id, name, null, 30, 20m);
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Service") { Content = JsonContent.Create(dto) };
@@ -211,38 +184,8 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             return created!;
         }
 
-        private async Task<RegisteredOwner> RegisterOwnerAsync(string slug)
-        {
-            var unique = Guid.NewGuid().ToString("N");
-            var email = $"{slug}-{unique}@test.local";
-            var businessName = $"{slug}-{unique}";
-
-            var registration = new RegisterOwnerDto(
-                Email: email,
-                Password: OwnerPassword,
-                FullName: $"Owner {slug}",
-                Phone: "600000000",
-                BusinessName: businessName,
-                BusinessAddress: "Calle Test 1",
-                BusinessPhone: "910000000",
-                BusinessEmail: $"info-{unique}@test.local",
-                BusinessDescription: null);
-
-            var registerResponse = await _client.PostAsJsonAsync("/api/auth/register/owner", registration);
-            registerResponse.EnsureSuccessStatusCode();
-            var auth = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
-            Assert.NotNull(auth);
-
-            var businessesResponse = await _client.GetAsync("/api/Business?page=1&pageSize=200");
-            businessesResponse.EnsureSuccessStatusCode();
-            var paged = await businessesResponse.Content.ReadFromJsonAsync<PagedResult<BusinessPublicDto>>();
-            Assert.NotNull(paged);
-            var business = paged!.Items.First(b => b.Name == businessName);
-
-            return new RegisteredOwner(auth!.AccessToken, business);
-        }
-
-        private sealed record RegisteredOwner(string Token, BusinessPublicDto Business);
+        private Task<ProvisionedOwner> RegisterOwnerAsync(string slug) =>
+            TestProvisioning.ProvisionOwnerAsync(_client, slug);
 
         private sealed record ApiError(string Code, string Message);
     }

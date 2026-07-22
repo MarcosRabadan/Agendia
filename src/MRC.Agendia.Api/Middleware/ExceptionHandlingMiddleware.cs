@@ -60,7 +60,8 @@ namespace MRC.Agendia.Api.Middleware
 
             var (statusCode, code, message) = ex switch
             {
-                AuthenticationException => (HttpStatusCode.Unauthorized, "UNAUTHENTICATED", ex.Message),
+                // No 401 mapping here: Agendia authenticates nobody. A missing or
+                // invalid token is rejected by the JWT middleware before reaching us.
                 // Typed domain exceptions carry their own descriptive Code.
                 // NotFoundException is a DomainException, so match it first.
                 NotFoundException notFound => (HttpStatusCode.NotFound, notFound.Code, ex.Message),

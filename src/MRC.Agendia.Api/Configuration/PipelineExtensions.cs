@@ -14,11 +14,10 @@ namespace MRC.Agendia.Api.Configuration
     ///   1. ForwardedHeaders (only outside Development/Testing)
     ///   2. HttpsRedirection
     ///   3. CORS
-    ///   4. RateLimiter
-    ///   5. ExceptionHandlingMiddleware
-    ///   6. Authentication
-    ///   7. Authorization
-    ///   8. Controllers
+    ///   4. ExceptionHandlingMiddleware
+    ///   5. Authentication
+    ///   6. Authorization
+    ///   7. Controllers
     /// </summary>
     public static class PipelineExtensions
     {
@@ -56,13 +55,9 @@ namespace MRC.Agendia.Api.Configuration
 
             app.UseCors();
 
-            // Skipped under "Testing" because the auth rate limits (login 5/min,
-            // register 3/h) collide with integration scenarios that exercise the
-            // lockout-after-5-failures path or register several users in a row.
-            if (!app.Environment.IsEnvironment("Testing"))
-            {
-                app.UseRateLimiter();
-            }
+            // No rate limiter: the only rate-limited endpoints were the auth ones,
+            // which now live in Harmony. Agendia is reached backend-to-backend, so
+            // throttling belongs at Harmony's public edge, not here.
 
             app.UseMiddleware<ExceptionHandlingMiddleware>();
             app.UseAuthentication();

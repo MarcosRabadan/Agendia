@@ -1,12 +1,10 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using MRC.Agendia.Application.Auth.DTO;
-using MRC.Agendia.Application.Business.DTO;
-using MRC.Agendia.Application.Common;
+using MRC.Agendia.Application.Employees.DTO;
 using MRC.Agendia.Application.Statistics.DTO;
+using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Infrastructure;
@@ -21,8 +19,6 @@ namespace MRC.Agendia.Tests.Integration.Statistics
     /// </summary>
     public class BusinessStatsIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
-        private const string OwnerPassword = "Owner1234!";
-
         private readonly CustomWebApplicationFactory _factory;
         private readonly HttpClient _client;
 
@@ -36,7 +32,7 @@ namespace MRC.Agendia.Tests.Integration.Statistics
         public async Task GetStats_ComoDueno_DevuelveMetricas()
         {
             var owner = await RegisterOwnerAsync("stats-ok");
-            await SeedAppointmentsAsync(owner.Business.Id);
+            await SeedAppointmentsAsync(owner);
 
             var stats = await GetStatsAsync(owner.Token, owner.Business.Id, "2026-05-01", "2026-05-31");
 
@@ -62,7 +58,7 @@ namespace MRC.Agendia.Tests.Integration.Statistics
         public async Task GetStats_ComoCliente_DevuelveForbidden()
         {
             var owner = await RegisterOwnerAsync("stats-cli");
-            var clientToken = await RegisterClientAndGetTokenAsync("stats-c");
+            var clientToken = (await TestProvisioning.ProvisionClientAsync(_client, "stats-c")).Token;
 
             var response = await SendStatsAsync(clientToken, owner.Business.Id, "2026-05-01", "2026-05-31");
 
@@ -73,8 +69,8 @@ namespace MRC.Agendia.Tests.Integration.Statistics
         public async Task GetStats_ComoEmpleado_DevuelveMetricas()
         {
             var owner = await RegisterOwnerAsync("stats-emp");
-            await SeedAppointmentsAsync(owner.Business.Id);
-            var employeeToken = await RegisterEmployeeAndGetTokenAsync(owner, "stats-emp");
+            await SeedAppointmentsAsync(owner);
+            var employeeToken = await CreateEmployeeAccountAsync(owner, "stats-emp");
 
             var stats = await GetStatsAsync(employeeToken, owner.Business.Id, "2026-05-01", "2026-05-31");
 
@@ -84,22 +80,21 @@ namespace MRC.Agendia.Tests.Integration.Statistics
 
         // ----- Helpers -----
 
-        private async Task SeedAppointmentsAsync(int businessId)
+        private async Task SeedAppointmentsAsync(ProvisionedOwner owner)
         {
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
 
-            var employeeId = (await db.Employees.FirstAsync(e => e.BusinessId == businessId)).Id;
-            var service = new Service { BusinessId = businessId, Name = "Corte", DurationMinutes = 30, Price = 30m };
+            var service = new Service { BusinessId = owner.Business.Id, Name = "Corte", DurationMinutes = 30, Price = 30m };
             db.Services.Add(service);
             var client = new Client { Name = "Cliente Test", Phone = "600111222" };
             db.Clients.Add(client);
             await db.SaveChangesAsync();
 
             db.Appointments.AddRange(
-                Appointment(client.Id, employeeId, service.Id, new DateTime(2026, 5, 4, 10, 0, 0), AppointmentStatus.Completed),
-                Appointment(client.Id, employeeId, service.Id, new DateTime(2026, 5, 4, 11, 0, 0), AppointmentStatus.Confirmed),
-                Appointment(client.Id, employeeId, service.Id, new DateTime(2026, 5, 6, 16, 0, 0), AppointmentStatus.NoShow));
+                Appointment(client.Id, owner.EmployeeId, service.Id, new DateTime(2026, 5, 4, 10, 0, 0), AppointmentStatus.Completed),
+                Appointment(client.Id, owner.EmployeeId, service.Id, new DateTime(2026, 5, 4, 11, 0, 0), AppointmentStatus.Confirmed),
+                Appointment(client.Id, owner.EmployeeId, service.Id, new DateTime(2026, 5, 6, 16, 0, 0), AppointmentStatus.NoShow));
             await db.SaveChangesAsync();
         }
 
@@ -131,71 +126,30 @@ namespace MRC.Agendia.Tests.Integration.Statistics
             return await _client.SendAsync(request);
         }
 
-        private async Task<string> RegisterClientAndGetTokenAsync(string slug)
+        /// <summary>
+        /// The owner creates an employee bound to a Harmony user id; the token is then
+        /// minted for that same user id so the employee is recognised as staff of the
+        /// business (this replaces the old register-employee + login round-trip).
+        /// </summary>
+        private async Task<string> CreateEmployeeAccountAsync(ProvisionedOwner owner, string slug)
         {
             var unique = Guid.NewGuid().ToString("N");
-            var dto = new RegisterClientDto($"{slug}-{unique}@test.local", "Client1234!", $"Cliente {slug}", "600999888");
-            var response = await _client.PostAsJsonAsync("/api/auth/register/client", dto);
-            response.EnsureSuccessStatusCode();
-            var auth = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
-            Assert.NotNull(auth);
-            return auth!.AccessToken;
+            var employeeUserId = $"harmony-employee-{unique}";
+
+            await TestProvisioning.PostAsync<CreateEmployeeDto, EmployeeDto>(
+                _client,
+                "/api/Employee",
+                new CreateEmployeeDto(BusinessId: owner.Business.Id,
+                                      FullName: $"Empleado {slug}",
+                                      Email: $"{slug}-emp-{unique}@test.local",
+                                      Phone: "600222333",
+                                      UserId: employeeUserId),
+                owner.Token);
+
+            return TestTokenFactory.Create(employeeUserId, Roles.Employee);
         }
 
-        private async Task<string> RegisterEmployeeAndGetTokenAsync(RegisteredOwner owner, string slug)
-        {
-            var unique = Guid.NewGuid().ToString("N");
-            var email = $"{slug}-emp-{unique}@test.local";
-            const string password = "Employee1234!";
-
-            // The owner creates the employee account, then the employee logs in.
-            var dto = new RegisterEmployeeDto(owner.Business.Id, email, password, $"Empleado {slug}", "600222333");
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/register/employee")
-            {
-                Content = JsonContent.Create(dto)
-            };
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
-            var response = await _client.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-
-            var login = await _client.PostAsJsonAsync("/api/auth/login", new { email, password });
-            login.EnsureSuccessStatusCode();
-            var auth = await login.Content.ReadFromJsonAsync<AuthResponseDto>();
-            Assert.NotNull(auth);
-            return auth!.AccessToken;
-        }
-
-        private async Task<RegisteredOwner> RegisterOwnerAsync(string slug)
-        {
-            var unique = Guid.NewGuid().ToString("N");
-            var email = $"{slug}-{unique}@test.local";
-            var businessName = $"{slug}-{unique}";
-
-            var registration = new RegisterOwnerDto(
-                Email: email,
-                Password: OwnerPassword,
-                FullName: $"Owner {slug}",
-                Phone: "600000000",
-                BusinessName: businessName,
-                BusinessAddress: "Calle Test 1",
-                BusinessPhone: "910000000",
-                BusinessEmail: $"info-{unique}@test.local",
-                BusinessDescription: null);
-
-            var registerResponse = await _client.PostAsJsonAsync("/api/auth/register/owner", registration);
-            registerResponse.EnsureSuccessStatusCode();
-            var auth = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
-            Assert.NotNull(auth);
-
-            var businessesResponse = await _client.GetAsync("/api/Business?page=1&pageSize=200");
-            businessesResponse.EnsureSuccessStatusCode();
-            var paged = await businessesResponse.Content.ReadFromJsonAsync<PagedResult<BusinessPublicDto>>();
-            Assert.NotNull(paged);
-            var business = paged!.Items.First(b => b.Name == businessName);
-
-            return new RegisteredOwner(auth!.AccessToken, business);
-        }
-
-        private sealed record RegisteredOwner(string Token, BusinessPublicDto Business);
+        private Task<ProvisionedOwner> RegisterOwnerAsync(string slug) =>
+            TestProvisioning.ProvisionOwnerAsync(_client, slug);
     }
 }

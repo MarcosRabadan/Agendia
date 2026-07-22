@@ -1,13 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments.DTO;
-using MRC.Agendia.Application.Auth.DTO;
 using MRC.Agendia.Application.Availability.DTO;
-using MRC.Agendia.Application.Business.DTO;
-using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Schedules.DTO;
 using MRC.Agendia.Application.Services.DTO;
 using MRC.Agendia.Domain.Entities;
@@ -25,7 +21,6 @@ namespace MRC.Agendia.Tests.Integration.Appointments
     public class MultiserviceAppointmentIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
         private const int Year = 2035;
-        private const string OwnerPassword = "Owner1234!";
         private static readonly DateOnly SlotDate = new(Year, 6, 4);
         private static readonly TimeOnly SlotTime = new(10, 0);
 
@@ -45,7 +40,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await GenerateScheduleAsync(owner);
             var primary = await CreateServiceAsync(owner, "Corte", durationMinutes: 30, price: 20m);
             var extra = await CreateServiceAsync(owner, "Barba", durationMinutes: 30, price: 12m);
-            var (employeeId, clientId) = await SeedEmployeeAndClientAsync(owner.Business.Id);
+            var (employeeId, clientId) = await SeedEmployeeAndClientAsync(owner);
 
             var start = SlotDate.ToDateTime(SlotTime);
             var dto = new CreateAppointmentDto(
@@ -72,7 +67,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await GenerateScheduleAsync(owner);
             var primary = await CreateServiceAsync(owner, "Corte", durationMinutes: 30, price: 20m);
             var extra = await CreateServiceAsync(owner, "Barba", durationMinutes: 30, price: 12m);
-            var (employeeId, clientId) = await SeedEmployeeAndClientAsync(owner.Business.Id);
+            var (employeeId, clientId) = await SeedEmployeeAndClientAsync(owner);
 
             var start = SlotDate.ToDateTime(SlotTime);
             // Only 30 min booked for two 30-min services -> total duration mismatch.
@@ -114,7 +109,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await GenerateScheduleAsync(owner);
             var primary = await CreateServiceAsync(owner, "Corte", durationMinutes: 30, price: 20m);
             var extra = await CreateServiceAsync(owner, "Barba", durationMinutes: 30, price: 12m);
-            var (employeeId, clientId) = await SeedEmployeeAndClientAsync(owner.Business.Id);
+            var (employeeId, clientId) = await SeedEmployeeAndClientAsync(owner);
 
             var start = SlotDate.ToDateTime(SlotTime);
             var createResponse = await PostAppointmentAsync(owner.Token, new CreateAppointmentDto(
@@ -148,7 +143,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await GenerateScheduleAsync(owner);
             var primary = await CreateServiceAsync(owner, "Corte", durationMinutes: 30, price: 20m);
             var extra = await CreateServiceAsync(owner, "Barba", durationMinutes: 30, price: 12m);
-            var (employeeId, clientId) = await SeedEmployeeAndClientAsync(owner.Business.Id);
+            var (employeeId, clientId) = await SeedEmployeeAndClientAsync(owner);
 
             var start = SlotDate.ToDateTime(SlotTime);
             var dto = new CreateAppointmentDto(
@@ -180,18 +175,18 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             return dto!;
         }
 
-        private async Task<(int EmployeeId, int ClientId)> SeedEmployeeAndClientAsync(int businessId)
+        private async Task<(int EmployeeId, int ClientId)> SeedEmployeeAndClientAsync(ProvisionedOwner owner)
         {
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
-            var employeeId = (await db.Employees.FirstAsync(e => e.BusinessId == businessId)).Id;
+            var employeeId = owner.EmployeeId;
             var client = new Client { Name = "Cliente MS", Phone = "600111222", Email = $"ms-{Guid.NewGuid():N}@test.local" };
             db.Clients.Add(client);
             await db.SaveChangesAsync();
             return (employeeId, client.Id);
         }
 
-        private async Task GenerateScheduleAsync(RegisteredOwner owner)
+        private async Task GenerateScheduleAsync(ProvisionedOwner owner)
         {
             var request = new GenerateScheduleRequestDto(
                 BusinessId: owner.Business.Id,
@@ -220,7 +215,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             (await _client.SendAsync(gen)).EnsureSuccessStatusCode();
         }
 
-        private async Task<ServiceDto> CreateServiceAsync(RegisteredOwner owner, string name, int durationMinutes, decimal price)
+        private async Task<ServiceDto> CreateServiceAsync(ProvisionedOwner owner, string name, int durationMinutes, decimal price)
         {
             var dto = new CreateServiceDto(owner.Business.Id, name, null, durationMinutes, price);
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Service") { Content = JsonContent.Create(dto) };
@@ -232,38 +227,8 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             return created!;
         }
 
-        private async Task<RegisteredOwner> RegisterOwnerAsync(string slug)
-        {
-            var unique = Guid.NewGuid().ToString("N");
-            var email = $"{slug}-{unique}@test.local";
-            var businessName = $"{slug}-{unique}";
-
-            var registration = new RegisterOwnerDto(
-                Email: email,
-                Password: OwnerPassword,
-                FullName: $"Owner {slug}",
-                Phone: "600000000",
-                BusinessName: businessName,
-                BusinessAddress: "Calle Test 1",
-                BusinessPhone: "910000000",
-                BusinessEmail: $"info-{unique}@test.local",
-                BusinessDescription: null);
-
-            var registerResponse = await _client.PostAsJsonAsync("/api/auth/register/owner", registration);
-            registerResponse.EnsureSuccessStatusCode();
-            var auth = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
-            Assert.NotNull(auth);
-
-            var businessesResponse = await _client.GetAsync("/api/Business?page=1&pageSize=200");
-            businessesResponse.EnsureSuccessStatusCode();
-            var paged = await businessesResponse.Content.ReadFromJsonAsync<PagedResult<BusinessPublicDto>>();
-            Assert.NotNull(paged);
-            var business = paged!.Items.First(b => b.Name == businessName);
-
-            return new RegisteredOwner(auth!.AccessToken, business);
-        }
-
-        private sealed record RegisteredOwner(string Token, BusinessPublicDto Business);
+        private Task<ProvisionedOwner> RegisterOwnerAsync(string slug) =>
+            TestProvisioning.ProvisionOwnerAsync(_client, slug);
 
         private sealed record ApiError(string Code, string Message);
     }

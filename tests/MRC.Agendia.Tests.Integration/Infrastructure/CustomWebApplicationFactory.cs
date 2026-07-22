@@ -25,7 +25,7 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
     ///
     /// Production code paths are honoured except for:
     ///   - Environment is "Testing" (PipelineExtensions skips HTTPS redirect
-    ///     and rate limiter in that environment, see #47).
+    ///     in that environment, see #47).
     ///   - DbContext is replaced with EF Core InMemory.
     /// </summary>
     public class CustomWebApplicationFactory : WebApplicationFactory<Program>
@@ -40,13 +40,11 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
 
         public CustomWebApplicationFactory()
         {
-            // 64-char deterministic key (good enough for HS256 in tests).
-            Environment.SetEnvironmentVariable("Jwt__Key",
-                "test-key-for-integration-tests-do-not-use-in-production-1234567890");
-            Environment.SetEnvironmentVariable("Jwt__Issuer", "MRC.Agendia.Tests");
-            Environment.SetEnvironmentVariable("Jwt__Audience", "MRC.Agendia.Tests.Clients");
-            Environment.SetEnvironmentVariable("Jwt__AccessTokenMinutes", "15");
-            Environment.SetEnvironmentVariable("Jwt__RefreshTokenDays", "7");
+            // Same signing material TestTokenFactory forges tokens with: it stands in
+            // for the secret shared with the Harmony identity service.
+            Environment.SetEnvironmentVariable("Jwt__Key", TestTokenFactory.Key);
+            Environment.SetEnvironmentVariable("Jwt__Issuer", TestTokenFactory.Issuer);
+            Environment.SetEnvironmentVariable("Jwt__Audience", TestTokenFactory.Audience);
 
             // Required by AddInfrastructure (registers SQL Server) even though
             // the DbContext is replaced below. SqlConnectionStringBuilder

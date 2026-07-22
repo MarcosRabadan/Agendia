@@ -15,8 +15,12 @@ namespace MRC.Agendia.Application.Mappings
             // Update does NOT allow changing the BusinessId. Mapping it would let an
             // Employee (or Owner) move an employee to another tenant via a crafted
             // DTO (cross-tenant takeover, same vector as #91/#92). See issue #125.
+            // UserId is likewise not mappable on update: repointing an existing
+            // employee to another Harmony user would grant that user access to the
+            // business through EnsureCanManageBusinessResourcesAsync.
             CreateMap<UpdateEmployeeDto, Employee>()
-                .ForMember(dest => dest.BusinessId, opt => opt.Ignore());
+                .ForMember(dest => dest.BusinessId, opt => opt.Ignore())
+                .ForMember(dest => dest.UserId, opt => opt.Ignore());
         }
     }
 }

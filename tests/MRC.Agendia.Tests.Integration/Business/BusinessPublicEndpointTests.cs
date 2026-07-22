@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
-using MRC.Agendia.Application.Auth.DTO;
 using MRC.Agendia.Application.Business.DTO;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Infrastructure;
@@ -19,8 +18,6 @@ namespace MRC.Agendia.Tests.Integration.Business
     /// </summary>
     public class BusinessPublicEndpointTests : IClassFixture<CustomWebApplicationFactory>
     {
-        private const string OwnerPassword = "Owner1234!";
-
         private readonly CustomWebApplicationFactory _factory;
         private readonly HttpClient _client;
 
@@ -123,37 +120,7 @@ namespace MRC.Agendia.Tests.Integration.Business
             return doc.RootElement.GetRawText();
         }
 
-        private async Task<RegisteredOwner> RegisterOwnerAsync(string slug)
-        {
-            var unique = Guid.NewGuid().ToString("N");
-            var email = $"{slug}-{unique}@test.local";
-            var businessName = $"{slug}-{unique}";
-
-            var registration = new RegisterOwnerDto(
-                Email: email,
-                Password: OwnerPassword,
-                FullName: $"Owner {slug}",
-                Phone: "600000000",
-                BusinessName: businessName,
-                BusinessAddress: "Calle Test 1",
-                BusinessPhone: "910000000",
-                BusinessEmail: $"info-{unique}@test.local",
-                BusinessDescription: "Negocio de pruebas");
-
-            var registerResponse = await _client.PostAsJsonAsync("/api/auth/register/owner", registration);
-            registerResponse.EnsureSuccessStatusCode();
-
-            // The public GET works even before login, so we use it to resolve
-            // the new business by its unique name without any token plumbing.
-            var listResponse = await _client.GetAsync("/api/business?page=1&pageSize=200");
-            listResponse.EnsureSuccessStatusCode();
-            var paged = await listResponse.Content.ReadFromJsonAsync<PagedResult<BusinessPublicDto>>();
-            Assert.NotNull(paged);
-            var business = paged!.Items.First(b => b.Name == businessName);
-
-            return new RegisteredOwner(business);
-        }
-
-        private sealed record RegisteredOwner(BusinessPublicDto Business);
+        private Task<ProvisionedOwner> RegisterOwnerAsync(string slug) =>
+            TestProvisioning.ProvisionOwnerAsync(_client, slug);
     }
 }

@@ -1,9 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using MRC.Agendia.Application.Auth.DTO;
-using MRC.Agendia.Application.Business.DTO;
-using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Schedules.DTO;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Tests.Integration.Infrastructure;
@@ -23,8 +20,6 @@ namespace MRC.Agendia.Tests.Integration.Schedules
     /// </summary>
     public class ScheduleCrossTenantTests : IClassFixture<CustomWebApplicationFactory>
     {
-        private const string OwnerPassword = "Owner1234!";
-
         private readonly HttpClient _client;
 
         public ScheduleCrossTenantTests(CustomWebApplicationFactory factory)
@@ -97,7 +92,7 @@ namespace MRC.Agendia.Tests.Integration.Schedules
 
         // ----- Helpers -----
 
-        private async Task<ScheduleTemplateDto> CreateTemplateAsAsync(RegisteredOwner owner)
+        private async Task<ScheduleTemplateDto> CreateTemplateAsAsync(ProvisionedOwner owner)
         {
             var createDto = new CreateScheduleTemplateDto(
                 BusinessId: owner.Business.Id,
@@ -125,7 +120,7 @@ namespace MRC.Agendia.Tests.Integration.Schedules
             return created!;
         }
 
-        private async Task<ScheduleOverrideDto> CreateOverrideAsAsync(RegisteredOwner owner)
+        private async Task<ScheduleOverrideDto> CreateOverrideAsAsync(ProvisionedOwner owner)
         {
             var createDto = new CreateScheduleOverrideDto(
                 BusinessId: owner.Business.Id,
@@ -149,37 +144,9 @@ namespace MRC.Agendia.Tests.Integration.Schedules
             return created!;
         }
 
-        private async Task<RegisteredOwner> RegisterOwnerAsync(string slug)
-        {
-            var unique = Guid.NewGuid().ToString("N");
-            var email = $"{slug}-{unique}@test.local";
-            var businessName = $"{slug}-{unique}";
-
-            var registration = new RegisterOwnerDto(
-                Email: email,
-                Password: OwnerPassword,
-                FullName: $"Owner {slug}",
-                Phone: "600000000",
-                BusinessName: businessName,
-                BusinessAddress: "Calle Test 1",
-                BusinessPhone: "910000000",
-                BusinessEmail: $"info-{unique}@test.local",
-                BusinessDescription: null);
-
-            var registerResponse = await _client.PostAsJsonAsync("/api/auth/register/owner", registration);
-            registerResponse.EnsureSuccessStatusCode();
-            var auth = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
-            Assert.NotNull(auth);
-
-            var businessesResponse = await _client.GetAsync("/api/Business?page=1&pageSize=200");
-            businessesResponse.EnsureSuccessStatusCode();
-            var paged = await businessesResponse.Content.ReadFromJsonAsync<PagedResult<BusinessPublicDto>>();
-            Assert.NotNull(paged);
-            var business = paged!.Items.First(b => b.Name == businessName);
-
-            return new RegisteredOwner(auth!.AccessToken, business);
-        }
-
-        private sealed record RegisteredOwner(string Token, BusinessPublicDto Business);
+        // Every call provisions a brand new owner user id, so owner A and owner B
+        // are distinct identities holding distinct tokens.
+        private Task<ProvisionedOwner> RegisterOwnerAsync(string slug) =>
+            TestProvisioning.ProvisionOwnerAsync(_client, slug);
     }
 }

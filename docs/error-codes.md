@@ -14,13 +14,17 @@ Todas las respuestas de error siguen la forma:
 El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan de
 `DomainException` (en `MRC.Agendia.Domain.Exceptions`) y llevan su propio `Code`.
 
+> **401 no aparece en este catálogo.** Agendia no autentica a nadie: los tokens los
+> emite Harmony (ver [contrato de token](harmony-token-contract.md)) y un token
+> ausente, caducado o mal firmado lo rechaza el middleware de JWT Bearer con un 401
+> sin cuerpo, antes de llegar al middleware de excepciones.
+
 ## Genéricos / transversales
 
 | Code | HTTP | Cuándo |
 |---|---|---|
 | `VALIDATION_ERROR` | 400 | FluentValidation falló (incluye `errors`). |
 | `BAD_REQUEST` | 400 | `InvalidOperationException`/`ArgumentException` sin tipar (reglas varias). |
-| `UNAUTHENTICATED` | 401 | Credenciales inválidas, cuenta bloqueada/desactivada, refresh token inválido, email sin confirmar. |
 | `FORBIDDEN` | 403 | Autenticado pero sin permiso sobre el recurso (cross-tenant). |
 | `NOT_FOUND` | 404 | Recurso no encontrado sin tipar (fallback heredado). |
 | `INTERNAL_ERROR` | 500 | Excepción no controlada. |
@@ -44,7 +48,6 @@ El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan 
 
 | Code | Excepción | Cuándo |
 |---|---|---|
-| `DUPLICATE_EMAIL` | `DuplicateEmailException` | Ya existe una cuenta con ese email. |
 | `SCHEDULE_TEMPLATES_OVERLAP` | `TemplatesOverlapException` | Plantillas de horario con fechas solapadas. |
 | `SCHEDULE_OVERRIDE_CONFLICT` | `ScheduleOverrideConflictException` | Ya existe una excepción de horario para esa fecha en el negocio. |
 | `SCHEDULE_YEAR_ALREADY_EXISTS` | `ScheduleAlreadyExistsForYearException` | Se intenta generar el horario de un año que el negocio ya tiene configurado sin confirmar el reemplazo. Reenviar con `replaceExisting: true` para rehacerlo. |

@@ -1,8 +1,10 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using MRC.Agendia.Application.Auth.DTO;
+using MRC.Agendia.Application.Business.DTO;
+using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Tests.Integration.Infrastructure;
 
@@ -10,12 +12,14 @@ namespace MRC.Agendia.Tests.Integration.Business
 {
     /// <summary>
     /// End-to-end coverage for the per-business notification language (es/en/fr):
-    /// the validator rejects unknown codes, and a valid code chosen at owner
-    /// registration is persisted on the Business so notifications pick it up.
+    /// the validator rejects unknown codes, and a valid code chosen when the
+    /// business is created is persisted so notifications pick it up.
+    ///
+    /// The language used to travel on the owner-registration payload; now that
+    /// Harmony owns registration it is set on CreateBusinessDto instead.
     /// </summary>
     public class BusinessLanguageIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
-        private const string ValidPassword = "Owner1234!";
         private readonly CustomWebApplicationFactory _factory;
         private readonly HttpClient _client;
 
@@ -26,11 +30,11 @@ namespace MRC.Agendia.Tests.Integration.Business
         }
 
         [Fact]
-        public async Task RegisterOwner_IdiomaNoSoportado_400()
+        public async Task CreateBusiness_IdiomaNoSoportado_400()
         {
-            var dto = BuildDto(NewEmail(), NewBusinessEmail(), "xx");
+            var dto = BuildDto(NewBusinessEmail(), "xx");
 
-            var response = await _client.PostAsJsonAsync("/api/auth/register/owner", dto);
+            var response = await PostBusinessAsync(dto);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var body = await response.Content.ReadAsStringAsync();
@@ -38,43 +42,61 @@ namespace MRC.Agendia.Tests.Integration.Business
         }
 
         [Fact]
-        public async Task RegisterOwner_ConIdiomaIngles_PersisteEnElNegocio()
+        public async Task CreateBusiness_ConIdiomaIngles_PersisteEnElNegocio()
         {
             var businessEmail = NewBusinessEmail();
-            var dto = BuildDto(NewEmail(), businessEmail, "en");
+            var dto = BuildDto(businessEmail, "en");
 
-            var response = await _client.PostAsJsonAsync("/api/auth/register/owner", dto);
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var response = await PostBusinessAsync(dto);
+            response.EnsureSuccessStatusCode();
 
-            using var scope = _factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
-            var business = await db.Businesses
-                .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(b => b.Email == businessEmail);
-
-            Assert.NotNull(business);
-            Assert.Equal("en", business!.DefaultLanguage);
+            Assert.Equal("en", await GetStoredLanguageAsync(businessEmail));
         }
 
         [Fact]
-        public async Task RegisterOwner_SinIdioma_UsaEspanolPorDefecto()
+        public async Task CreateBusiness_SinIdioma_UsaEspanolPorDefecto()
         {
             var businessEmail = NewBusinessEmail();
-            // BusinessDefaultLanguage left at its default (es) by the record.
-            var dto = new RegisterOwnerDto(
-                Email: NewEmail(),
-                Password: ValidPassword,
-                FullName: "Maria Owner",
-                Phone: "600111222",
-                BusinessName: "Pelu Maria",
-                BusinessAddress: "Calle 1, 28001 Madrid",
-                BusinessPhone: "910001122",
-                BusinessEmail: businessEmail,
-                BusinessDescription: null);
 
-            var response = await _client.PostAsJsonAsync("/api/auth/register/owner", dto);
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            // Posted as an anonymous object so DefaultLanguage is genuinely ABSENT
+            // from the JSON, exercising the record's default instead of sending "es".
+            var payload = new
+            {
+                Name = "Pelu Maria",
+                Description = (string?)null,
+                Address = "Calle 1, 28001 Madrid",
+                Phone = "910001122",
+                Email = businessEmail,
+                OwnerUserId = NewOwnerUserId()
+            };
 
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Business")
+            {
+                Content = JsonContent.Create(payload)
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", NewAdminToken());
+
+            var response = await _client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            Assert.Equal("es", await GetStoredLanguageAsync(businessEmail));
+        }
+
+        // ----- Helpers -----
+
+        private async Task<HttpResponseMessage> PostBusinessAsync(CreateBusinessDto dto)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Business")
+            {
+                Content = JsonContent.Create(dto)
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", NewAdminToken());
+
+            return await _client.SendAsync(request);
+        }
+
+        private async Task<string?> GetStoredLanguageAsync(string businessEmail)
+        {
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
             var business = await db.Businesses
@@ -82,23 +104,23 @@ namespace MRC.Agendia.Tests.Integration.Business
                 .FirstOrDefaultAsync(b => b.Email == businessEmail);
 
             Assert.NotNull(business);
-            Assert.Equal("es", business!.DefaultLanguage);
+            return business!.DefaultLanguage;
         }
 
-        private static string NewEmail() => $"owner-{Guid.NewGuid():N}@agendia.test";
+        private static CreateBusinessDto BuildDto(string businessEmail, string language) => new(
+            Name: "Pelu Maria",
+            Description: null,
+            Address: "Calle 1, 28001 Madrid",
+            Phone: "910001122",
+            Email: businessEmail,
+            OwnerUserId: NewOwnerUserId(),
+            DefaultLanguage: language);
 
         private static string NewBusinessEmail() => $"biz-{Guid.NewGuid():N}@agendia.test";
 
-        private static RegisterOwnerDto BuildDto(string email, string businessEmail, string language) => new(
-            Email: email,
-            Password: ValidPassword,
-            FullName: "Maria Owner",
-            Phone: "600111222",
-            BusinessName: "Pelu Maria",
-            BusinessAddress: "Calle 1, 28001 Madrid",
-            BusinessPhone: "910001122",
-            BusinessEmail: businessEmail,
-            BusinessDescription: null,
-            BusinessDefaultLanguage: language);
+        private static string NewOwnerUserId() => $"harmony-owner-{Guid.NewGuid():N}";
+
+        private static string NewAdminToken() =>
+            TestTokenFactory.Create($"harmony-admin-{Guid.NewGuid():N}", Roles.Admin);
     }
 }
