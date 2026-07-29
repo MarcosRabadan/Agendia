@@ -14,10 +14,13 @@ Todas las respuestas de error siguen la forma:
 El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan de
 `DomainException` (en `MRC.Agendia.Domain.Exceptions`) y llevan su propio `Code`.
 
-> **401 no aparece en este catálogo.** Agendia no autentica a nadie: los tokens los
-> emite Harmony (ver [contrato de token](harmony-token-contract.md)) y un token
-> ausente, caducado o mal firmado lo rechaza el middleware de JWT Bearer con un 401
-> sin cuerpo, antes de llegar al middleware de excepciones.
+> **Sobre el 401.** Agendia no autentica **usuarios**: los tokens de usuario los emite
+> Harmony (ver [contrato de token](harmony-token-contract.md)) y un token ausente,
+> caducado o mal firmado lo rechaza el middleware de JWT Bearer con un 401 sin cuerpo,
+> antes de llegar al middleware de excepciones. La **única** excepción es la
+> autenticación **máquina-a-máquina** (`POST /api/auth/service-token`, ver
+> [contrato de servicio](service-auth-contract.md)): unas credenciales de servicio
+> inválidas devuelven un 401 **con cuerpo** y `code` `INVALID_SERVICE_CREDENTIALS`.
 
 ## Genéricos / transversales
 
@@ -25,6 +28,7 @@ El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan 
 |---|---|---|
 | `VALIDATION_ERROR` | 400 | FluentValidation falló (incluye `errors`). |
 | `BAD_REQUEST` | 400 | `InvalidOperationException`/`ArgumentException` sin tipar (reglas varias). |
+| `INVALID_SERVICE_CREDENTIALS` | 401 | `InvalidServiceCredentialsException`: credenciales M2M inválidas (clientId desconocido, secreto incorrecto o cliente deshabilitado) en `POST /api/auth/service-token`. Mensaje uniforme para no filtrar qué clientId existe. |
 | `FORBIDDEN` | 403 | Autenticado pero sin permiso sobre el recurso (cross-tenant). |
 | `NOT_FOUND` | 404 | Recurso no encontrado sin tipar (fallback heredado). |
 | `INTERNAL_ERROR` | 500 | Excepción no controlada. |

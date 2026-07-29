@@ -16,8 +16,10 @@ using MRC.Agendia.Infrastructure.Caching;
 using MRC.Agendia.Infrastructure.Notifications;
 using MRC.Agendia.Infrastructure.Persistence;
 using MRC.Agendia.Infrastructure.Repositories;
+using MRC.Agendia.Infrastructure.ServiceAuth;
 using MRC.Agendia.Infrastructure.Services;
 using MRC.Agendia.Infrastructure.Time;
+using MRC.Agendia.Application.ServiceAuth;
 
 namespace MRC.Agendia.Infrastructure
 {
@@ -92,6 +94,14 @@ namespace MRC.Agendia.Infrastructure
 
             // Audit log
             services.AddScoped<IAuditLogger, AuditLogger>();
+
+            // Machine-to-machine (client-credentials) service auth (#232).
+            // Trusted clients live in the "ServiceClients" config array (secrets are
+            // hashed); the issuer signs with the same key Harmony's tokens validate with.
+            services.Configure<ServiceClientRegistryOptions>(configuration);
+            services.Configure<ServiceAuthOptions>(configuration.GetSection(ServiceAuthOptions.SectionName));
+            services.AddScoped<IServiceClientAuthenticator, ConfigurationServiceClientAuthenticator>();
+            services.AddScoped<IServiceTokenIssuer, JwtServiceTokenIssuer>();
 
             // Hosted services
             services.AddHostedService<AppointmentReminderService>();
