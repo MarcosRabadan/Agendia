@@ -1,4 +1,5 @@
 using FluentValidation;
+using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Enums;
 
 namespace MRC.Agendia.Application.Appointments.Commands.Series
@@ -18,7 +19,14 @@ namespace MRC.Agendia.Application.Appointments.Commands.Series
             RuleFor(x => x.Dto.Interval)
                 .InclusiveBetween(1, MaxInterval)
                 .WithMessage($"El intervalo debe estar entre 1 y {MaxInterval}.");
+            // Absolute bounds so the day-by-day recurrence expansion cannot overflow
+            // DateOnly.MaxValue (would be a 500 instead of a 400).
+            RuleFor(x => x.Dto.StartDate)
+                .InclusiveBetween(SchedulingLimits.MinDate, SchedulingLimits.MaxDate)
+                .WithMessage(SchedulingLimits.OutOfRangeMessage);
             RuleFor(x => x.Dto.UntilDate)
+                .InclusiveBetween(SchedulingLimits.MinDate, SchedulingLimits.MaxDate)
+                .WithMessage(SchedulingLimits.OutOfRangeMessage)
                 .GreaterThanOrEqualTo(x => x.Dto.StartDate)
                 .WithMessage("UntilDate debe ser igual o posterior a StartDate.");
             RuleFor(x => x.Dto)

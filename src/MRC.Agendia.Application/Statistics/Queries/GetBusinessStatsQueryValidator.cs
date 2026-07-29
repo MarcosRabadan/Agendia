@@ -1,4 +1,5 @@
 using FluentValidation;
+using MRC.Agendia.Domain.Constants;
 
 namespace MRC.Agendia.Application.Statistics.Queries
 {
@@ -9,9 +10,15 @@ namespace MRC.Agendia.Application.Statistics.Queries
         public GetBusinessStatsQueryValidator()
         {
             RuleFor(x => x.BusinessId).GreaterThan(0);
-            RuleFor(x => x.From).NotEqual(default(DateOnly));
+            // Absolute bounds keep To.AddDays(1) in the handler from overflowing at
+            // DateOnly.MaxValue (would be a 500 instead of a 400); NotEqual(default)
+            // is subsumed because default(DateOnly) falls below MinDate.
+            RuleFor(x => x.From)
+                .InclusiveBetween(SchedulingLimits.MinDate, SchedulingLimits.MaxDate)
+                .WithMessage(SchedulingLimits.OutOfRangeMessage);
             RuleFor(x => x.To)
-                .NotEqual(default(DateOnly))
+                .InclusiveBetween(SchedulingLimits.MinDate, SchedulingLimits.MaxDate)
+                .WithMessage(SchedulingLimits.OutOfRangeMessage)
                 .GreaterThanOrEqualTo(x => x.From)
                 .WithMessage("To debe ser igual o posterior a From.");
             RuleFor(x => x)
