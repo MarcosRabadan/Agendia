@@ -19,6 +19,19 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MRC.Agendia.Tests.Unit", "t
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MRC.Agendia.Tests.Integration", "tests\MRC.Agendia.Tests.Integration\MRC.Agendia.Tests.Integration.csproj", "{C2DF1202-145A-4B75-9482-80D6F4D801DC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{35F6DEE0-585E-4CC7-99A1-21B9493696B1}"
+	ProjectSection(SolutionItems) = preProject
+		docs\error-codes.md = docs\error-codes.md
+		docs\harmony-token-contract.md = docs\harmony-token-contract.md
+		docs\service-auth-contract.md = docs\service-auth-contract.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wiki", "wiki", "{FF7B9783-6AA1-4634-9CD3-366F97F370A8}"
+	ProjectSection(SolutionItems) = preProject
+		docs\wiki\README.md = docs\wiki\README.md
+		docs\wiki\v0.1.0.md = docs\wiki\v0.1.0.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -112,6 +125,7 @@ Global
 		{BFBFCF97-4851-B68B-AF5B-1F60EC7CBF26} = {3BCE93FF-0783-43E9-9894-DB0A193ABF17}
 		{E80FA8B7-D52F-4E5F-9A17-A72534902FB3} = {AAE8D743-2BFA-4E4A-B113-8332F72DD47B}
 		{C2DF1202-145A-4B75-9482-80D6F4D801DC} = {AAE8D743-2BFA-4E4A-B113-8332F72DD47B}
+		{FF7B9783-6AA1-4634-9CD3-366F97F370A8} = {35F6DEE0-585E-4CC7-99A1-21B9493696B1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FCA60840-1DDB-4702-B385-4B48BCC3AE36}
