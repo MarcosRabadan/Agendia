@@ -1,0 +1,368 @@
+# Agendia — Nivel técnico
+
+> Cómo está construido Agendia por dentro: arquitectura, modelo de dominio, el motor de horarios y
+> citas, seguridad, persistencia y pruebas. Pensado para quien va a leer o tocar el código.
+
+← Volver al [índice de la wiki](README.md) · Ver el [nivel funcional](funcional.md)
+
+---
+
+## 1. Arquitectura
+
+Agendia es una **API REST** construida con **Clean Architecture + DDD** en cuatro capas con
+dependencias hacia dentro:
+
+| Capa | Responsabilidad |
+|---|---|
+| `Domain` | Entidades, enums, excepciones tipadas, interfaces de repositorio y servicios de dominio. Sin dependencias externas. |
+| `Application` | Casos de uso en **CQRS** (Command/Query + Handler) con MediatR, DTOs, validadores FluentValidation, servicios de aplicación, perfiles de AutoMapper. |
+| `Infrastructure` | EF Core (DbContext, repositorios, interceptores), autorización basada en recursos, notificaciones, reloj de negocio, firma de tokens de servicio. |
+| `Api` | Controllers, middleware, configuración del pipeline, validación de JWT, health checks, Swagger. |
+
+### Stack
+
+- **.NET 9** + ASP.NET Core Web API
+- **CQRS con MediatR** — cada caso de uso es un Command/Query con su Handler; un
+  `ValidationBehavior` ejecuta FluentValidation antes del handler.
+- **EF Core 9** + SQL Server (LocalDB en desarrollo)
+- **AutoMapper** para el mapeo entidad ↔ DTO (con reglas estrictas anti cross-tenant)
+- **JWT Bearer** — Agendia *valida* los tokens que firma el servicio de identidad (Harmony) y
+  *emite* tokens de servicio máquina-a-máquina
+- **Serilog + Seq** para logging; **Swagger/OpenAPI** para documentación
+- **xUnit + NSubstitute + EF InMemory** (unit) y **WebApplicationFactory** (integración)
+
+> **Microservicio.** Agendia es un microservicio de una plataforma mayor. La **identidad de
+> usuario es externa** (servicio Harmony): Agendia no registra usuarios, ni hace login, ni guarda
+> contraseñas. Ver [Identidad y autenticación](#3-identidad-y-autenticación).
+
+## 2. Flujo de una petición
+
+Una petición atraviesa el pipeline y baja por las capas hasta la base de datos:
+
+```
+Request
+  → CorrelationIdMiddleware   (lee/genera X-Correlation-Id, lo fija como traceId)
+  → CORS · HTTPS redirect
+  → ExceptionHandlingMiddleware
+  → Authentication (JWT Bearer)  ·  Authorization
+  → Controller
+      → MediatR.Send(Command/Query)
+          → ValidationBehavior     (FluentValidation → 400 si falla)
+          → Handler
+              → IResourceAuthorizationService.EnsureCan*  (autorización por recurso)
+              → Service (Application)
+                  → IAppointmentSchedulingValidator  (en alta/edición de cita)
+                  → Repository (EF Core)
+                      → SQL Server
+```
+
+Cada respuesta lleva su `X-Correlation-Id`, y ese identificador es el `traceId` que aparece en los
+errores, de modo que un fallo se puede rastrear de punta a punta en los logs.
+
+## 3. Identidad y autenticación
+
+Agendia **no autentica usuarios**: eso vive en el servicio de identidad **Harmony**, que registra
+a los usuarios, firma los access tokens y llama a Agendia con ellos. Agendia **solo los valida** y
+lee la identidad de los claims.
+
+### Contrato del token de usuario
+
+| Parámetro | Valor |
+|---|---|
+| Algoritmo | `HS256` (pineado; ningún otro, tampoco `none`) |
+| Clave | Secreto simétrico **compartido** entre Harmony y Agendia (`Jwt:Key`, ≥ 32 bytes) |
+| `iss` / `aud` | `MRC.Agendia` / `MRC.Agendia.Clients` |
+| `sub` | Id de usuario de Harmony — opaco, estable e **inmutable** |
+| `role` | `Admin` · `BusinessOwner` · `Employee` · `Client` |
+
+El `sub` no solo autentica: se **persiste** como clave de negocio en `Business.OwnerUserId`,
+`Employee.UserId`, `Client.UserId`, etc. Por eso debe ser inmutable de por vida. El mapeo de claims
+de entrada (`MapInboundClaims=true`) traduce `sub → NameIdentifier` y `role → Role`, que es lo que
+leen la autorización y los `[Authorize]`.
+
+> **Ya no existe aquí.** Registro, login, logout, refresh tokens, cambio/recuperación de
+> contraseña, confirmación de email, tablas `AspNet*` y rate limiting de auth **viven ahora en
+> Harmony** y no deben reintroducirse en Agendia.
+
+## 4. Auth máquina-a-máquina (client-credentials)
+
+Para que otros servicios de confianza llamen a Agendia **servicio-a-servicio** (sin usuario
+humano), Agendia expone un flujo estándar **client-credentials**.
+
+Endpoint público, sin Bearer previo, pero solo funciona con un secreto válido:
+
+```http
+POST /api/auth/service-token
+Content-Type: application/json
+
+{ "clientId": "mi-servicio", "clientSecret": "<secreto>" }
+```
+
+```json
+200 OK
+{
+  "accessToken": "eyJhbGci...",
+  "expiresAt": "2026-07-29T12:15:00Z",
+  "tokenType": "Bearer"
+}
+```
+
+- **Sin refresh token**: cuando caduca, el servicio vuelve a pedir token con su secreto.
+- `401 INVALID_SERVICE_CREDENTIALS` (mensaje **uniforme**) si el clientId no existe, el secreto no
+  coincide o el cliente está deshabilitado — no se distingue cuál, para no filtrar qué clientIds
+  existen. `400` si faltan campos.
+- Agendia **firma** el token con la **misma** clave/issuer/audience que valida (posible por ser
+  clave simétrica compartida), con claims `sub` = `client_id` = clientId, `token_use=service` y
+  `role`.
+
+### Registro de clientes y secreto
+
+Los clientes de confianza viven en **configuración** (`ServiceClients[]` + `ServiceAuth`), sin
+migración de base de datos. El secreto se guarda **hasheado** (PBKDF2-HMAC-SHA256 con sal) y se
+compara en **tiempo constante**; el secreto en claro va en variables de entorno / user-secrets,
+nunca en el repositorio.
+
+### Autorización del token de servicio
+
+El token se emite con rol **`Admin`** (configurable por cliente), lo que le da **acceso transversal
+a todos los negocios** reutilizando la autorización existente —imprescindible para un servicio que
+opera sobre múltiples negocios—. El claim `token_use=service` lo deja marcado para auditoría y para
+poder acotarlo en el futuro con un rol dedicado. Cada intento se **audita**
+(`SERVICE_TOKEN_ISSUED` / `SERVICE_TOKEN_DENIED`).
+
+> Contrato completo para el servicio consumidor en [`docs/service-auth-contract.md`](../service-auth-contract.md).
+
+## 5. Modelo de dominio
+
+| Entidad | Notas |
+|---|---|
+| `Business` | Negocio. `OwnerUserId`, idioma de notificaciones, ventana de cancelación, estado inicial de cita por defecto. |
+| `Employee` | Profesional o recurso. `MaxConcurrentAppointments` (aforo), `UserId` opcional (recurso sin cuenta). |
+| `Service` | Servicio del catálogo: duración y precio. |
+| `Client` | Cliente. `UserId` y `BusinessId` opcionales (cliente global vs. de un negocio). |
+| `Appointment` | Cita. Estado, servicios extra (`ExtraServices`), `SeriesId`, `ReminderSentAt`. |
+| `ScheduleTemplate` / `ScheduleOverride` | Plantillas de horario por rango de fechas y excepciones por día. |
+| `HolidayCalendar` | Festivos por ámbito. |
+| `WaitlistEntry` | Entrada en lista de espera de un hueco. |
+| `DeviceToken` | Token de dispositivo para push. |
+| `AuditLog` | Registro de acciones sensibles. |
+
+### Soft delete y campos de auditoría
+
+Las cinco entidades de negocio (Business, Employee, Service, Client, Appointment) heredan de
+`AuditableEntity`: llevan `CreatedAt/UpdatedAt/CreatedBy/UpdatedBy` y `IsDeleted/DeletedAt`. Un
+interceptor de `SaveChanges` rellena esos campos y convierte los borrados en **soft delete**; un
+filtro global oculta lo borrado. **Política: sin cascada** — borrar un padre no borra hijos, se
+conserva el historial. Hay endpoints de `restore` (solo Admin).
+
+## 6. Sistema de horarios
+
+Es la pieza más rica. La disponibilidad se **define**, no se teclea hueco a hueco.
+
+- **Plantillas anuales** (`ScheduleTemplate`): horario semanal con vigencia por rango de fechas.
+  Varias plantillas se suceden en el tiempo y el sistema garantiza que **no se solapen**.
+- **Turnos partidos**: franjas mañana/tarde con descanso; una cita no puede cruzar el descanso.
+- **Excepciones por día** (`ScheduleOverride`): prevalecen sobre la plantilla para una fecha
+  concreta (media jornada, cierre, horario especial).
+- **Festivos y vacaciones**: cierran días automáticamente; la generación **deduplica** solapes
+  (vacaciones que pisan festivos, reejecuciones) sin romper el índice único.
+
+### Resolución
+
+Toda la pregunta "¿qué horario aplica el día X?" pasa por un único servicio de dominio,
+`IScheduleResolver`, que combina plantilla + override + festivo. Tiene una variante en memoria (sin
+BD) que comparte el mapeo con la variante que consulta la base de datos, lo que permite la **vista
+previa**: `POST /api/businesses/{id}/schedules/preview` devuelve el calendario del año resultante
+**sin persistir**, fusionando la petición con el horario existente.
+
+## 7. Disponibilidad
+
+`AvailabilityService` calcula los huecos libres a partir del horario resuelto y las citas
+existentes. La **capacidad de cada franja** es la suma, por empleado libre, de
+`(MaxConcurrentAppointments − citas solapadas)`. El front pinta `slot.capacity` directamente.
+
+- Omite los huecos cuyo inicio es anterior a **"ahora"** (mismo límite que el validador de citas).
+- Solo cuentan como ocupación los estados `Pending` y `Confirmed` (predicado `OccupiesCapacity()`
+  compartido con el validador, para que lo que el cliente ve libre coincida con lo que la reserva
+  acepta).
+- `GetSlotCapacityAsync` se reutiliza para validar "franja completa" al apuntarse a la lista de
+  espera.
+
+## 8. Motor de citas
+
+### Validación
+
+`AppointmentSchedulingValidator` comprueba en alta y edición: fechas válidas y no en el pasado,
+cliente/empleado/servicio existentes, empleado activo, servicio y empleado del mismo negocio,
+duración = suma de servicios, día abierto (vía `IScheduleResolver`), que la cita encaje en una
+franja continua, y que no se supere el aforo del empleado.
+
+### Anti doble-reserva
+
+La sección crítica *validar + insertar* se serializa con un **lock de aplicación de SQL Server**
+(`sp_getapplock`) por **empleado + día**, dentro de una transacción (`IBookingConcurrencyGuard`).
+Cierra la carrera *check-then-act* que permitiría superar el aforo del último hueco. En tests
+(InMemory) ejecuta directo.
+
+### Hora de pared
+
+Las fechas de cita son hora local sin desfase. El "ahora" se calcula con `IClock.BusinessNow` en la
+zona configurada (`Scheduling:TimeZone`, por defecto `Europe/Madrid`), **independiente de la zona
+del servidor**. Lo usan el check de "pasado", el recordatorio y el recorte de huecos.
+
+### Máquina de estados
+
+| Predicado | Estados |
+|---|---|
+| `IsValidInitialStatus()` | `Pending`, `Confirmed` — una cita solo puede nacer en uno de estos. |
+| `OccupiesCapacity()` | `Pending`, `Confirmed` — ocupan plaza. |
+| `IsTerminal()` | `Completed`, `NoShow`, `Cancelled` — no se puede volver a cambiar el estado. |
+
+El **estado inicial** lo fija el negocio (`DefaultAppointmentStatus`); el personal puede elegirlo
+por reserva (solo estados iniciales válidos), un cliente siempre recibe el de por defecto. Las
+**transiciones por rol**: un cliente solo puede pasar a `Cancelled`; el resto de estados son del
+personal.
+
+### Otras capacidades
+
+- **Multiservicio**: `ServiceId` principal + colección `ExtraServices`; la duración total es la
+  suma.
+- **Series recurrentes**: `RecurrenceExpander` (puro y testeable) genera las fechas (semanal
+  multi-día, quincenal, mensual por día del mes); se materializa una cita por ocurrencia
+  reutilizando validador y guard; las que chocan se omiten y se informan; se gestionan por
+  `SeriesId`.
+- **Lista de espera**: al cancelar o borrar una cita que ocupaba hueco, se dispara la notificación
+  FIFO al siguiente en espera (best-effort, serializado, con índice único filtrado anti-duplicados).
+- **Aviso de retraso**: notifica solo a los clientes del mismo tramo horario (respeta el turno
+  partido).
+- **Política de cancelación**: `Business.CancellationWindowHours` impide al cliente
+  cancelar/reprogramar dentro de la ventana; el personal no la sufre.
+
+## 9. Autorización y multi-tenant
+
+La autorización se valida **en los handlers**, no en los controllers.
+`IResourceAuthorizationService` ofrece métodos `EnsureCan*Async` que comparan el `sub` del token
+contra las columnas de propiedad (`OwnerUserId`, `UserId`…) y lanzan `UnauthorizedAccessException`
+(→ 403) si no procede. `Admin` hace bypass.
+
+Como defensa en profundidad, `ICurrentBusinessScope` aplica un **filtro global por negocio**: los
+roles Owner/Employee solo ven las filas de sus negocios; Admin, anónimo y Client no se restringen.
+
+> **Invariante cross-tenant.** Ningún DTO de `Update` lleva `BusinessId`, `OwnerUserId` ni
+> `UserId`: repuntar una entidad a otro negocio o usuario con un DTO manipulado sería un vector de
+> robo de acceso. Está blindado con tests de mapeo (regresión de bugs históricos) y con perfiles de
+> AutoMapper que ignoran esos campos.
+
+## 10. Notificaciones
+
+- **Email** (`IEmailSender`): confirmación al crear la cita, aviso al cancelar, y recordatorio 24 h
+  antes vía `AppointmentReminderService` (servicio en segundo plano, idempotente por
+  `ReminderSentAt`). Best-effort: un fallo se registra y nunca rompe la reserva.
+- **Push** (`IPushSender`): núcleo agnóstico listo; el envío real por FCM está pendiente de cablear
+  un proveedor.
+- **i18n por negocio**: las plantillas se localizan según `Business.DefaultLanguage` (es/en/fr) con
+  recursos `.resx` y cultura explícita (los envíos son asíncronos).
+
+En producción el email sale por SMTP genérico (`SmtpEmailSender`, sin vendor lock-in); en
+desarrollo/test se registra el contenido para inspección.
+
+## 11. Errores y trazabilidad
+
+Las excepciones de dominio son **tipadas** y llevan un `Code` estable. `ExceptionHandlingMiddleware`
+las mapea a HTTP con una forma JSON uniforme:
+
+```json
+{ "code": "APPOINTMENT_CONFLICT", "message": "...", "traceId": "...", "errors": { } }
+```
+
+| Tipo | HTTP |
+|---|---|
+| `InvalidServiceCredentialsException` | **401** — único 401 que emite Agendia |
+| `NotFoundException` (y derivadas) | **404** |
+| `DomainException` (reglas de negocio) | **400** |
+| `UnauthorizedAccessException` | **403** |
+| `ValidationException` (FluentValidation) | **400** con `errors` por campo |
+| Otros | **500** |
+
+El `traceId` coincide con el `X-Correlation-Id`. El catálogo completo de códigos vive en
+[`docs/error-codes.md`](../error-codes.md). Los mensajes visibles van en **español**; el front
+ramifica por `code`, no por texto.
+
+## 12. Persistencia
+
+- `RepositoryBase<T>` centraliza el CRUD plano; los repos de dominio lo heredan y añaden sus
+  consultas.
+- `IUnitOfWork` encapsula `SaveChanges`.
+- `AuditableSaveChangesInterceptor` rellena los campos de auditoría y aplica el soft delete.
+- Lecturas puras con `AsNoTracking`; las que cargan padres soft-deleted usan `IgnoreQueryFilters`
+  + filtro explícito para no descartar filas por un INNER JOIN.
+- Decoradores de **caché en memoria** para datos de lectura intensiva y poco cambiantes (festivos
+  por año, plantillas por negocio).
+- Índices únicos (override por `(BusinessId, Date)`, waitlist filtrado…) verificados contra **SQL
+  Server real** con tests LocalDB, porque el proveedor InMemory no impone constraints.
+- En desarrollo las migraciones EF se aplican **automáticamente** al arrancar.
+
+## 13. Superficie de API
+
+Conviven **tres patrones de ruta**, elegidos según el tipo de recurso:
+
+| Patrón | Ejemplos |
+|---|---|
+| Recurso de primer nivel | `/api/Business`, `/api/Client`, `/api/Service`, `/api/Employee`, `/api/Appointment`, `/api/Holiday` |
+| Sub-recurso anidado | `/api/businesses/{id}/schedules`, `/availability`, `/clients`, `/stats` |
+| Operación / agrupador | `/api/auth/service-token`, `/api/admin/audit-logs`, `/api/waitlist`, `/api/notifications/device-tokens` |
+
+Todos los listados devuelven `PagedResult<T>` con `?page=&pageSize=`. Los `GET` públicos (catálogo
+de negocios y servicios) usan proyecciones seguras (`BusinessPublicDto`, sin email, ocultando
+inactivos).
+
+## 14. Configuración
+
+| Clave | Para qué |
+|---|---|
+| `Jwt:Key / Issuer / Audience` | Validación (y firma del token de servicio). La clave se comparte con Harmony. |
+| `ServiceClients[]` · `ServiceAuth` | Clientes máquina-a-máquina y vida del token de servicio. |
+| `Scheduling:TimeZone` | Zona horaria del negocio (default `Europe/Madrid`). |
+| `Cors:AllowedOrigins` | Orígenes permitidos (fail-fast en producción si falta). |
+| `Email:Smtp:*` · `Notifications:*` | Envío SMTP y ventanas de recordatorio. |
+
+Sin secretos en `appsettings.json`: en desarrollo se usan user-secrets, en producción variables de
+entorno. La app hace **fail-fast** al arrancar si falta configuración crítica (clave JWT, orígenes
+CORS, host SMTP en prod).
+
+## 15. Testing
+
+- **Unitarios** — xUnit + NSubstitute + EF InMemory. Cubren validadores, servicios de aplicación,
+  guard de concurrencia, invariantes de mapeo cross-tenant y los handlers CRUD (contrato
+  autorizar-antes-de-delegar).
+- **Integración** — xUnit + `WebApplicationFactory`. `TestTokenFactory` forja tokens como los de
+  Harmony; hay tests `[SkippableFact]` contra LocalDB para verificar constraints reales.
+
+**328 tests en verde** — 247 unitarios + 81 de integración · build 0 avisos / 0 errores.
+
+## 16. Seguridad
+
+- Algoritmo JWT pineado a `HS256` (rechaza `none` y algoritmos asimétricos falsificados).
+- Secretos de servicio hasheados (PBKDF2 con sal) y comparados en tiempo constante; nunca en el
+  repositorio.
+- Autorización por recurso + filtro global por negocio (defensa en profundidad multi-tenant).
+- Invariantes anti cross-tenant en los DTOs de `Update` (sin `BusinessId`/`OwnerUserId`/`UserId`),
+  con tests de regresión.
+- Saneo del `X-Correlation-Id` (anti log-forging), `OperationCanceled → 499`, health detallado solo
+  en desarrollo.
+- Auditoría de acciones sensibles (login de servicio, cambios de estado de cita, cambios de
+  horario…).
+
+## 17. Estado y roadmap
+
+Esta es la **versión 0.1.0** de la wiki. El código está funcional, testeado (328 en verde) y con el
+motor de reservas, horarios y multi-negocio operativo.
+
+### Abierto / pendiente
+
+| Tema | Estado |
+|---|---|
+| Envío push real (FCM) | **pendiente** — el núcleo está; falta cablear un proveedor (necesita proyecto Firebase). |
+| Verificación de SMTP real | **pendiente** — la lógica está probada con un doble; falta validar contra un relay real. |
+| Entrega del secreto M2M | **operativo** — no es código: entregar el `clientSecret` y generar su hash para el consumidor. |
+| Rol `Service` dedicado (opción B) | **futuro** — hoy el token de servicio usa rol `Admin`; el claim `token_use=service` deja la puerta abierta a acotarlo. |
