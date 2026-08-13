@@ -118,7 +118,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         private static Appointment Appt(int id, int hour, int minute) => new()
         {
             Id = id,
-            ClientId = 1,
+            ClientUserId = "client-1",
             EmployeeId = 2,
             ServiceId = 3,
             StartDate = new DateTime(2030, 6, 3, hour, minute, 0),

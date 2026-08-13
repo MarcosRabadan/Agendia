@@ -17,12 +17,10 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
     {
         private const int BusinessId = 1;
         private const int EmployeeId = 10;
-        private const int ClientId = 5;
         private const int PrimaryServiceId = 100;
         private const int ExtraServiceId = 200;
 
         private readonly IBusinessRepository _businessRepository = Substitute.For<IBusinessRepository>();
-        private readonly IClientRepository _clientRepository = Substitute.For<IClientRepository>();
         private readonly IEmployeeRepository _employeeRepository = Substitute.For<IEmployeeRepository>();
         private readonly IServiceRepository _serviceRepository = Substitute.For<IServiceRepository>();
         private readonly IAppointmentRepository _appointmentRepository = Substitute.For<IAppointmentRepository>();
@@ -33,7 +31,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         public AppointmentSchedulingValidatorTests()
         {
             _sut = new AppointmentSchedulingValidator(
-                _businessRepository, _clientRepository, _employeeRepository,
+                _businessRepository, _employeeRepository,
                 _serviceRepository, _appointmentRepository, _scheduleResolver, _clock);
         }
 
@@ -47,7 +45,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             var end = new DateTime(2026, 6, 1, 11, 30, 0);
 
             await Assert.ThrowsAsync<InvalidAppointmentTimeException>(() =>
-                _sut.EnsureValidAsync(null, clientId: 1, employeeId: 1, serviceId: 1, start, end));
+                _sut.EnsureValidAsync(null, employeeId: 1, serviceId: 1, start, end));
         }
 
         [Fact]
@@ -58,7 +56,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             var end = start.AddMinutes(75); // 30 + 45
 
             await _sut.EnsureValidAsync(
-                null, ClientId, EmployeeId, PrimaryServiceId, start, end,
+                null, EmployeeId, PrimaryServiceId, start, end,
                 extraServiceIds: new[] { ExtraServiceId });
         }
 
@@ -71,7 +69,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             await Assert.ThrowsAsync<AppointmentDurationMismatchException>(() =>
                 _sut.EnsureValidAsync(
-                    null, ClientId, EmployeeId, PrimaryServiceId, start, end,
+                    null, EmployeeId, PrimaryServiceId, start, end,
                     extraServiceIds: new[] { ExtraServiceId }));
         }
 
@@ -87,14 +85,13 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             await Assert.ThrowsAsync<ServiceEmployeeMismatchException>(() =>
                 _sut.EnsureValidAsync(
-                    null, ClientId, EmployeeId, PrimaryServiceId, start, end,
+                    null, EmployeeId, PrimaryServiceId, start, end,
                     extraServiceIds: new[] { ExtraServiceId }));
         }
 
         private void ArrangeOpenDayWithServices(int primaryMinutes, int extraMinutes)
         {
             _clock.BusinessNow.Returns(new DateTime(2030, 6, 1, 0, 0, 0));
-            _clientRepository.GetByIdAsync(ClientId).Returns(new Client { Id = ClientId });
             _employeeRepository.GetByIdAsync(EmployeeId)
                 .Returns(new Employee { Id = EmployeeId, BusinessId = BusinessId, IsActive = true, MaxConcurrentAppointments = 1 });
             _businessRepository.GetByIdAsync(BusinessId).Returns(new Business { Id = BusinessId });

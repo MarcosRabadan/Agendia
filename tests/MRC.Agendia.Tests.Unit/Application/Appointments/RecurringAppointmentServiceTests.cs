@@ -74,7 +74,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             // The 2nd occurrence is full; the rest fit.
             _validator.EnsureValidAsync(
-                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(),
+                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(),
                     Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
                 .Returns(
                     Task.CompletedTask,
@@ -167,7 +167,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             // First moves fine, second hits a closed day.
             _validator.EnsureValidAsync(
-                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(),
+                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(),
                     Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
                 .Returns(
                     Task.CompletedTask,
@@ -208,7 +208,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // rejects it; a2 -> Feb 15 fits. The a1 skip must carry the collision code,
             // not the generic conflict, so the silent collapse is visible.
             _validator.EnsureValidAsync(
-                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(),
+                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(),
                     Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
                 .Returns(
                     Task.FromException(new AppointmentConflictException("El empleado ya tiene otra cita.")),
@@ -231,7 +231,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // Every occurrence is full -> all skipped, none created. The action must
             // still be audited (skip-only is not "nothing happened").
             _validator.EnsureValidAsync(
-                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(),
+                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(),
                     Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
                 .Returns(Task.FromException(new AppointmentConflictException("Lleno.")));
 
@@ -253,7 +253,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                 .Returns(new List<Appointment> { a1 });
 
             _validator.EnsureValidAsync(
-                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(),
+                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(),
                     Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
                 .Returns(Task.FromException(new AppointmentOutsideScheduleException("Cerrado.")));
 
@@ -266,7 +266,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         }
 
         private static CreateAppointmentSeriesDto WeeklySeries(DateOnly start, DateOnly until) => new(
-            ClientId: 1, EmployeeId: 2, ServiceId: 3,
+            ClientUserId: "client-1", EmployeeId: 2, ServiceId: 3,
             StartTime: new TimeOnly(16, 0),
             Frequency: RecurrenceFrequency.Weekly, Interval: 1,
             DaysOfWeek: new[] { start.DayOfWeek }, DayOfMonth: null,
@@ -275,7 +275,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         private static Appointment Appt(int id, DateTime start, AppointmentStatus status, Guid seriesId) => new()
         {
             Id = id,
-            ClientId = 1,
+            ClientUserId = "client-1",
             EmployeeId = 2,
             ServiceId = 3,
             StartDate = start,
@@ -286,6 +286,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         };
 
         private static AppointmentDto ToDto(Appointment a) =>
-            new(a.Id, a.ClientId, a.EmployeeId, a.ServiceId, a.StartDate, a.EndDate, a.Status, a.Notes, a.SeriesId);
+            new(a.Id, a.ClientUserId, a.EmployeeId, a.ServiceId, a.StartDate, a.EndDate, a.Status, a.Notes, a.SeriesId);
     }
 }

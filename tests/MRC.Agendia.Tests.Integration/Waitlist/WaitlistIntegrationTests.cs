@@ -1,14 +1,11 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Schedules.DTO;
 using MRC.Agendia.Application.Services.DTO;
 using MRC.Agendia.Application.Waitlist.DTO;
-using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
-using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Tests.Integration.Infrastructure;
 
 namespace MRC.Agendia.Tests.Integration.Waitlist
@@ -18,8 +15,8 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
     /// full, Staff/non-client cannot use it, and cancelling a booking notifies the
     /// first waiting client.
     ///
-    /// The waiting client is resolved by <c>IClientRepository.GetByUserIdAsync</c>, so
-    /// the forged token must carry the very same user id stored in Client.UserId.
+    /// The waiting client is identified by the token's "sub" (its Harmony user id),
+    /// which is stored directly on the waitlist entry (no Client entity).
     /// </summary>
     public class WaitlistIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
@@ -42,11 +39,11 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
             var owner = await RegisterOwnerAsync("wl-flow");
             await GenerateScheduleAsync(owner);
             var service = await CreateServiceAsAsync(owner, "Corte");
-            var clientAId = await SeedClientAsync();
-            var clientBToken = (await TestProvisioning.ProvisionClientAsync(_client, "wl-b")).Token;
+            var clientAUserId = ClientAUserId();
+            var clientBToken = TestProvisioning.ProvisionClient("wl-b").Token;
 
             // Client A's booking fills the slot (employee MaxConcurrent = 1).
-            var appointment = await BookAppointmentAsync(owner, clientAId, owner.EmployeeId, service.Id);
+            var appointment = await BookAppointmentAsync(owner, clientAUserId, owner.EmployeeId, service.Id);
 
             // Client B joins the (now full) slot's waitlist.
             var join = await JoinAsync(clientBToken, new JoinWaitlistDto(owner.Business.Id, service.Id, SlotDate, SlotTime, owner.EmployeeId));
@@ -70,7 +67,7 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
             var owner = await RegisterOwnerAsync("wl-cap");
             await GenerateScheduleAsync(owner);
             var service = await CreateServiceAsAsync(owner, "Corte");
-            var clientToken = (await TestProvisioning.ProvisionClientAsync(_client, "wl-c")).Token;
+            var clientToken = TestProvisioning.ProvisionClient("wl-c").Token;
 
             // No appointment booked -> the slot has capacity -> joining is rejected.
             var response = await JoinAsync(clientToken, new JoinWaitlistDto(owner.Business.Id, service.Id, SlotDate, SlotTime, EmployeeId: null));
@@ -110,10 +107,10 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
             return list!;
         }
 
-        private async Task<AppointmentDto> BookAppointmentAsync(ProvisionedOwner owner, int clientId, int employeeId, int serviceId)
+        private async Task<AppointmentDto> BookAppointmentAsync(ProvisionedOwner owner, string clientUserId, int employeeId, int serviceId)
         {
             var start = SlotDate.ToDateTime(SlotTime);
-            var dto = new CreateAppointmentDto(clientId, employeeId, serviceId, start, start.AddMinutes(30), Notes: null);
+            var dto = new CreateAppointmentDto(clientUserId, employeeId, serviceId, start, start.AddMinutes(30), Notes: null);
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Appointment") { Content = JsonContent.Create(dto) };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
             var response = await _client.SendAsync(request);
@@ -124,18 +121,10 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
         }
 
         /// <summary>
-        /// Client A only needs to hold the booking that fills the slot, so it is
-        /// seeded straight into the database with no user account.
+        /// Client A only needs a user id to hold the booking that fills the slot; the
+        /// appointment stores it directly (no Client entity anymore).
         /// </summary>
-        private async Task<int> SeedClientAsync()
-        {
-            using var scope = _factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
-            var client = new Client { Name = "Cliente A", Phone = "600111222", Email = "a@test.local" };
-            db.Clients.Add(client);
-            await db.SaveChangesAsync();
-            return client.Id;
-        }
+        private static string ClientAUserId() => $"harmony-wl-a-{Guid.NewGuid():N}";
 
         private async Task GenerateScheduleAsync(ProvisionedOwner owner)
         {

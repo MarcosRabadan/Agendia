@@ -3,7 +3,7 @@ using MRC.Agendia.Domain.Enums;
 namespace MRC.Agendia.Application.Appointments.DTO
 {
     public record CreateAppointmentDto(
-        int ClientId,
+        string ClientUserId,
         int EmployeeId,
         int ServiceId,
         DateTime StartDate,

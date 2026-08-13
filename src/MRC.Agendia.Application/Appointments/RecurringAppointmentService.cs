@@ -89,7 +89,6 @@ namespace MRC.Agendia.Application.Appointments
                     {
                         await _schedulingValidator.EnsureValidAsync(
                             appointmentId: null,
-                            clientId: dto.ClientId,
                             employeeId: dto.EmployeeId,
                             serviceId: dto.ServiceId,
                             startDate: start,
@@ -98,7 +97,7 @@ namespace MRC.Agendia.Application.Appointments
 
                         var appointment = new Appointment
                         {
-                            ClientId = dto.ClientId,
+                            ClientUserId = dto.ClientUserId,
                             EmployeeId = dto.EmployeeId,
                             ServiceId = dto.ServiceId,
                             StartDate = start,
@@ -126,7 +125,7 @@ namespace MRC.Agendia.Application.Appointments
             {
                 await _auditLogger.LogAsync(
                     AuditActions.AppointmentSeriesCreated, "AppointmentSeries", seriesId.ToString(),
-                    new { created = created.Count, skipped = skipped.Count, dto.ClientId, dto.EmployeeId, dto.ServiceId },
+                    new { created = created.Count, skipped = skipped.Count, dto.ClientUserId, dto.EmployeeId, dto.ServiceId },
                     cancellationToken);
             }
 
@@ -224,7 +223,6 @@ namespace MRC.Agendia.Application.Appointments
                     {
                         await _schedulingValidator.EnsureValidAsync(
                             appointmentId: appointment.Id,
-                            clientId: appointment.ClientId,
                             employeeId: appointment.EmployeeId,
                             serviceId: appointment.ServiceId,
                             startDate: newStart,

@@ -1,269 +1,38 @@
 using Microsoft.Extensions.Logging;
-using MRC.Agendia.Application.Common.Email;
-using MRC.Agendia.Application.Common.Push;
-using MRC.Agendia.Domain.Entities;
-using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Infrastructure.Notifications;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 
 namespace MRC.Agendia.Tests.Unit.Infrastructure.Notifications
 {
+    /// <summary>
+    /// The Client entity was removed, so Agendia can no longer resolve a recipient and
+    /// <see cref="NotificationService"/> is a temporary no-op until delivery moves to
+    /// events (#246). Every method must report the notification as handled (return
+    /// true) so the reminder job and the waitlist trigger do not retry it forever.
+    /// </summary>
     public class NotificationServiceTests
     {
-        private readonly IAppointmentRepository _appointments = Substitute.For<IAppointmentRepository>();
-        private readonly IWaitlistRepository _waitlist = Substitute.For<IWaitlistRepository>();
-        private readonly IDeviceTokenRepository _deviceTokens = Substitute.For<IDeviceTokenRepository>();
-        private readonly IEmailSender _emailSender = Substitute.For<IEmailSender>();
-        private readonly IPushSender _pushSender = Substitute.For<IPushSender>();
-        private readonly NotificationService _sut;
-
-        public NotificationServiceTests()
-        {
-            _sut = new NotificationService(
-                _appointments, _waitlist, _deviceTokens, _emailSender, _pushSender,
-                Substitute.For<ILogger<NotificationService>>());
-        }
-
-        private static Appointment BuildAppointment(
-            string? clientEmail = "ana@test.com", string? clientUserId = null, string defaultLanguage = "es") => new()
-            {
-                Id = 5,
-                StartDate = new DateTime(2027, 1, 4, 9, 0, 0, DateTimeKind.Utc),
-                EndDate = new DateTime(2027, 1, 4, 9, 30, 0, DateTimeKind.Utc),
-                Client = new Client { Name = "Ana", Email = clientEmail, UserId = clientUserId },
-                Service = new Service { Name = "Corte" },
-                Employee = new Employee { FullName = "Luis", Business = new Business { Name = "Peluqueria X", DefaultLanguage = defaultLanguage } }
-            };
-
-        private static WaitlistEntry BuildWaitlistEntry(string defaultLanguage = "es") => new()
-        {
-            Id = 7,
-            Date = new DateOnly(2027, 1, 4),
-            StartTime = new TimeOnly(9, 0),
-            Client = new Client { Name = "Ana", Email = "ana@test.com" },
-            Service = new Service { Name = "Corte", Business = new Business { Name = "Peluqueria X", DefaultLanguage = defaultLanguage } }
-        };
+        private readonly NotificationService _sut =
+            new(Substitute.For<ILogger<NotificationService>>());
 
         [Fact]
-        public async Task Confirmation_EnviaEmailAlCliente_ConAsuntoDeConfirmacion()
-        {
-            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>()).Returns(BuildAppointment());
-
-            await _sut.SendAppointmentConfirmationAsync(5);
-
-            await _emailSender.Received(1).SendAsync(
-                "ana@test.com",
-                Arg.Is<string>(s => s.Contains("confirmada", StringComparison.OrdinalIgnoreCase)),
-                Arg.Is<string>(b => b.Contains("Corte") && b.Contains("Luis")));
-        }
+        public async Task Confirmation_EsNoOp_DevuelveTrue()
+            => Assert.True(await _sut.SendAppointmentConfirmationAsync(5));
 
         [Fact]
-        public async Task Confirmation_ConTokensDeDispositivo_EnviaPush()
-        {
-            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>())
-                .Returns(BuildAppointment(clientUserId: "user-1"));
-            _deviceTokens.GetTokensByUserIdAsync("user-1", Arg.Any<CancellationToken>())
-                .Returns(new List<string> { "tok-a", "tok-b" });
-
-            await _sut.SendAppointmentConfirmationAsync(5);
-
-            await _pushSender.Received(1).SendAsync(
-                Arg.Is<IReadOnlyCollection<string>>(t => t.Count == 2),
-                Arg.Is<string>(s => s.Contains("confirmada", StringComparison.OrdinalIgnoreCase)),
-                Arg.Any<string>(),
-                Arg.Any<IReadOnlyDictionary<string, string>>(),
-                Arg.Any<CancellationToken>());
-        }
+        public async Task Reminder_EsNoOp_DevuelveTrue()
+            => Assert.True(await _sut.SendAppointmentReminderAsync(5));
 
         [Fact]
-        public async Task Confirmation_SiElPushFalla_NoRompeElEmail()
-        {
-            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>())
-                .Returns(BuildAppointment(clientUserId: "user-1"));
-            _deviceTokens.GetTokensByUserIdAsync("user-1", Arg.Any<CancellationToken>())
-                .Returns(new List<string> { "tok" });
-            _pushSender.SendAsync(
-                    Arg.Any<IReadOnlyCollection<string>>(), Arg.Any<string>(), Arg.Any<string>(),
-                    Arg.Any<IReadOnlyDictionary<string, string>>(), Arg.Any<CancellationToken>())
-                .ThrowsAsync(new InvalidOperationException("push provider down"));
-
-            var handled = await _sut.SendAppointmentConfirmationAsync(5);
-
-            // Push is best-effort: the email still goes out and the result is success.
-            Assert.True(handled);
-            await _emailSender.Received(1).SendAsync("ana@test.com", Arg.Any<string>(), Arg.Any<string>());
-        }
+        public async Task Cancellation_EsNoOp_DevuelveTrue()
+            => Assert.True(await _sut.SendAppointmentCancellationAsync(5));
 
         [Fact]
-        public async Task Cancellation_EnviaEmail_ConAsuntoDeCancelacion()
-        {
-            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>()).Returns(BuildAppointment());
-
-            await _sut.SendAppointmentCancellationAsync(5);
-
-            await _emailSender.Received(1).SendAsync(
-                "ana@test.com",
-                Arg.Is<string>(s => s.Contains("cancelada", StringComparison.OrdinalIgnoreCase)),
-                Arg.Any<string>());
-        }
+        public async Task Delay_EsNoOp_DevuelveTrue()
+            => Assert.True(await _sut.SendDelayNotificationAsync(5, 15));
 
         [Fact]
-        public async Task SinEmailDelCliente_NoEnviaNada()
-        {
-            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>()).Returns(BuildAppointment(clientEmail: null));
-
-            await _sut.SendAppointmentReminderAsync(5);
-
-            await _emailSender.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
-        }
-
-        [Fact]
-        public async Task CitaInexistente_NoEnviaNada_NiLanza()
-        {
-            _appointments.GetByIdWithDetailsAsync(99, Arg.Any<CancellationToken>()).Returns((Appointment?)null);
-
-            await _sut.SendAppointmentConfirmationAsync(99);
-
-            await _emailSender.DidNotReceive().SendAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
-        }
-
-        [Fact]
-        public async Task Reminder_CuandoEnvia_DevuelveTrue()
-        {
-            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>()).Returns(BuildAppointment());
-
-            var handled = await _sut.SendAppointmentReminderAsync(5);
-
-            Assert.True(handled);
-        }
-
-        [Fact]
-        public async Task Reminder_SinEmail_DevuelveTrue_ParaNoReintentar()
-        {
-            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>()).Returns(BuildAppointment(clientEmail: null));
-
-            var handled = await _sut.SendAppointmentReminderAsync(5);
-
-            // Nothing to send and nothing to retry: the reminder is considered handled.
-            Assert.True(handled);
-        }
-
-        [Fact]
-        public async Task Reminder_CuandoElEnvioFalla_DevuelveFalse_ParaPermitirReintento()
-        {
-            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>()).Returns(BuildAppointment());
-            _emailSender
-                .SendAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
-                .ThrowsAsync(new InvalidOperationException("smtp down"));
-
-            var handled = await _sut.SendAppointmentReminderAsync(5);
-
-            Assert.False(handled);
-        }
-
-        [Fact]
-        public async Task Confirmation_NegocioEnIngles_AsuntoYCuerpoEnIngles()
-        {
-            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>())
-                .Returns(BuildAppointment(defaultLanguage: "en"));
-
-            await _sut.SendAppointmentConfirmationAsync(5);
-
-            await _emailSender.Received(1).SendAsync(
-                "ana@test.com",
-                Arg.Is<string>(s => s.Contains("confirmed", StringComparison.OrdinalIgnoreCase)),
-                Arg.Is<string>(b => b.Contains("Hello") && b.Contains("Service:")));
-        }
-
-        [Fact]
-        public async Task Confirmation_NegocioEnFrances_AsuntoYCuerpoEnFrances()
-        {
-            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>())
-                .Returns(BuildAppointment(defaultLanguage: "fr"));
-
-            await _sut.SendAppointmentConfirmationAsync(5);
-
-            await _emailSender.Received(1).SendAsync(
-                "ana@test.com",
-                Arg.Is<string>(s => s.Contains("Rendez-vous")),
-                Arg.Is<string>(b => b.Contains("Bonjour")));
-        }
-
-        [Fact]
-        public async Task Delay_NegocioEnIngles_CuerpoConMinutosEnIngles()
-        {
-            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>())
-                .Returns(BuildAppointment(defaultLanguage: "en"));
-
-            await _sut.SendDelayNotificationAsync(5, 15);
-
-            await _emailSender.Received(1).SendAsync(
-                "ana@test.com",
-                Arg.Is<string>(s => s.Contains("delayed", StringComparison.OrdinalIgnoreCase)),
-                Arg.Is<string>(b => b.Contains("15") && b.Contains("minutes")));
-        }
-
-        [Fact]
-        public async Task Waitlist_PorDefecto_EnEspanol()
-        {
-            _waitlist.GetByIdWithDetailsAsync(7, Arg.Any<CancellationToken>()).Returns(BuildWaitlistEntry());
-
-            await _sut.SendWaitlistAvailabilityAsync(7);
-
-            await _emailSender.Received(1).SendAsync(
-                "ana@test.com",
-                Arg.Is<string>(s => s.Contains("hueco", StringComparison.OrdinalIgnoreCase)),
-                Arg.Is<string>(b => b.Contains("Hola") && b.Contains("Servicio:")));
-        }
-
-        [Fact]
-        public async Task Waitlist_NegocioEnIngles_EnIngles()
-        {
-            _waitlist.GetByIdWithDetailsAsync(7, Arg.Any<CancellationToken>()).Returns(BuildWaitlistEntry("en"));
-
-            await _sut.SendWaitlistAvailabilityAsync(7);
-
-            await _emailSender.Received(1).SendAsync(
-                "ana@test.com",
-                Arg.Is<string>(s => s.Contains("slot", StringComparison.OrdinalIgnoreCase)),
-                Arg.Is<string>(b => b.Contains("Hello") && b.Contains("Service:")));
-        }
-
-        [Fact]
-        public async Task Waitlist_NegocioEnFrances_EnFrances()
-        {
-            _waitlist.GetByIdWithDetailsAsync(7, Arg.Any<CancellationToken>()).Returns(BuildWaitlistEntry("fr"));
-
-            await _sut.SendWaitlistAvailabilityAsync(7);
-
-            await _emailSender.Received(1).SendAsync(
-                "ana@test.com",
-                Arg.Any<string>(),
-                Arg.Is<string>(b => b.Contains("Bonjour")));
-        }
-
-        [Fact]
-        public async Task Reminder_SiLaComposicionFalla_DevuelveTrue_YNoEnvia()
-        {
-            // Required navigation missing (Business) -> building the body throws. That is
-            // a permanent data error, not a transient delivery failure: it must be handled
-            // (true) so the reminder job does not retry it forever, and no email is sent.
-            _appointments.GetByIdWithDetailsAsync(5, Arg.Any<CancellationToken>())
-                .Returns(new Appointment
-                {
-                    Id = 5,
-                    StartDate = new DateTime(2027, 1, 4, 9, 0, 0, DateTimeKind.Utc),
-                    EndDate = new DateTime(2027, 1, 4, 9, 30, 0, DateTimeKind.Utc),
-                    Client = new Client { Name = "Ana", Email = "ana@test.com" },
-                    Service = new Service { Name = "Corte" },
-                    Employee = new Employee { FullName = "Luis", Business = null! }
-                });
-
-            var handled = await _sut.SendAppointmentReminderAsync(5);
-
-            Assert.True(handled);
-            await _emailSender.DidNotReceiveWithAnyArgs().SendAsync(default!, default!, default!);
-        }
+        public async Task Waitlist_EsNoOp_DevuelveTrue()
+            => Assert.True(await _sut.SendWaitlistAvailabilityAsync(7));
     }
 }

@@ -1,14 +1,11 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Availability.DTO;
 using MRC.Agendia.Application.Schedules.DTO;
 using MRC.Agendia.Application.Services.DTO;
-using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
-using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Tests.Integration.Infrastructure;
 
 namespace MRC.Agendia.Tests.Integration.Appointments
@@ -40,11 +37,11 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await GenerateScheduleAsync(owner);
             var primary = await CreateServiceAsync(owner, "Corte", durationMinutes: 30, price: 20m);
             var extra = await CreateServiceAsync(owner, "Barba", durationMinutes: 30, price: 12m);
-            var (employeeId, clientId) = await SeedEmployeeAndClientAsync(owner);
+            var (employeeId, clientUserId) = SeedEmployeeAndClientUser(owner);
 
             var start = SlotDate.ToDateTime(SlotTime);
             var dto = new CreateAppointmentDto(
-                clientId, employeeId, primary.Id, start, start.AddMinutes(60), Notes: null,
+                clientUserId, employeeId, primary.Id, start, start.AddMinutes(60), Notes: null,
                 ExtraServiceIds: new[] { extra.Id });
 
             var response = await PostAppointmentAsync(owner.Token, dto);
@@ -67,12 +64,12 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await GenerateScheduleAsync(owner);
             var primary = await CreateServiceAsync(owner, "Corte", durationMinutes: 30, price: 20m);
             var extra = await CreateServiceAsync(owner, "Barba", durationMinutes: 30, price: 12m);
-            var (employeeId, clientId) = await SeedEmployeeAndClientAsync(owner);
+            var (employeeId, clientUserId) = SeedEmployeeAndClientUser(owner);
 
             var start = SlotDate.ToDateTime(SlotTime);
             // Only 30 min booked for two 30-min services -> total duration mismatch.
             var dto = new CreateAppointmentDto(
-                clientId, employeeId, primary.Id, start, start.AddMinutes(30), Notes: null,
+                clientUserId, employeeId, primary.Id, start, start.AddMinutes(30), Notes: null,
                 ExtraServiceIds: new[] { extra.Id });
 
             var response = await PostAppointmentAsync(owner.Token, dto);
@@ -109,11 +106,11 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await GenerateScheduleAsync(owner);
             var primary = await CreateServiceAsync(owner, "Corte", durationMinutes: 30, price: 20m);
             var extra = await CreateServiceAsync(owner, "Barba", durationMinutes: 30, price: 12m);
-            var (employeeId, clientId) = await SeedEmployeeAndClientAsync(owner);
+            var (employeeId, clientUserId) = SeedEmployeeAndClientUser(owner);
 
             var start = SlotDate.ToDateTime(SlotTime);
             var createResponse = await PostAppointmentAsync(owner.Token, new CreateAppointmentDto(
-                clientId, employeeId, primary.Id, start, start.AddMinutes(60), Notes: null,
+                clientUserId, employeeId, primary.Id, start, start.AddMinutes(60), Notes: null,
                 ExtraServiceIds: new[] { extra.Id }));
             createResponse.EnsureSuccessStatusCode();
             var created = await createResponse.Content.ReadFromJsonAsync<AppointmentDto>();
@@ -122,7 +119,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             // Reschedule to a later 60-min block; the PUT response must still echo the extras.
             var newStart = SlotDate.ToDateTime(new TimeOnly(14, 0));
             var update = new UpdateAppointmentDto(
-                created!.Id, clientId, employeeId, primary.Id, newStart, newStart.AddMinutes(60), created.Status, Notes: null);
+                created!.Id, clientUserId, employeeId, primary.Id, newStart, newStart.AddMinutes(60), created.Status, Notes: null);
             using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/Appointment/{created.Id}")
             {
                 Content = JsonContent.Create(update)
@@ -143,11 +140,11 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await GenerateScheduleAsync(owner);
             var primary = await CreateServiceAsync(owner, "Corte", durationMinutes: 30, price: 20m);
             var extra = await CreateServiceAsync(owner, "Barba", durationMinutes: 30, price: 12m);
-            var (employeeId, clientId) = await SeedEmployeeAndClientAsync(owner);
+            var (employeeId, clientUserId) = SeedEmployeeAndClientUser(owner);
 
             var start = SlotDate.ToDateTime(SlotTime);
             var dto = new CreateAppointmentDto(
-                clientId, employeeId, primary.Id, start, start.AddMinutes(90), Notes: null,
+                clientUserId, employeeId, primary.Id, start, start.AddMinutes(90), Notes: null,
                 ExtraServiceIds: new[] { extra.Id, extra.Id });
 
             var response = await PostAppointmentAsync(owner.Token, dto);
@@ -175,16 +172,8 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             return dto!;
         }
 
-        private async Task<(int EmployeeId, int ClientId)> SeedEmployeeAndClientAsync(ProvisionedOwner owner)
-        {
-            using var scope = _factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
-            var employeeId = owner.EmployeeId;
-            var client = new Client { Name = "Cliente MS", Phone = "600111222", Email = $"ms-{Guid.NewGuid():N}@test.local" };
-            db.Clients.Add(client);
-            await db.SaveChangesAsync();
-            return (employeeId, client.Id);
-        }
+        private static (int EmployeeId, string ClientUserId) SeedEmployeeAndClientUser(ProvisionedOwner owner)
+            => (owner.EmployeeId, $"harmony-ms-{Guid.NewGuid():N}");
 
         private async Task GenerateScheduleAsync(ProvisionedOwner owner)
         {

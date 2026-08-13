@@ -11,7 +11,6 @@ namespace MRC.Agendia.Application.Appointments
         private const double DurationToleranceMinutes = 0.5;
 
         private readonly IBusinessRepository _businessRepository;
-        private readonly IClientRepository _clientRepository;
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IServiceRepository _serviceRepository;
         private readonly IAppointmentRepository _appointmentRepository;
@@ -19,7 +18,6 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IClock _clock;
 
         public AppointmentSchedulingValidator(IBusinessRepository businessRepository,
-                                              IClientRepository clientRepository,
                                               IEmployeeRepository employeeRepository,
                                               IServiceRepository serviceRepository,
                                               IAppointmentRepository appointmentRepository,
@@ -27,7 +25,6 @@ namespace MRC.Agendia.Application.Appointments
                                               IClock clock)
         {
             _businessRepository = businessRepository;
-            _clientRepository = clientRepository;
             _employeeRepository = employeeRepository;
             _serviceRepository = serviceRepository;
             _appointmentRepository = appointmentRepository;
@@ -37,7 +34,6 @@ namespace MRC.Agendia.Application.Appointments
 
         /// <inheritdoc />
         public async Task EnsureValidAsync(int? appointmentId,
-                                           int clientId,
                                            int employeeId,
                                            int serviceId,
                                            DateTime startDate,
@@ -56,9 +52,8 @@ namespace MRC.Agendia.Application.Appointments
                 throw new InvalidAppointmentTimeException("No se pueden crear ni mover citas al pasado.");
 
             // ---------- Existence + activity ----------
-            _ = await _clientRepository.GetByIdAsync(clientId, cancellationToken)
-                ?? throw new ClientNotFoundException(clientId);
-
+            // The client is not validated here: it is a Harmony user id (the JWT sub),
+            // already authenticated by the token; Agendia owns no client profile to check.
             var employee = await _employeeRepository.GetByIdAsync(employeeId, cancellationToken)
                 ?? throw new EmployeeNotFoundException(employeeId);
             if (!employee.IsActive)

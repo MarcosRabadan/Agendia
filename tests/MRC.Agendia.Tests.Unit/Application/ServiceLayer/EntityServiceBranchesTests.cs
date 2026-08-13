@@ -1,8 +1,6 @@
 using AutoMapper;
 using MRC.Agendia.Application.Business;
 using MRC.Agendia.Application.Business.DTO;
-using MRC.Agendia.Application.Clients;
-using MRC.Agendia.Application.Clients.DTO;
 using MRC.Agendia.Application.Employees;
 using MRC.Agendia.Application.Holidays;
 using MRC.Agendia.Application.Holidays.DTO;
@@ -100,16 +98,6 @@ namespace MRC.Agendia.Tests.Unit.Application.ServiceLayer
             await Assert.ThrowsAsync<BusinessNotFoundException>(() =>
                 new BusinessService(repo, _uow, _mapper)
                     .UpdateAsync(new UpdateBusinessDto(9, "X", null, "A", "6", "a@b.c", true)));
-        }
-
-        [Fact]
-        public async Task Client_update_missing_throws()
-        {
-            var repo = Substitute.For<IClientRepository>();
-            repo.GetByIdAsync(9, Arg.Any<CancellationToken>()).Returns((Client?)null);
-
-            await Assert.ThrowsAsync<ClientNotFoundException>(() =>
-                new ClientService(repo, _uow, _mapper).UpdateAsync(new UpdateClientDto(9, "X", "6", null)));
         }
 
         [Fact]

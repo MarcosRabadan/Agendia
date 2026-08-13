@@ -24,14 +24,14 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Persistence
             var dbName = $"audit-int-{Guid.NewGuid()}";
             using var ctx = NewContext(new FakeCurrentUserContext { UserId = "creator" }, dbName);
 
-            var client = new Client { Name = "Ana", Phone = "600" };
-            ctx.Clients.Add(client);
+            var service = new Service { Name = "Ana", DurationMinutes = 30, Price = 10m };
+            ctx.Services.Add(service);
             await ctx.SaveChangesAsync();
 
-            Assert.NotEqual(default, client.CreatedAt);
-            Assert.Equal("creator", client.CreatedBy);
-            Assert.Null(client.UpdatedAt);
-            Assert.Null(client.UpdatedBy);
+            Assert.NotEqual(default, service.CreatedAt);
+            Assert.Equal("creator", service.CreatedBy);
+            Assert.Null(service.UpdatedAt);
+            Assert.Null(service.UpdatedBy);
         }
 
         [Fact]
@@ -41,19 +41,19 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Persistence
 
             using (var ctx = NewContext(new FakeCurrentUserContext { UserId = "creator" }, dbName))
             {
-                ctx.Clients.Add(new Client { Name = "Ana", Phone = "600" });
+                ctx.Services.Add(new Service { Name = "Ana", DurationMinutes = 30, Price = 10m });
                 await ctx.SaveChangesAsync();
             }
 
             using (var ctx = NewContext(new FakeCurrentUserContext { UserId = "editor" }, dbName))
             {
-                var client = await ctx.Clients.SingleAsync();
-                client.Name = "Ana B";
+                var service = await ctx.Services.SingleAsync();
+                service.Name = "Ana B";
                 await ctx.SaveChangesAsync();
 
-                Assert.Equal("creator", client.CreatedBy);
-                Assert.Equal("editor", client.UpdatedBy);
-                Assert.NotNull(client.UpdatedAt);
+                Assert.Equal("creator", service.CreatedBy);
+                Assert.Equal("editor", service.UpdatedBy);
+                Assert.NotNull(service.UpdatedAt);
             }
         }
 
@@ -64,24 +64,24 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Persistence
 
             using (var ctx = NewContext(new FakeCurrentUserContext { UserId = "u" }, dbName))
             {
-                ctx.Clients.Add(new Client { Name = "Ana", Phone = "600" });
+                ctx.Services.Add(new Service { Name = "Ana", DurationMinutes = 30, Price = 10m });
                 await ctx.SaveChangesAsync();
             }
 
             using (var ctx = NewContext(new FakeCurrentUserContext { UserId = "u" }, dbName))
             {
-                var client = await ctx.Clients.SingleAsync();
-                ctx.Clients.Remove(client);
+                var service = await ctx.Services.SingleAsync();
+                ctx.Services.Remove(service);
                 await ctx.SaveChangesAsync();
             }
 
             using (var ctx = NewContext(new FakeCurrentUserContext { UserId = "u" }, dbName))
             {
                 // The global query filter hides soft-deleted rows.
-                Assert.False(await ctx.Clients.AnyAsync());
+                Assert.False(await ctx.Services.AnyAsync());
 
                 // The row is still physically present, just flagged.
-                var deleted = await ctx.Clients.IgnoreQueryFilters().SingleAsync();
+                var deleted = await ctx.Services.IgnoreQueryFilters().SingleAsync();
                 Assert.True(deleted.IsDeleted);
                 Assert.NotNull(deleted.DeletedAt);
             }

@@ -87,10 +87,10 @@ namespace MRC.Agendia.Tests.Integration.Auth
             var businessA = await TestProvisioning.ProvisionOwnerAsync(_client, "svc-a");
             var businessB = await TestProvisioning.ProvisionOwnerAsync(_client, "svc-b");
 
-            // The service token (no per-business scope) reads a Staff-gated,
-            // business-scoped endpoint for BOTH businesses.
-            var readA = await GetWithTokenAsync($"/api/businesses/{businessA.Business.Id}/clients?page=1&pageSize=10", serviceToken);
-            var readB = await GetWithTokenAsync($"/api/businesses/{businessB.Business.Id}/clients?page=1&pageSize=10", serviceToken);
+            // The service token (no per-business scope) reads an AdminOrOwner-gated,
+            // business-scoped endpoint (business stats) for BOTH businesses.
+            var readA = await GetWithTokenAsync($"/api/businesses/{businessA.Business.Id}/stats?from=2026-01-01&to=2026-01-31", serviceToken);
+            var readB = await GetWithTokenAsync($"/api/businesses/{businessB.Business.Id}/stats?from=2026-01-01&to=2026-01-31", serviceToken);
 
             Assert.Equal(HttpStatusCode.OK, readA.StatusCode);
             Assert.Equal(HttpStatusCode.OK, readB.StatusCode);

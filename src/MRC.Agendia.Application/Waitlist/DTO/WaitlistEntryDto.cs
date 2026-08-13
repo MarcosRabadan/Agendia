@@ -6,7 +6,7 @@ namespace MRC.Agendia.Application.Waitlist.DTO
         int Id,
         int BusinessId,
         int ServiceId,
-        int ClientId,
+        string ClientUserId,
         int? EmployeeId,
         DateOnly Date,
         TimeOnly StartTime,

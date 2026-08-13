@@ -60,10 +60,10 @@ namespace MRC.Agendia.Tests.Integration.Auth
 
             var start = Day.ToDateTime(new TimeOnly(9, 0));
             var created = await (await BookableBusinessFactory.PostAppointmentAsync(_client, setup.OwnerToken,
-                new CreateAppointmentDto(setup.ClientId, setup.EmployeeId, setup.Service.Id, start, start.AddMinutes(30), null)))
+                new CreateAppointmentDto(setup.ClientUserId, setup.EmployeeId, setup.Service.Id, start, start.AddMinutes(30), null)))
                 .Content.ReadFromJsonAsync<AppointmentDto>();
 
-            var update = new UpdateAppointmentDto(created!.Id, created.ClientId, created.EmployeeId, created.ServiceId,
+            var update = new UpdateAppointmentDto(created!.Id, created.ClientUserId, created.EmployeeId, created.ServiceId,
                 created.StartDate, created.EndDate, AppointmentStatus.Confirmed, created.Notes);
             (await BookableBusinessFactory.SendAsync(_client, HttpMethod.Put, $"/api/Appointment/{created.Id}", setup.OwnerToken, update))
                 .EnsureSuccessStatusCode();

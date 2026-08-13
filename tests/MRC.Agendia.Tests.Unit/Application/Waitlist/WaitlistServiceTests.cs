@@ -22,7 +22,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         private const string UserId = "user-1";
 
         private readonly IWaitlistRepository _repository = Substitute.For<IWaitlistRepository>();
-        private readonly IClientRepository _clientRepository = Substitute.For<IClientRepository>();
         private readonly IAvailabilityService _availability = Substitute.For<IAvailabilityService>();
         private readonly IAppointmentRepository _appointmentRepository = Substitute.For<IAppointmentRepository>();
         private readonly INotificationService _notifications = Substitute.For<INotificationService>();
@@ -33,14 +32,12 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
 
         public WaitlistServiceTests()
         {
-            _clientRepository.GetByUserIdAsync(UserId, Arg.Any<CancellationToken>())
-                .Returns(new Client { Id = 1, Name = "Ana", UserId = UserId });
             _mapper.Map<WaitlistEntryDto>(Arg.Any<WaitlistEntry>()).Returns(ci => ToDto(ci.Arg<WaitlistEntry>()));
             // The guard just runs the critical section directly in unit tests.
             _bookingGuard.ExecuteSerializedAsync(Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
                 .Returns(ci => ci.Arg<Func<Task>>()());
             _sut = new WaitlistService(
-                _repository, _clientRepository, _availability, _appointmentRepository, _notifications, _bookingGuard, _unitOfWork, _mapper);
+                _repository, _availability, _appointmentRepository, _notifications, _bookingGuard, _unitOfWork, _mapper);
         }
 
         private JoinWaitlistDto Dto() => new(BusinessId: 10, ServiceId: 3, Date: new DateOnly(2030, 6, 7), StartTime: new TimeOnly(16, 0), EmployeeId: 2);
@@ -49,13 +46,13 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         public async Task JoinAsync_FranjaCompleta_CreaEntradaWaiting()
         {
             SlotCapacity(0);
-            _repository.ExistsWaitingAsync(1, 10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>()).Returns(false);
+            _repository.ExistsWaitingAsync(UserId, 10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>()).Returns(false);
 
             var result = await _sut.JoinAsync(Dto(), UserId);
 
             Assert.Equal(WaitlistStatus.Waiting, result.Status);
-            Assert.Equal(1, result.ClientId);
-            await _repository.Received(1).AddAsync(Arg.Is<WaitlistEntry>(w => w.Status == WaitlistStatus.Waiting && w.ClientId == 1), Arg.Any<CancellationToken>());
+            Assert.Equal(UserId, result.ClientUserId);
+            await _repository.Received(1).AddAsync(Arg.Is<WaitlistEntry>(w => w.Status == WaitlistStatus.Waiting && w.ClientUserId == UserId), Arg.Any<CancellationToken>());
             await _unitOfWork.Received(1).Save(Arg.Any<CancellationToken>());
         }
 
@@ -80,23 +77,15 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         public async Task JoinAsync_Duplicada_LanzaDuplicate()
         {
             SlotCapacity(0);
-            _repository.ExistsWaitingAsync(1, 10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>()).Returns(true);
+            _repository.ExistsWaitingAsync(UserId, 10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>()).Returns(true);
 
             await Assert.ThrowsAsync<DuplicateWaitlistEntryException>(() => _sut.JoinAsync(Dto(), UserId));
         }
 
         [Fact]
-        public async Task JoinAsync_SinCliente_Lanza403()
-        {
-            _clientRepository.GetByUserIdAsync("ghost", Arg.Any<CancellationToken>()).Returns((Client?)null);
-
-            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.JoinAsync(Dto(), "ghost"));
-        }
-
-        [Fact]
         public async Task LeaveAsync_PropiaEntrada_LaCancela()
         {
-            var entry = new WaitlistEntry { Id = 5, ClientId = 1, Status = WaitlistStatus.Waiting };
+            var entry = new WaitlistEntry { Id = 5, ClientUserId = UserId, Status = WaitlistStatus.Waiting };
             _repository.GetByIdAsync(5, Arg.Any<CancellationToken>()).Returns(entry);
 
             await _sut.LeaveAsync(5, UserId);
@@ -108,7 +97,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         [Fact]
         public async Task LeaveAsync_EntradaAjena_Lanza403()
         {
-            var entry = new WaitlistEntry { Id = 5, ClientId = 999, Status = WaitlistStatus.Waiting };
+            var entry = new WaitlistEntry { Id = 5, ClientUserId = "other-user", Status = WaitlistStatus.Waiting };
             _repository.GetByIdAsync(5, Arg.Any<CancellationToken>()).Returns(entry);
 
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.LeaveAsync(5, UserId));
@@ -135,7 +124,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
                     StartDate = new DateTime(2030, 6, 7, 16, 0, 0),
                     Employee = new Employee { Id = 2, BusinessId = 10 }
                 });
-            var waiting = new WaitlistEntry { Id = 7, ClientId = 1, Status = WaitlistStatus.Waiting };
+            var waiting = new WaitlistEntry { Id = 7, ClientUserId = UserId, Status = WaitlistStatus.Waiting };
             _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
                 .Returns(waiting);
             SlotCapacity(1); // the freed slot now has room
@@ -161,7 +150,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
                     Employee = new Employee { Id = 2, BusinessId = 10 }
                 });
             _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
-                .Returns(new WaitlistEntry { Id = 7, ClientId = 1, Status = WaitlistStatus.Waiting });
+                .Returns(new WaitlistEntry { Id = 7, ClientUserId = UserId, Status = WaitlistStatus.Waiting });
             SlotCapacity(1);
             _notifications.SendWaitlistAvailabilityAsync(7, Arg.Any<CancellationToken>()).Returns(true);
 
@@ -177,7 +166,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         {
             _appointmentRepository.GetByIdWithDetailsAsync(50, Arg.Any<CancellationToken>())
                 .Returns(new Appointment { Id = 50, EmployeeId = 2, ServiceId = 3, StartDate = new DateTime(2030, 6, 7, 16, 0, 0), Employee = new Employee { Id = 2, BusinessId = 10 } });
-            var waiting = new WaitlistEntry { Id = 7, ClientId = 1, Status = WaitlistStatus.Waiting };
+            var waiting = new WaitlistEntry { Id = 7, ClientUserId = UserId, Status = WaitlistStatus.Waiting };
             _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
                 .Returns(waiting);
             SlotCapacity(1); // the slot has room, so the send is attempted
@@ -196,7 +185,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         {
             _appointmentRepository.GetByIdWithDetailsAsync(50, Arg.Any<CancellationToken>())
                 .Returns(new Appointment { Id = 50, EmployeeId = 2, ServiceId = 3, StartDate = new DateTime(2030, 6, 7, 16, 0, 0), Employee = new Employee { Id = 2, BusinessId = 10 } });
-            var waiting = new WaitlistEntry { Id = 7, ClientId = 1, Status = WaitlistStatus.Waiting };
+            var waiting = new WaitlistEntry { Id = 7, ClientUserId = UserId, Status = WaitlistStatus.Waiting };
             _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
                 .Returns(waiting);
             SlotCapacity(0); // the freed appointment did not actually open a seat (still full)
@@ -236,6 +225,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
                 .Returns(capacity);
 
         private static WaitlistEntryDto ToDto(WaitlistEntry w)
-            => new(w.Id, w.BusinessId, w.ServiceId, w.ClientId, w.EmployeeId, w.Date, w.StartTime, w.Status, w.CreatedAt);
+            => new(w.Id, w.BusinessId, w.ServiceId, w.ClientUserId, w.EmployeeId, w.Date, w.StartTime, w.Status, w.CreatedAt);
     }
 }

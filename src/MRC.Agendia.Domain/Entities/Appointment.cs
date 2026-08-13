@@ -6,7 +6,14 @@ namespace MRC.Agendia.Domain.Entities
     public class Appointment : AuditableEntity
     {
         public int Id { get; set; }
-        public int ClientId { get; set; }
+
+        /// <summary>
+        /// Harmony user id (the JWT <c>sub</c>) of the client who booked. Agendia no
+        /// longer owns a Client profile: the identity lives in Harmony and only its
+        /// opaque id is stored here. Not a foreign key (no cross-service FK).
+        /// </summary>
+        public string ClientUserId { get; set; } = null!;
+
         public int EmployeeId { get; set; }
         public int ServiceId { get; set; }
         public DateTime StartDate { get; set; }
@@ -27,7 +34,6 @@ namespace MRC.Agendia.Domain.Entities
         /// </summary>
         public Guid? SeriesId { get; set; }
 
-        public Client Client { get; set; } = null!;
         public Employee Employee { get; set; } = null!;
         public Service Service { get; set; } = null!;
 

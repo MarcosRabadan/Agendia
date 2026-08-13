@@ -18,11 +18,11 @@ namespace MRC.Agendia.Application.Appointments.Commands.Crud
         public async Task<AppointmentDto> Handle(UpdateAppointmentCommand request, CancellationToken cancellationToken)
         {
             // Authorize the existing appointment AND the destination: the update can
-            // reassign ClientId/EmployeeId/ServiceId, so re-check the caller may book
-            // for that client + employee. Stops a client spoofing another ClientId or
+            // reassign ClientUserId/EmployeeId/ServiceId, so re-check the caller may book
+            // for that client + employee. Stops a client spoofing another ClientUserId or
             // moving the appointment into another tenant's agenda.
             await _auth.EnsureCanManageAppointmentAsync(request.Dto.Id, cancellationToken);
-            await _auth.EnsureCanCreateAppointmentAsync(request.Dto.ClientId, request.Dto.EmployeeId, cancellationToken);
+            await _auth.EnsureCanCreateAppointmentAsync(request.Dto.ClientUserId, request.Dto.EmployeeId, cancellationToken);
             return await _service.UpdateAsync(request.Dto, cancellationToken);
         }
     }

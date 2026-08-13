@@ -5,7 +5,6 @@ using MRC.Agendia.Application.Appointments.Commands.Crud;
 using MRC.Agendia.Application.Availability;
 using MRC.Agendia.Application.Behaviors;
 using MRC.Agendia.Application.Business;
-using MRC.Agendia.Application.Clients;
 using MRC.Agendia.Application.Employees;
 using MRC.Agendia.Application.Holidays;
 using MRC.Agendia.Application.Mappings;
@@ -45,7 +44,6 @@ namespace MRC.Agendia.Application
             services.AddScoped<IAppointmentDelayService, AppointmentDelayService>();
             services.AddScoped<IAppointmentSchedulingValidator, AppointmentSchedulingValidator>();
             services.AddScoped<IBusinessService, BusinessService>();
-            services.AddScoped<IClientService, ClientService>();
             services.AddScoped<IEmployeeService, EmployeeService>();
             services.AddScoped<IServicesService, ServicesService>();
             services.AddScoped<IScheduleService, ScheduleService>();

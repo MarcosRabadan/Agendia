@@ -49,7 +49,7 @@ namespace MRC.Agendia.Tests.Integration.Database
             {
                 var business = await SeedBusinessAsync(db);
                 var service = await SeedServiceAsync(db, business.Id);
-                var client = await SeedClientAsync(db);
+                var clientUserId = $"harmony-{Guid.NewGuid():N}";
                 var date = new DateOnly(2026, 6, 7);
                 var start = new TimeOnly(16, 0);
 
@@ -57,7 +57,7 @@ namespace MRC.Agendia.Tests.Integration.Database
                 {
                     BusinessId = business.Id,
                     ServiceId = service.Id,
-                    ClientId = client.Id,
+                    ClientUserId = clientUserId,
                     EmployeeId = null,
                     Date = date,
                     StartTime = start,
@@ -76,7 +76,7 @@ namespace MRC.Agendia.Tests.Integration.Database
                 // The filter is WHERE Status = Waiting, so cancelling the first entry and
                 // re-joining the same slot is allowed.
                 db.ChangeTracker.Clear();
-                var existing = await db.WaitlistEntries.FirstAsync(w => w.ClientId == client.Id);
+                var existing = await db.WaitlistEntries.FirstAsync(w => w.ClientUserId == clientUserId);
                 existing.Status = WaitlistStatus.Cancelled;
                 await db.SaveChangesAsync();
 
@@ -162,14 +162,6 @@ namespace MRC.Agendia.Tests.Integration.Database
             db.Services.Add(service);
             await db.SaveChangesAsync();
             return service;
-        }
-
-        private static async Task<Client> SeedClientAsync(AgendiaDbContext db)
-        {
-            var client = new Client { Name = "C", Phone = "P", Email = "c@test" };
-            db.Clients.Add(client);
-            await db.SaveChangesAsync();
-            return client;
         }
     }
 }

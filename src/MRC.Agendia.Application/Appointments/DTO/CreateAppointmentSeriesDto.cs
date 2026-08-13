@@ -8,7 +8,7 @@ namespace MRC.Agendia.Application.Appointments.DTO
     /// service duration, so only the start time is provided.
     /// </summary>
     public record CreateAppointmentSeriesDto(
-        int ClientId,
+        string ClientUserId,
         int EmployeeId,
         int ServiceId,
         TimeOnly StartTime,

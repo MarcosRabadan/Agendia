@@ -19,14 +19,8 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="entry">The entry to update.</param>
         void Update(WaitlistEntry entry);
 
-        /// <summary>Loads the entry with its (live) Client and Service for composing the notification.</summary>
-        /// <param name="id">Waitlist entry id.</param>
-        /// <param name="cancellationToken">Token to cancel the operation.</param>
-        /// <returns>The untracked entry with details, or null when missing or a participant is soft-deleted.</returns>
-        Task<WaitlistEntry?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default);
-
         /// <summary>True if the client already has a Waiting entry for this exact slot.</summary>
-        /// <param name="clientId">Client id.</param>
+        /// <param name="clientUserId">Harmony user id of the client.</param>
         /// <param name="businessId">Business id.</param>
         /// <param name="serviceId">Service id.</param>
         /// <param name="date">Slot date.</param>
@@ -35,7 +29,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>True when a matching Waiting entry already exists.</returns>
         Task<bool> ExistsWaitingAsync(
-            int clientId, int businessId, int serviceId, DateOnly date, TimeOnly startTime, int? employeeId,
+            string clientUserId, int businessId, int serviceId, DateOnly date, TimeOnly startTime, int? employeeId,
             CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -55,9 +49,9 @@ namespace MRC.Agendia.Domain.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>The client's non-cancelled waitlist entries, ordered by date/time.</summary>
-        /// <param name="clientId">Client id.</param>
+        /// <param name="clientUserId">Harmony user id of the client.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The client's active (non-cancelled) entries.</returns>
-        Task<IReadOnlyList<WaitlistEntry>> GetActiveByClientAsync(int clientId, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<WaitlistEntry>> GetActiveByClientUserIdAsync(string clientUserId, CancellationToken cancellationToken = default);
     }
 }

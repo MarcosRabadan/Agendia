@@ -122,45 +122,6 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 throw new UnauthorizedAccessException("Solo el dueno del negocio (o un admin) puede eliminar empleados.");
         }
 
-        // ---------- CLIENT ----------
-
-        /// <inheritdoc />
-        public async Task EnsureCanManageClientAsync(int clientId, CancellationToken cancellationToken = default)
-        {
-            if (_currentUser.IsInRole(Roles.Admin)) return;
-            var userId = RequireUserId();
-
-            var client = await _context.Clients
-                .AsNoTracking()
-                .Where(c => c.Id == clientId)
-                .Select(c => new { c.UserId, c.BusinessId })
-                .FirstOrDefaultAsync(cancellationToken);
-
-            // Missing client: no access (kept as 403, as before).
-            if (client is null)
-                throw new UnauthorizedAccessException("No tienes permiso para gestionar este cliente.");
-
-            // The client's own user
-            if (client.UserId == userId) return;
-
-            // Staff (owner or active employee) of the client's business, for
-            // business-managed clients (BusinessId set).
-            if (client.BusinessId is int businessId)
-            {
-                var isOwner = await _context.Businesses
-                    .AsNoTracking()
-                    .AnyAsync(b => b.Id == businessId && b.OwnerUserId == userId, cancellationToken);
-                if (isOwner) return;
-
-                var isEmployee = await _context.Employees
-                    .AsNoTracking()
-                    .AnyAsync(e => e.BusinessId == businessId && e.UserId == userId && e.IsActive, cancellationToken);
-                if (isEmployee) return;
-            }
-
-            throw new UnauthorizedAccessException("No tienes permiso para gestionar este cliente.");
-        }
-
         // ---------- APPOINTMENT ----------
 
         /// <inheritdoc />
@@ -174,11 +135,10 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .Where(a => a.Id == appointmentId)
                 .Select(a => new
                 {
-                    a.ClientId,
+                    a.ClientUserId,
                     a.EmployeeId,
                     BusinessId = a.Employee.BusinessId,
                     OwnerUserId = a.Employee.Business.OwnerUserId,
-                    ClientUserId = a.Client.UserId,
                     EmployeeUserId = a.Employee.UserId
                 })
                 .FirstOrDefaultAsync(cancellationToken)
@@ -200,7 +160,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
         }
 
         /// <inheritdoc />
-        public async Task EnsureCanCreateAppointmentAsync(int clientId, int employeeId, CancellationToken cancellationToken = default)
+        public async Task EnsureCanCreateAppointmentAsync(string clientUserId, int employeeId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
@@ -222,15 +182,9 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .AnyAsync(e => e.BusinessId == employee.BusinessId && e.UserId == userId && e.IsActive, cancellationToken);
             if (isEmployeeOfBusiness) return;
 
-            // If Client, can only create an appointment for themselves
+            // A Client can only create an appointment for their own user id.
             if (_currentUser.IsInRole(Roles.Client))
             {
-                var clientUserId = await _context.Clients
-                    .AsNoTracking()
-                    .Where(c => c.Id == clientId)
-                    .Select(c => c.UserId)
-                    .FirstOrDefaultAsync(cancellationToken);
-
                 if (clientUserId == userId) return;
 
                 throw new UnauthorizedAccessException("Solo puedes crear citas para tu propia cuenta de cliente.");

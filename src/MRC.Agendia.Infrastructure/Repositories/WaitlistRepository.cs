@@ -13,10 +13,10 @@ namespace MRC.Agendia.Infrastructure.Repositories
 
         /// <inheritdoc />
         public Task<bool> ExistsWaitingAsync(
-            int clientId, int businessId, int serviceId, DateOnly date, TimeOnly startTime, int? employeeId,
+            string clientUserId, int businessId, int serviceId, DateOnly date, TimeOnly startTime, int? employeeId,
             CancellationToken cancellationToken = default)
             => Set.AnyAsync(w =>
-                w.ClientId == clientId
+                w.ClientUserId == clientUserId
                 && w.BusinessId == businessId
                 && w.ServiceId == serviceId
                 && w.Date == date
@@ -26,23 +26,11 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 cancellationToken);
 
         /// <inheritdoc />
-        public Task<WaitlistEntry?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default)
-            // Required Client/Service navigations keep their soft-delete filters, so a
-            // soft-deleted participant makes this return null (the notification is skipped).
-            // Service.Business is loaded to resolve the business language for the email.
-            => Set
-                .AsNoTracking()
-                .Include(w => w.Client)
-                .Include(w => w.Service)
-                    .ThenInclude(s => s.Business)
-                .FirstOrDefaultAsync(w => w.Id == id, cancellationToken);
-
-        /// <inheritdoc />
         public Task<WaitlistEntry?> GetNextWaitingForSlotAsync(
             int businessId, int serviceId, DateOnly date, TimeOnly startTime, int employeeId,
             CancellationToken cancellationToken = default)
-            // IgnoreQueryFilters + explicit liveness: never notify a client/service
-            // that was soft-deleted (BIZ-03). Tracked so the caller marks it Notified.
+            // IgnoreQueryFilters + explicit liveness: never notify for a service that
+            // was soft-deleted (BIZ-03). Tracked so the caller marks it Notified.
             => Set
                 .IgnoreQueryFilters()
                 .Where(w =>
@@ -52,16 +40,15 @@ namespace MRC.Agendia.Infrastructure.Repositories
                     && w.Date == date
                     && w.StartTime == startTime
                     && (w.EmployeeId == null || w.EmployeeId == employeeId)
-                    && !w.Client.IsDeleted
                     && !w.Service.IsDeleted)
                 .OrderBy(w => w.CreatedAt)
                 .FirstOrDefaultAsync(cancellationToken);
 
         /// <inheritdoc />
-        public async Task<IReadOnlyList<WaitlistEntry>> GetActiveByClientAsync(int clientId, CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyList<WaitlistEntry>> GetActiveByClientUserIdAsync(string clientUserId, CancellationToken cancellationToken = default)
             => await Set
                 .AsNoTracking()
-                .Where(w => w.ClientId == clientId && w.Status != WaitlistStatus.Cancelled)
+                .Where(w => w.ClientUserId == clientUserId && w.Status != WaitlistStatus.Cancelled)
                 .OrderBy(w => w.Date)
                 .ThenBy(w => w.StartTime)
                 .ToListAsync(cancellationToken);

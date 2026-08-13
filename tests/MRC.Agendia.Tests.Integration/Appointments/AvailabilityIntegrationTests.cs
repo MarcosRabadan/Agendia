@@ -75,7 +75,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             Assert.Contains(before.Slots, s => s.StartTime == new TimeOnly(10, 0) && s.Capacity >= 1);
 
             var start = Day.ToDateTime(new TimeOnly(10, 0));
-            var booking = new CreateAppointmentDto(setup.ClientId, setup.EmployeeId, setup.Service.Id, start, start.AddMinutes(30), null);
+            var booking = new CreateAppointmentDto(setup.ClientUserId, setup.EmployeeId, setup.Service.Id, start, start.AddMinutes(30), null);
             (await BookableBusinessFactory.PostAppointmentAsync(_client, setup.OwnerToken, booking)).EnsureSuccessStatusCode();
 
             var after = await GetAvailabilityAsync(setup.BusinessId, setup.Service.Id, Day);

@@ -20,21 +20,20 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Repositories
                     CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning))
                 .Options, new UnrestrictedBusinessScope());
 
-        private sealed record Seeded(int AppointmentId, int BusinessId, int ClientId, int EmployeeId, int ServiceId);
+        private sealed record Seeded(int AppointmentId, int BusinessId, int EmployeeId, int ServiceId);
 
-        /// <summary>Seeds business + client + service + employee + one confirmed appointment.</summary>
+        /// <summary>Seeds business + service + employee + one confirmed appointment.</summary>
         private static async Task<Seeded> SeedAsync(AgendiaDbContext ctx)
         {
             var business = new Business { Name = "B", Address = "x", Phone = "1", Email = "b@x.com", IsActive = true };
-            var client = new Client { Name = "Ana", Phone = "600", Email = "ana@x.com" };
             var service = new Service { Name = "Corte", DurationMinutes = 30, Price = 10m, Business = business };
             var employee = new Employee { FullName = "Luis", Business = business, IsActive = true, MaxConcurrentAppointments = 1 };
-            ctx.AddRange(business, client, service, employee);
+            ctx.AddRange(business, service, employee);
             await ctx.SaveChangesAsync();
 
             var appointment = new Appointment
             {
-                ClientId = client.Id,
+                ClientUserId = "harmony-ana",
                 EmployeeId = employee.Id,
                 ServiceId = service.Id,
                 StartDate = Start,
@@ -44,7 +43,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Repositories
             ctx.Appointments.Add(appointment);
             await ctx.SaveChangesAsync();
 
-            return new Seeded(appointment.Id, business.Id, client.Id, employee.Id, service.Id);
+            return new Seeded(appointment.Id, business.Id, employee.Id, service.Id);
         }
 
         [Fact]
@@ -55,8 +54,8 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Repositories
             using (var ctx = NewContext(dbName))
             {
                 seeded = await SeedAsync(ctx);
-                var client = await ctx.Clients.FindAsync(seeded.ClientId);
-                client!.IsDeleted = true;
+                var service = await ctx.Services.FindAsync(seeded.ServiceId);
+                service!.IsDeleted = true;
                 await ctx.SaveChangesAsync();
             }
 
@@ -65,9 +64,9 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Repositories
                 var loaded = await new AppointmentRepository(ctx).GetByIdWithDetailsAsync(seeded.AppointmentId);
 
                 Assert.NotNull(loaded);
-                Assert.NotNull(loaded!.Client);
-                Assert.Equal("Ana", loaded.Client.Name);
-                Assert.NotNull(loaded.Service);
+                // Required parents (soft-deleted service included) still load via IgnoreQueryFilters.
+                Assert.NotNull(loaded!.Service);
+                Assert.Equal("Corte", loaded.Service.Name);
                 Assert.NotNull(loaded.Employee.Business);
             }
         }

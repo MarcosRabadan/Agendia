@@ -7,7 +7,6 @@ using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Schedules.DTO;
 using MRC.Agendia.Application.Services.DTO;
 using MRC.Agendia.Domain.Constants;
-using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Tests.Integration.Infrastructure;
@@ -175,7 +174,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         {
             var start = new DateOnly(SeriesYear, 6, 4);
             return new CreateAppointmentSeriesDto(
-                ClientId: setup.ClientId,
+                ClientUserId: setup.ClientUserId,
                 EmployeeId: setup.EmployeeId,
                 ServiceId: setup.ServiceId,
                 StartTime: new TimeOnly(10, 0),
@@ -224,18 +223,9 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             var service = await CreateServiceAsAsync(owner, "Clase");
 
             var employeeId = owner.EmployeeId;
-            int clientId;
-            using (var scope = _factory.Services.CreateScope())
-            {
-                var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
+            var clientUserId = $"harmony-series-{Guid.NewGuid():N}";
 
-                var client = new Client { Name = "Cliente Test", Phone = "600111222" };
-                db.Clients.Add(client);
-                await db.SaveChangesAsync();
-                clientId = client.Id;
-            }
-
-            return new BookableSetup(owner.Token, owner.Business.Id, employeeId, clientId, service.Id);
+            return new BookableSetup(owner.Token, owner.Business.Id, employeeId, clientUserId, service.Id);
         }
 
         private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner, string name)
@@ -268,6 +258,6 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         private Task<ProvisionedOwner> RegisterOwnerAsync(string slug) =>
             TestProvisioning.ProvisionOwnerAsync(_client, slug);
 
-        private sealed record BookableSetup(string Token, int BusinessId, int EmployeeId, int ClientId, int ServiceId);
+        private sealed record BookableSetup(string Token, int BusinessId, int EmployeeId, string ClientUserId, int ServiceId);
     }
 }

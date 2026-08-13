@@ -13,7 +13,6 @@ namespace MRC.Agendia.Application.Waitlist
     public class WaitlistService : IWaitlistService
     {
         private readonly IWaitlistRepository _repository;
-        private readonly IClientRepository _clientRepository;
         private readonly IAvailabilityService _availabilityService;
         private readonly IAppointmentRepository _appointmentRepository;
         private readonly INotificationService _notificationService;
@@ -22,7 +21,6 @@ namespace MRC.Agendia.Application.Waitlist
         private readonly IMapper _mapper;
 
         public WaitlistService(IWaitlistRepository repository,
-                               IClientRepository clientRepository,
                                IAvailabilityService availabilityService,
                                IAppointmentRepository appointmentRepository,
                                INotificationService notificationService,
@@ -31,7 +29,6 @@ namespace MRC.Agendia.Application.Waitlist
                                IMapper mapper)
         {
             _repository = repository;
-            _clientRepository = clientRepository;
             _availabilityService = availabilityService;
             _appointmentRepository = appointmentRepository;
             _notificationService = notificationService;
@@ -43,9 +40,6 @@ namespace MRC.Agendia.Application.Waitlist
         /// <inheritdoc />
         public async Task<WaitlistEntryDto> JoinAsync(JoinWaitlistDto dto, string userId, CancellationToken cancellationToken = default)
         {
-            var client = await _clientRepository.GetByUserIdAsync(userId, cancellationToken)
-                ?? throw new UnauthorizedAccessException("Solo los clientes pueden usar la lista de espera.");
-
             // The slot must exist in the schedule and be full (capacity 0). If it
             // still has room, the client should just book directly.
             var capacity = await _availabilityService.GetSlotCapacityAsync(
@@ -56,14 +50,14 @@ namespace MRC.Agendia.Application.Waitlist
                 throw new SlotHasCapacityException();
 
             if (await _repository.ExistsWaitingAsync(
-                    client.Id, dto.BusinessId, dto.ServiceId, dto.Date, dto.StartTime, dto.EmployeeId, cancellationToken))
+                    userId, dto.BusinessId, dto.ServiceId, dto.Date, dto.StartTime, dto.EmployeeId, cancellationToken))
                 throw new DuplicateWaitlistEntryException();
 
             var entry = new WaitlistEntry
             {
                 BusinessId = dto.BusinessId,
                 ServiceId = dto.ServiceId,
-                ClientId = client.Id,
+                ClientUserId = userId,
                 EmployeeId = dto.EmployeeId,
                 Date = dto.Date,
                 StartTime = dto.StartTime,
@@ -82,8 +76,7 @@ namespace MRC.Agendia.Application.Waitlist
             var entry = await _repository.GetByIdAsync(entryId, cancellationToken)
                 ?? throw new WaitlistEntryNotFoundException(entryId);
 
-            var client = await _clientRepository.GetByUserIdAsync(userId, cancellationToken);
-            if (client is null || entry.ClientId != client.Id)
+            if (entry.ClientUserId != userId)
                 throw new UnauthorizedAccessException("Solo puedes gestionar tus propias entradas de lista de espera.");
 
             if (entry.Status == WaitlistStatus.Cancelled)
@@ -97,11 +90,7 @@ namespace MRC.Agendia.Application.Waitlist
         /// <inheritdoc />
         public async Task<IReadOnlyList<WaitlistEntryDto>> GetMineAsync(string userId, CancellationToken cancellationToken = default)
         {
-            var client = await _clientRepository.GetByUserIdAsync(userId, cancellationToken);
-            if (client is null)
-                return Array.Empty<WaitlistEntryDto>();
-
-            var entries = await _repository.GetActiveByClientAsync(client.Id, cancellationToken);
+            var entries = await _repository.GetActiveByClientUserIdAsync(userId, cancellationToken);
             return _mapper.Map<List<WaitlistEntryDto>>(entries);
         }
 
