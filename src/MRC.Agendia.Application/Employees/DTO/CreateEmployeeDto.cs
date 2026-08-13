@@ -6,9 +6,6 @@ namespace MRC.Agendia.Application.Employees.DTO
     // repointed to another user via a crafted DTO.
     public record CreateEmployeeDto(
         int BusinessId,
-        string FullName,
-        string? Email,
-        string? Phone,
         string? UserId = null,
         int MaxConcurrentAppointments = 1);
 }

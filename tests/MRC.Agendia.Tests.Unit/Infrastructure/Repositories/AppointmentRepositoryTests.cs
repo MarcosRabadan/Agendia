@@ -27,7 +27,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Repositories
         {
             var business = new Business { IsActive = true };
             var service = new Service { Name = "Corte", DurationMinutes = 30, Price = 10m, Business = business };
-            var employee = new Employee { FullName = "Luis", Business = business, IsActive = true, MaxConcurrentAppointments = 1 };
+            var employee = new Employee { Business = business, IsActive = true, MaxConcurrentAppointments = 1 };
             ctx.AddRange(business, service, employee);
             await ctx.SaveChangesAsync();
 

@@ -138,11 +138,7 @@ namespace MRC.Agendia.Tests.Integration.Statistics
             await TestProvisioning.PostAsync<CreateEmployeeDto, EmployeeDto>(
                 _client,
                 "/api/Employee",
-                new CreateEmployeeDto(BusinessId: owner.Business.Id,
-                                      FullName: $"Empleado {slug}",
-                                      Email: $"{slug}-emp-{unique}@test.local",
-                                      Phone: "600222333",
-                                      UserId: employeeUserId),
+                new CreateEmployeeDto(BusinessId: owner.Business.Id, UserId: employeeUserId),
                 owner.Token);
 
             return TestTokenFactory.Create(employeeUserId, Roles.Employee);

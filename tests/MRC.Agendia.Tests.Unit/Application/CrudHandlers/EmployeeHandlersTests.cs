@@ -26,7 +26,7 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
         private readonly ICurrentUserContext _currentUser = Substitute.For<ICurrentUserContext>();
 
         private static EmployeeDto Result(int id = 1, int businessId = 7) =>
-            new(id, businessId, "Ana", "a@b.c", "600", true, 1);
+            new(id, businessId, IsActive: true, MaxConcurrentAppointments: 1);
 
         private static PagedResult<EmployeeDto> EmptyPage() =>
             PagedResult<EmployeeDto>.Create(Array.Empty<EmployeeDto>(), 0, 1, 50);
@@ -34,7 +34,7 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
         [Fact]
         public async Task Create_authorizes_the_target_business_then_delegates()
         {
-            var dto = new CreateEmployeeDto(BusinessId: 7, FullName: "Ana", Email: null, Phone: null);
+            var dto = new CreateEmployeeDto(BusinessId: 7);
             var expected = Result();
             _service.CreateAsync(dto, Arg.Any<CancellationToken>()).Returns(expected);
 
@@ -48,7 +48,7 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
         [Fact]
         public async Task Update_authorizes_the_existing_employee_then_delegates()
         {
-            var dto = new UpdateEmployeeDto(5, "Ana", null, null, true, 2);
+            var dto = new UpdateEmployeeDto(5, IsActive: true, MaxConcurrentAppointments: 2);
             var expected = Result(5);
             _service.UpdateAsync(dto, Arg.Any<CancellationToken>()).Returns(expected);
 

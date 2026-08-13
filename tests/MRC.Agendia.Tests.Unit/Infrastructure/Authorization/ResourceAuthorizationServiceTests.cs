@@ -547,7 +547,6 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             {
                 Id = EmployeeActiveId,
                 BusinessId = Business1Id,
-                FullName = "Active Employee",
                 UserId = EmployeeUserId,
                 IsActive = true,
                 MaxConcurrentAppointments = 1,
@@ -556,7 +555,6 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             {
                 Id = EmployeeInactiveId,
                 BusinessId = Business1Id,
-                FullName = "Inactive Employee",
                 UserId = InactiveEmployeeUserId,
                 IsActive = false,
                 MaxConcurrentAppointments = 1,
@@ -565,7 +563,6 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             {
                 Id = EmployeeOtherBusinessId,
                 BusinessId = Business2Id,
-                FullName = "Other Business Employee",
                 UserId = OtherBusinessEmployeeUserId,
                 IsActive = true,
                 MaxConcurrentAppointments = 1,
