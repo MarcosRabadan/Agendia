@@ -26,17 +26,5 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .AsNoTracking()
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(s => s.Id == id && !s.IsDeleted, cancellationToken);
-
-        // Public (anonymous) catalog read: IgnoreQueryFilters so it stays a global
-        // catalog regardless of the caller's business scope (#58); re-apply
-        // !IsDeleted explicitly since the global filter is bypassed.
-        /// <inheritdoc />
-        public Task<(IReadOnlyList<Service> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
-            => Set
-                .AsNoTracking()
-                .IgnoreQueryFilters()
-                .Where(s => !s.IsDeleted)
-                .OrderBy(s => s.Id)
-                .ToPagedListAsync(page, pageSize, cancellationToken);
     }
 }

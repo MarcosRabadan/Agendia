@@ -29,12 +29,11 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
                                                                IServiceProvider services,
                                                                string slug,
                                                                int year,
-                                                               int durationMinutes = 30,
-                                                               decimal price = 20m)
+                                                               int durationMinutes = 30)
         {
             var owner = await TestProvisioning.ProvisionOwnerAsync(client, slug);
             await GenerateFullWeekScheduleAsync(client, owner, year);
-            var service = await CreateServiceAsync(client, owner, "Servicio", durationMinutes, price);
+            var service = await CreateServiceAsync(client, owner, durationMinutes);
             var clientUserId = CounterClientUserId();
             return new BookableBusiness(owner, service, owner.EmployeeId, clientUserId);
         }
@@ -65,12 +64,10 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
 
         public static async Task<ServiceDto> CreateServiceAsync(HttpClient client,
                                                                 ProvisionedOwner owner,
-                                                                string name,
-                                                                int durationMinutes,
-                                                                decimal price)
+                                                                int durationMinutes)
         {
             var response = await SendAsync(client, HttpMethod.Post, "/api/Service", owner.Token,
-                new CreateServiceDto(owner.Business.Id, name, null, durationMinutes, price));
+                new CreateServiceDto(owner.Business.Id, durationMinutes));
             response.EnsureSuccessStatusCode();
             var created = await response.Content.ReadFromJsonAsync<ServiceDto>();
             Assert.NotNull(created);

@@ -1,10 +1,9 @@
 namespace MRC.Agendia.Application.Services.DTO
 {
+    // Scheduling projection returned by the provisioning POST/PUT. Carries no catalog
+    // data (name/description/price): that lives in the management/catalog service.
     public record ServiceDto(
         int Id,
         int BusinessId,
-        string Name,
-        string? Description,
-        int DurationMinutes,
-        decimal Price);
+        int DurationMinutes);
 }

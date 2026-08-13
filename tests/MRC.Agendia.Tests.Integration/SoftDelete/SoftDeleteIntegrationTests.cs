@@ -29,7 +29,7 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
         public async Task DeleteService_OcultaElServicio_PeroNoBorraLaFila()
         {
             var owner = await RegisterOwnerAsync("sd-del");
-            var service = await CreateServiceAsAsync(owner, "Corte");
+            var service = await CreateServiceAsAsync(owner);
 
             using (var del = new HttpRequestMessage(HttpMethod.Delete, $"/api/Service/{service.Id}"))
             {
@@ -38,13 +38,11 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
                 Assert.Equal(HttpStatusCode.NoContent, delResponse.StatusCode);
             }
 
-            // Hidden from the public read endpoint by the global query filter.
-            var get = await _client.GetAsync($"/api/Service/{service.Id}");
-            Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
-
-            // The row is still physically present, flagged as deleted.
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
+
+            // Hidden by the global query filter, but still physically present.
+            Assert.False(await db.Services.AnyAsync(s => s.Id == service.Id));
             var stored = await db.Services.IgnoreQueryFilters().FirstOrDefaultAsync(s => s.Id == service.Id);
             Assert.NotNull(stored);
             Assert.True(stored!.IsDeleted);
@@ -55,16 +53,13 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
         public async Task RestoreService_ComoAdmin_RecuperaElServicio()
         {
             var owner = await RegisterOwnerAsync("sd-restore");
-            var service = await CreateServiceAsAsync(owner, "Tinte");
+            var service = await CreateServiceAsAsync(owner);
 
             using (var del = new HttpRequestMessage(HttpMethod.Delete, $"/api/Service/{service.Id}"))
             {
                 del.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
                 (await _client.SendAsync(del)).EnsureSuccessStatusCode();
             }
-
-            Assert.Equal(HttpStatusCode.NotFound,
-                (await _client.GetAsync($"/api/Service/{service.Id}")).StatusCode);
 
             var adminToken = NewAdminToken();
             using (var restore = new HttpRequestMessage(HttpMethod.Post, $"/api/Service/{service.Id}/restore"))
@@ -74,16 +69,19 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
                 Assert.Equal(HttpStatusCode.NoContent, restoreResponse.StatusCode);
             }
 
-            // Visible again after restore.
-            var get = await _client.GetAsync($"/api/Service/{service.Id}");
-            Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+            // Live again after restore: the global query filter no longer hides it.
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
+            var stored = await db.Services.FirstOrDefaultAsync(s => s.Id == service.Id);
+            Assert.NotNull(stored);
+            Assert.False(stored!.IsDeleted);
         }
 
         [Fact]
         public async Task RestoreService_ComoOwner_DevuelveForbidden()
         {
             var owner = await RegisterOwnerAsync("sd-forbidden");
-            var service = await CreateServiceAsAsync(owner, "Peinado");
+            var service = await CreateServiceAsAsync(owner);
 
             using var restore = new HttpRequestMessage(HttpMethod.Post, $"/api/Service/{service.Id}/restore");
             restore.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
@@ -96,7 +94,7 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
         public async Task Availability_DeNegocioBorrado_Devuelve404()
         {
             var owner = await RegisterOwnerAsync("sd-avail");
-            var service = await CreateServiceAsAsync(owner, "Corte");
+            var service = await CreateServiceAsAsync(owner);
 
             var adminToken = NewAdminToken();
             using (var del = new HttpRequestMessage(HttpMethod.Delete, $"/api/Business/{owner.Business.Id}"))
@@ -116,7 +114,7 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
         public async Task CreateService_RellenaAuditFields()
         {
             var owner = await RegisterOwnerAsync("sd-audit");
-            var service = await CreateServiceAsAsync(owner, "Manicura");
+            var service = await CreateServiceAsAsync(owner);
 
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
@@ -130,14 +128,9 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
 
         // ----- Helpers -----
 
-        private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner, string name)
+        private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner)
         {
-            var dto = new CreateServiceDto(
-                BusinessId: owner.Business.Id,
-                Name: name,
-                Description: null,
-                DurationMinutes: 30,
-                Price: 20m);
+            var dto = new CreateServiceDto(owner.Business.Id, DurationMinutes: 30);
 
             return await TestProvisioning.PostAsync<CreateServiceDto, ServiceDto>(
                 _client, "/api/Service", dto, owner.Token);

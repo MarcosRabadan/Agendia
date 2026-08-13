@@ -32,15 +32,14 @@ namespace MRC.Agendia.Tests.Integration.Statistics
         public async Task GetStats_ComoDueno_DevuelveMetricas()
         {
             var owner = await RegisterOwnerAsync("stats-ok");
-            await SeedAppointmentsAsync(owner);
+            var serviceId = await SeedAppointmentsAsync(owner);
 
             var stats = await GetStatsAsync(owner.Token, owner.Business.Id, "2026-05-01", "2026-05-31");
 
             Assert.Equal(3, stats.TotalAppointments);
             Assert.Equal(2, stats.TotalBookings);   // completed + confirmed
-            Assert.Equal(30m, stats.TotalRevenue);  // one completed x 30
             Assert.Equal(1, stats.NoShowCount);
-            Assert.Contains(stats.Services, s => s.ServiceName == "Corte" && s.Count >= 1);
+            Assert.Contains(stats.Services, s => s.ServiceId == serviceId && s.Count >= 1);
         }
 
         [Fact]
@@ -75,17 +74,17 @@ namespace MRC.Agendia.Tests.Integration.Statistics
             var stats = await GetStatsAsync(employeeToken, owner.Business.Id, "2026-05-01", "2026-05-31");
 
             Assert.Equal(3, stats.TotalAppointments);
-            Assert.Equal(30m, stats.TotalRevenue);
+            Assert.Equal(2, stats.TotalBookings);
         }
 
         // ----- Helpers -----
 
-        private async Task SeedAppointmentsAsync(ProvisionedOwner owner)
+        private async Task<int> SeedAppointmentsAsync(ProvisionedOwner owner)
         {
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
 
-            var service = new Service { BusinessId = owner.Business.Id, Name = "Corte", DurationMinutes = 30, Price = 30m };
+            var service = new Service { BusinessId = owner.Business.Id, DurationMinutes = 30 };
             db.Services.Add(service);
             await db.SaveChangesAsync();
 
@@ -95,6 +94,7 @@ namespace MRC.Agendia.Tests.Integration.Statistics
                 Appointment(clientUserId, owner.EmployeeId, service.Id, new DateTime(2026, 5, 4, 11, 0, 0), AppointmentStatus.Confirmed),
                 Appointment(clientUserId, owner.EmployeeId, service.Id, new DateTime(2026, 5, 6, 16, 0, 0), AppointmentStatus.NoShow));
             await db.SaveChangesAsync();
+            return service.Id;
         }
 
         private static Appointment Appointment(string clientUserId, int employeeId, int serviceId, DateTime start, AppointmentStatus status)

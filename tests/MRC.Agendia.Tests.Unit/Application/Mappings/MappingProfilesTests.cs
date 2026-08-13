@@ -38,12 +38,11 @@ namespace MRC.Agendia.Tests.Unit.Application.Mappings
         [Fact]
         public void UpdateService_preserves_BusinessId()
         {
-            var entity = new Service { Id = 1, BusinessId = 7, Name = "old", DurationMinutes = 30, Price = 10 };
+            var entity = new Service { Id = 1, BusinessId = 7, DurationMinutes = 30 };
 
-            _mapper.Map(new UpdateServiceDto(1, "new", null, 45, 20m), entity);
+            _mapper.Map(new UpdateServiceDto(1, 45), entity);
 
             Assert.Equal(7, entity.BusinessId);
-            Assert.Equal("new", entity.Name);
             Assert.Equal(45, entity.DurationMinutes);
         }
 

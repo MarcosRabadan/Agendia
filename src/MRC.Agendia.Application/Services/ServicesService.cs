@@ -1,5 +1,4 @@
 using AutoMapper;
-using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Services.DTO;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Exceptions;
@@ -21,24 +20,6 @@ namespace MRC.Agendia.Application.Services
         }
 
         #region CRUD
-        /// <inheritdoc />
-        public async Task<PagedResult<ServiceDto>> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
-        {
-            var (items, totalCount) = await _repository.GetPagedAsync(page, pageSize, cancellationToken);
-            var dtos = _mapper.Map<List<ServiceDto>>(items);
-            return PagedResult<ServiceDto>.Create(dtos, totalCount, page, pageSize);
-        }
-
-        /// <inheritdoc />
-        public async Task<ServiceDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
-        {
-            // Public catalog detail (GET /api/Service/{id} is [AllowAnonymous]):
-            // read unscoped so an authenticated owner/employee can see any service,
-            // not only their own business's (#58). Update/Delete stay scoped.
-            var entity = await _repository.GetByIdPublicAsync(id, cancellationToken);
-            return entity is null ? null : _mapper.Map<ServiceDto>(entity);
-        }
-
         /// <inheritdoc />
         public async Task<ServiceDto> CreateAsync(CreateServiceDto dto, CancellationToken cancellationToken = default)
         {

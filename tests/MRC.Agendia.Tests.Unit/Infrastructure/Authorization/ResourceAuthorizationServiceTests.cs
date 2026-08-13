@@ -572,8 +572,6 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             {
                 Id = Service1Id,
                 BusinessId = Business1Id,
-                Name = "Corte",
-                Price = 20m,
                 DurationMinutes = 30,
             };
 

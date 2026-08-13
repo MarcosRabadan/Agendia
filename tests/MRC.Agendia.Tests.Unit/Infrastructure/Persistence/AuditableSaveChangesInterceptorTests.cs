@@ -24,7 +24,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Persistence
             var dbName = $"audit-int-{Guid.NewGuid()}";
             using var ctx = NewContext(new FakeCurrentUserContext { UserId = "creator" }, dbName);
 
-            var service = new Service { Name = "Ana", DurationMinutes = 30, Price = 10m };
+            var service = new Service { DurationMinutes = 30 };
             ctx.Services.Add(service);
             await ctx.SaveChangesAsync();
 
@@ -41,14 +41,14 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Persistence
 
             using (var ctx = NewContext(new FakeCurrentUserContext { UserId = "creator" }, dbName))
             {
-                ctx.Services.Add(new Service { Name = "Ana", DurationMinutes = 30, Price = 10m });
+                ctx.Services.Add(new Service { DurationMinutes = 30 });
                 await ctx.SaveChangesAsync();
             }
 
             using (var ctx = NewContext(new FakeCurrentUserContext { UserId = "editor" }, dbName))
             {
                 var service = await ctx.Services.SingleAsync();
-                service.Name = "Ana B";
+                service.DurationMinutes = 45;
                 await ctx.SaveChangesAsync();
 
                 Assert.Equal("creator", service.CreatedBy);
@@ -64,7 +64,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Persistence
 
             using (var ctx = NewContext(new FakeCurrentUserContext { UserId = "u" }, dbName))
             {
-                ctx.Services.Add(new Service { Name = "Ana", DurationMinutes = 30, Price = 10m });
+                ctx.Services.Add(new Service { DurationMinutes = 30 });
                 await ctx.SaveChangesAsync();
             }
 

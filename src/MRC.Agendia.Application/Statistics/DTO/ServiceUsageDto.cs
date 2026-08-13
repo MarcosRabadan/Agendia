@@ -1,5 +1,6 @@
 namespace MRC.Agendia.Application.Statistics.DTO
 {
-    /// <summary>Usage of a service in the range: number of bookings and completed revenue.</summary>
-    public record ServiceUsageDto(int ServiceId, string ServiceName, int Count, decimal Revenue);
+    /// <summary>Usage of a service in the range: number of bookings. The display name is
+    /// resolved by the front from the catalog service using <c>ServiceId</c>.</summary>
+    public record ServiceUsageDto(int ServiceId, int Count);
 }

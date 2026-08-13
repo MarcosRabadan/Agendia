@@ -158,7 +158,7 @@ namespace MRC.Agendia.Tests.Integration.Database
 
         private static async Task<Service> SeedServiceAsync(AgendiaDbContext db, int businessId)
         {
-            var service = new Service { BusinessId = businessId, Name = "S", DurationMinutes = 30, Price = 10m };
+            var service = new Service { BusinessId = businessId, DurationMinutes = 30 };
             db.Services.Add(service);
             await db.SaveChangesAsync();
             return service;

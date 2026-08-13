@@ -19,7 +19,6 @@ namespace MRC.Agendia.Application.Statistics
             var bookings = rows.Where(r => IsBooking(r.Status)).ToList();
             var noShow = rows.Count(r => r.Status == AppointmentStatus.NoShow);
             var cancelled = rows.Count(r => r.Status == AppointmentStatus.Cancelled);
-            var revenue = CompletedRevenue(rows);
 
             var byMonth = bookings
                 .GroupBy(r => r.StartDate.ToString("yyyy-MM", CultureInfo.InvariantCulture))
@@ -36,25 +35,21 @@ namespace MRC.Agendia.Application.Statistics
             // Ranked over bookings, so a service with only no-shows/cancellations
             // does not surface as a 0-count "used service".
             var services = bookings
-                .GroupBy(r => new { r.ServiceId, r.ServiceName })
-                .Select(g => new ServiceUsageDto(
-                    g.Key.ServiceId,
-                    g.Key.ServiceName,
-                    g.Count(),
-                    CompletedRevenue(g)))
+                .GroupBy(r => r.ServiceId)
+                .Select(g => new ServiceUsageDto(g.Key, g.Count()))
                 .OrderByDescending(s => s.Count)
-                .ThenBy(s => s.ServiceName, StringComparer.Ordinal)
+                .ThenBy(s => s.ServiceId)
                 .ToList();
 
             var byHour = bookings
                 .GroupBy(r => r.StartDate.Hour)
-                .Select(g => new HourStatsDto(g.Key, g.Count(), CompletedRevenue(g)))
+                .Select(g => new HourStatsDto(g.Key, g.Count()))
                 .OrderBy(h => h.Hour)
                 .ToList();
 
             var byDayOfWeek = bookings
                 .GroupBy(r => r.StartDate.DayOfWeek)
-                .Select(g => new DayOfWeekStatsDto(g.Key, g.Count(), CompletedRevenue(g)))
+                .Select(g => new DayOfWeekStatsDto(g.Key, g.Count()))
                 .OrderBy(d => d.DayOfWeek)
                 .ToList();
 
@@ -62,7 +57,6 @@ namespace MRC.Agendia.Application.Statistics
                 from, to,
                 total,
                 bookings.Count,
-                revenue,
                 noShow, Rate(noShow, total),
                 cancelled, Rate(cancelled, total),
                 byMonth, byWeek, services, byHour, byDayOfWeek);
@@ -72,10 +66,6 @@ namespace MRC.Agendia.Application.Statistics
         // or completed. NoShow/Cancelled are tracked by their own metrics instead.
         private static bool IsBooking(AppointmentStatus status)
             => status is AppointmentStatus.Pending or AppointmentStatus.Confirmed or AppointmentStatus.Completed;
-
-        // Revenue only counts completed appointments (the visit actually happened).
-        private static decimal CompletedRevenue(IEnumerable<AppointmentStatsRow> rows)
-            => rows.Where(r => r.Status == AppointmentStatus.Completed).Sum(r => r.ServicePrice);
 
         private static double Rate(int part, int total)
             => total == 0 ? 0 : Math.Round((double)part / total, 4);

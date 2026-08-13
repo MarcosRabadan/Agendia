@@ -26,7 +26,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Repositories
         private static async Task<Seeded> SeedAsync(AgendiaDbContext ctx)
         {
             var business = new Business { IsActive = true };
-            var service = new Service { Name = "Corte", DurationMinutes = 30, Price = 10m, Business = business };
+            var service = new Service { DurationMinutes = 30, Business = business };
             var employee = new Employee { Business = business, IsActive = true, MaxConcurrentAppointments = 1 };
             ctx.AddRange(business, service, employee);
             await ctx.SaveChangesAsync();
@@ -66,7 +66,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Repositories
                 Assert.NotNull(loaded);
                 // Required parents (soft-deleted service included) still load via IgnoreQueryFilters.
                 Assert.NotNull(loaded!.Service);
-                Assert.Equal("Corte", loaded.Service.Name);
+                Assert.Equal(30, loaded.Service.DurationMinutes);
                 Assert.NotNull(loaded.Employee.Business);
             }
         }

@@ -35,8 +35,8 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         {
             var owner = await RegisterOwnerAsync("ms-ok");
             await GenerateScheduleAsync(owner);
-            var primary = await CreateServiceAsync(owner, "Corte", durationMinutes: 30, price: 20m);
-            var extra = await CreateServiceAsync(owner, "Barba", durationMinutes: 30, price: 12m);
+            var primary = await CreateServiceAsync(owner, durationMinutes: 30);
+            var extra = await CreateServiceAsync(owner, durationMinutes: 30);
             var (employeeId, clientUserId) = SeedEmployeeAndClientUser(owner);
 
             var start = SlotDate.ToDateTime(SlotTime);
@@ -62,8 +62,8 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         {
             var owner = await RegisterOwnerAsync("ms-bad");
             await GenerateScheduleAsync(owner);
-            var primary = await CreateServiceAsync(owner, "Corte", durationMinutes: 30, price: 20m);
-            var extra = await CreateServiceAsync(owner, "Barba", durationMinutes: 30, price: 12m);
+            var primary = await CreateServiceAsync(owner, durationMinutes: 30);
+            var extra = await CreateServiceAsync(owner, durationMinutes: 30);
             var (employeeId, clientUserId) = SeedEmployeeAndClientUser(owner);
 
             var start = SlotDate.ToDateTime(SlotTime);
@@ -84,8 +84,8 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         {
             var owner = await RegisterOwnerAsync("ms-avail");
             await GenerateScheduleAsync(owner);
-            var primary = await CreateServiceAsync(owner, "Corte", durationMinutes: 30, price: 20m);
-            var extra = await CreateServiceAsync(owner, "Barba", durationMinutes: 30, price: 12m);
+            var primary = await CreateServiceAsync(owner, durationMinutes: 30);
+            var extra = await CreateServiceAsync(owner, durationMinutes: 30);
 
             var url = $"/api/businesses/{owner.Business.Id}/availability"
                 + $"?date={SlotDate:yyyy-MM-dd}&serviceId={primary.Id}&stepMinutes=30&extraServiceIds={extra.Id}";
@@ -104,8 +104,8 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         {
             var owner = await RegisterOwnerAsync("ms-put");
             await GenerateScheduleAsync(owner);
-            var primary = await CreateServiceAsync(owner, "Corte", durationMinutes: 30, price: 20m);
-            var extra = await CreateServiceAsync(owner, "Barba", durationMinutes: 30, price: 12m);
+            var primary = await CreateServiceAsync(owner, durationMinutes: 30);
+            var extra = await CreateServiceAsync(owner, durationMinutes: 30);
             var (employeeId, clientUserId) = SeedEmployeeAndClientUser(owner);
 
             var start = SlotDate.ToDateTime(SlotTime);
@@ -138,8 +138,8 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         {
             var owner = await RegisterOwnerAsync("ms-dup");
             await GenerateScheduleAsync(owner);
-            var primary = await CreateServiceAsync(owner, "Corte", durationMinutes: 30, price: 20m);
-            var extra = await CreateServiceAsync(owner, "Barba", durationMinutes: 30, price: 12m);
+            var primary = await CreateServiceAsync(owner, durationMinutes: 30);
+            var extra = await CreateServiceAsync(owner, durationMinutes: 30);
             var (employeeId, clientUserId) = SeedEmployeeAndClientUser(owner);
 
             var start = SlotDate.ToDateTime(SlotTime);
@@ -204,9 +204,9 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             (await _client.SendAsync(gen)).EnsureSuccessStatusCode();
         }
 
-        private async Task<ServiceDto> CreateServiceAsync(ProvisionedOwner owner, string name, int durationMinutes, decimal price)
+        private async Task<ServiceDto> CreateServiceAsync(ProvisionedOwner owner, int durationMinutes)
         {
-            var dto = new CreateServiceDto(owner.Business.Id, name, null, durationMinutes, price);
+            var dto = new CreateServiceDto(owner.Business.Id, durationMinutes);
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Service") { Content = JsonContent.Create(dto) };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
             var response = await _client.SendAsync(request);
