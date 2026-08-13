@@ -36,7 +36,7 @@ namespace MRC.Agendia.Tests.Unit.Application.ServiceLayer
             repo.GetByIdAsync(9, Arg.Any<CancellationToken>()).Returns((Service?)null);
 
             await Assert.ThrowsAsync<ServiceNotFoundException>(() =>
-                BuildServices(repo).UpdateAsync(new UpdateServiceDto(9, "X", null, 30, 10m)));
+                BuildServices(repo).UpdateAsync(new UpdateServiceDto(9, 30)));
         }
 
         [Fact]

@@ -44,10 +44,6 @@ public class AgendiaDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Service>()
-            .Property(s => s.Price)
-            .HasPrecision(10, 2);
-
         // The booking client is a Harmony user id (the JWT sub), not a local entity:
         // stored as a plain scalar column with an index, no cross-service FK.
         modelBuilder.Entity<Appointment>()

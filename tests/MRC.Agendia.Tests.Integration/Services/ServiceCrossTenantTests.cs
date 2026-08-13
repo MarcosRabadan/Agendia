@@ -3,7 +3,6 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Availability.DTO;
-using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Services.DTO;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Tests.Integration.Infrastructure;
@@ -39,15 +38,10 @@ namespace MRC.Agendia.Tests.Integration.Services
             var ownerB = await RegisterOwnerAsync("svc-b");
 
             // Owner A creates a service in his own business (legitimate).
-            var serviceOfA = await CreateServiceAsAsync(ownerA, "Corte A", price: 20m, duration: 30);
+            var serviceOfA = await CreateServiceAsAsync(ownerA, duration: 30);
 
             // Owner B crafts a PUT that targets the service of A (which he does not own).
-            var hijackDto = new UpdateServiceDto(
-                Id: serviceOfA.Id,
-                Name: "Hijacked",
-                Description: null,
-                DurationMinutes: 60,
-                Price: 99m);
+            var hijackDto = new UpdateServiceDto(Id: serviceOfA.Id, DurationMinutes: 60);
 
             using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/Service/{serviceOfA.Id}")
             {
@@ -68,21 +62,16 @@ namespace MRC.Agendia.Tests.Integration.Services
             var stored = await db.Services.FindAsync(serviceOfA.Id);
             Assert.NotNull(stored);
             Assert.Equal(ownerA.Business.Id, stored!.BusinessId);
-            Assert.Equal("Corte A", stored.Name);
+            Assert.Equal(30, stored.DurationMinutes); // unchanged: the hijack did not apply
         }
 
         [Fact]
         public async Task UpdateService_OwnerA_EnSuPropioBusiness_AplicaCambios()
         {
             var ownerA = await RegisterOwnerAsync("svc-happy");
-            var service = await CreateServiceAsAsync(ownerA, "Original", price: 10m, duration: 15);
+            var service = await CreateServiceAsAsync(ownerA, duration: 15);
 
-            var dto = new UpdateServiceDto(
-                Id: service.Id,
-                Name: "Renombrado",
-                Description: "Cambiado",
-                DurationMinutes: 45,
-                Price: 22m);
+            var dto = new UpdateServiceDto(Id: service.Id, DurationMinutes: 45);
 
             using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/Service/{service.Id}")
             {
@@ -95,33 +84,9 @@ namespace MRC.Agendia.Tests.Integration.Services
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var updated = await response.Content.ReadFromJsonAsync<ServiceDto>();
             Assert.NotNull(updated);
-            Assert.Equal("Renombrado", updated!.Name);
-            Assert.Equal(45, updated.DurationMinutes);
-            Assert.Equal(22m, updated.Price);
+            Assert.Equal(45, updated!.DurationMinutes);
             // The service stays in its owner's business.
             Assert.Equal(ownerA.Business.Id, updated.BusinessId);
-        }
-
-        [Fact]
-        public async Task GetServiceById_OwnerAutenticado_DeOtroNegocio_DevuelveOk()
-        {
-            // #58 regression: GET /api/Service/{id} is [AllowAnonymous] (public
-            // catalog detail). Before the fix it read through the scoped GetByIdAsync,
-            // so an authenticated owner browsing ANOTHER business's service got 404.
-            // It must now return the service (read unscoped via GetByIdPublicAsync).
-            var ownerA = await RegisterOwnerAsync("svc-detail-a");
-            var ownerB = await RegisterOwnerAsync("svc-detail-b");
-            var serviceOfA = await CreateServiceAsAsync(ownerA, "Corte A", price: 20m, duration: 30);
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/Service/{serviceOfA.Id}");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerB.Token);
-            var response = await _client.SendAsync(request);
-
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var dto = await response.Content.ReadFromJsonAsync<ServiceDto>();
-            Assert.NotNull(dto);
-            Assert.Equal(serviceOfA.Id, dto!.Id);
-            Assert.Equal(ownerA.Business.Id, dto.BusinessId);
         }
 
         [Fact]
@@ -133,7 +98,7 @@ namespace MRC.Agendia.Tests.Integration.Services
             // must now resolve (200) - the day may be closed, but it is not hidden.
             var ownerA = await RegisterOwnerAsync("avail-a");
             var ownerB = await RegisterOwnerAsync("avail-b");
-            var serviceOfA = await CreateServiceAsAsync(ownerA, "Corte A", price: 20m, duration: 30);
+            var serviceOfA = await CreateServiceAsAsync(ownerA, duration: 30);
 
             using var request = new HttpRequestMessage(
                 HttpMethod.Get,
@@ -147,43 +112,11 @@ namespace MRC.Agendia.Tests.Integration.Services
             Assert.Equal(ownerA.Business.Id, availability!.BusinessId);
         }
 
-        [Fact]
-        public async Task CatalogoPublicoDeServicios_OwnerAutenticado_VeServiciosDeOtroNegocio()
-        {
-            // #58 must NOT scope the public Service catalog: an authenticated owner
-            // still sees every business's services via the anonymous list
-            // (IgnoreQueryFilters), not just his own. Mirrors the public-business-list
-            // test for the GET /api/Service catalog path.
-            var ownerA = await RegisterOwnerAsync("svc-cat-a");
-            var ownerB = await RegisterOwnerAsync("svc-cat-b");
-            var serviceOfA = await CreateServiceAsAsync(ownerA, "Corte A", price: 20m, duration: 30);
-            var serviceOfB = await CreateServiceAsAsync(ownerB, "Corte B", price: 25m, duration: 45);
-
-            using var request = new HttpRequestMessage(HttpMethod.Get, "/api/Service?page=1&pageSize=200");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerB.Token);
-            var response = await _client.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-
-            var paged = await response.Content.ReadFromJsonAsync<PagedResult<ServiceDto>>();
-            Assert.NotNull(paged);
-            Assert.Contains(paged!.Items, s => s.Id == serviceOfA.Id);
-            Assert.Contains(paged.Items, s => s.Id == serviceOfB.Id);
-        }
-
         // ----- Helpers -----
 
-        private async Task<ServiceDto> CreateServiceAsAsync(
-            ProvisionedOwner owner,
-            string name,
-            decimal price,
-            int duration)
+        private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner, int duration)
         {
-            var dto = new CreateServiceDto(
-                BusinessId: owner.Business.Id,
-                Name: name,
-                Description: null,
-                DurationMinutes: duration,
-                Price: price);
+            var dto = new CreateServiceDto(owner.Business.Id, duration);
 
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Service")
             {

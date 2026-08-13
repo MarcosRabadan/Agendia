@@ -220,7 +220,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
                 (await _client.SendAsync(gen)).EnsureSuccessStatusCode();
             }
 
-            var service = await CreateServiceAsAsync(owner, "Clase");
+            var service = await CreateServiceAsAsync(owner);
 
             var employeeId = owner.EmployeeId;
             var clientUserId = $"harmony-series-{Guid.NewGuid():N}";
@@ -228,14 +228,9 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             return new BookableSetup(owner.Token, owner.Business.Id, employeeId, clientUserId, service.Id);
         }
 
-        private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner, string name)
+        private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner)
         {
-            var dto = new CreateServiceDto(
-                BusinessId: owner.Business.Id,
-                Name: name,
-                Description: null,
-                DurationMinutes: 30,
-                Price: 20m);
+            var dto = new CreateServiceDto(BusinessId: owner.Business.Id, DurationMinutes: 30);
 
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Service")
             {

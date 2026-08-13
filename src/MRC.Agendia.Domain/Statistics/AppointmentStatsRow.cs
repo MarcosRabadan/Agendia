@@ -10,7 +10,5 @@ namespace MRC.Agendia.Domain.Statistics
     public record AppointmentStatsRow(
         DateTime StartDate,
         AppointmentStatus Status,
-        int ServiceId,
-        string ServiceName,
-        decimal ServicePrice);
+        int ServiceId);
 }

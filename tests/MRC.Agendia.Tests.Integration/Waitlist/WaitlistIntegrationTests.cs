@@ -38,7 +38,7 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
         {
             var owner = await RegisterOwnerAsync("wl-flow");
             await GenerateScheduleAsync(owner);
-            var service = await CreateServiceAsAsync(owner, "Corte");
+            var service = await CreateServiceAsAsync(owner);
             var clientAUserId = ClientAUserId();
             var clientBToken = TestProvisioning.ProvisionClient("wl-b").Token;
 
@@ -66,7 +66,7 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
         {
             var owner = await RegisterOwnerAsync("wl-cap");
             await GenerateScheduleAsync(owner);
-            var service = await CreateServiceAsAsync(owner, "Corte");
+            var service = await CreateServiceAsAsync(owner);
             var clientToken = TestProvisioning.ProvisionClient("wl-c").Token;
 
             // No appointment booked -> the slot has capacity -> joining is rejected.
@@ -80,7 +80,7 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
         {
             var owner = await RegisterOwnerAsync("wl-forbidden");
             await GenerateScheduleAsync(owner);
-            var service = await CreateServiceAsAsync(owner, "Corte");
+            var service = await CreateServiceAsAsync(owner);
 
             var response = await JoinAsync(owner.Token, new JoinWaitlistDto(owner.Business.Id, service.Id, SlotDate, SlotTime, EmployeeId: null));
 
@@ -155,9 +155,9 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
             (await _client.SendAsync(gen)).EnsureSuccessStatusCode();
         }
 
-        private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner, string name)
+        private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner)
         {
-            var dto = new CreateServiceDto(owner.Business.Id, name, null, 30, 20m);
+            var dto = new CreateServiceDto(owner.Business.Id, 30);
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Service") { Content = JsonContent.Create(dto) };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
             var response = await _client.SendAsync(request);

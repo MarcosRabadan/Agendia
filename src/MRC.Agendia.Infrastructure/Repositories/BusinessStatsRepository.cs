@@ -20,7 +20,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                                                                                    CancellationToken cancellationToken = default)
             // Server-side filter + projection: only the columns the aggregation needs.
             // IgnoreQueryFilters + explicit !IsDeleted keeps the (historical) appointment
-            // even if its service was soft-deleted later, so revenue/usage stay accurate;
+            // even if its service was soft-deleted later, so usage counts stay accurate;
             // only soft-deleted appointments themselves are excluded.
             => await _context.Appointments
                 .AsNoTracking()
@@ -32,9 +32,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .Select(a => new AppointmentStatsRow(
                     a.StartDate,
                     a.Status,
-                    a.ServiceId,
-                    a.Service.Name,
-                    a.Service.Price))
+                    a.ServiceId))
                 .ToListAsync(cancellationToken);
     }
 }

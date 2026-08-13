@@ -98,7 +98,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
 
         // ---------- Service ----------
 
-        private static CreateServiceDto ValidService() => new(7, "Corte", "desc", 30, 15m);
+        private static CreateServiceDto ValidService() => new(7, 30);
 
         [Fact]
         public void CreateService_valid_passes()
@@ -127,23 +127,13 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
                 .Check(new CreateServiceCommand(ValidService() with { DurationMinutes = minutes })).ShouldBeValid();
 
         [Fact]
-        public void CreateService_negative_price_fails()
-            => new CreateServiceCommandValidator()
-                .Check(new CreateServiceCommand(ValidService() with { Price = -0.01m })).ShouldFailOn("Dto.Price");
-
-        [Fact]
-        public void CreateService_zero_price_passes()
-            => new CreateServiceCommandValidator()
-                .Check(new CreateServiceCommand(ValidService() with { Price = 0m })).ShouldBeValid();
-
-        [Fact]
         public void UpdateService_valid_passes()
-            => new UpdateServiceCommandValidator().Check(new UpdateServiceCommand(new UpdateServiceDto(1, "Corte", null, 30, 10m))).ShouldBeValid();
+            => new UpdateServiceCommandValidator().Check(new UpdateServiceCommand(new UpdateServiceDto(1, 30))).ShouldBeValid();
 
         [Fact]
         public void UpdateService_id_must_be_positive()
             => new UpdateServiceCommandValidator()
-                .Check(new UpdateServiceCommand(new UpdateServiceDto(0, "Corte", null, 30, 10m))).ShouldFailOn("Dto.Id");
+                .Check(new UpdateServiceCommand(new UpdateServiceDto(0, 30))).ShouldFailOn("Dto.Id");
 
         // ---------- Employee ----------
 

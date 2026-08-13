@@ -1,13 +1,10 @@
 using MRC.Agendia.Application.Authorization;
-using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Services;
 using MRC.Agendia.Application.Services.Commands.Create;
 using MRC.Agendia.Application.Services.Commands.Delete;
 using MRC.Agendia.Application.Services.Commands.Restore;
 using MRC.Agendia.Application.Services.Commands.Update;
 using MRC.Agendia.Application.Services.DTO;
-using MRC.Agendia.Application.Services.Queries.GetAll;
-using MRC.Agendia.Application.Services.Queries.GetById;
 using NSubstitute;
 
 namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
@@ -25,12 +22,12 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
         private readonly IResourceAuthorizationService _auth = Substitute.For<IResourceAuthorizationService>();
 
         private static ServiceDto Result(int id = 1, int businessId = 7) =>
-            new(id, businessId, "Corte", null, 30, 15m);
+            new(id, businessId, DurationMinutes: 30);
 
         [Fact]
         public async Task Create_authorizes_the_target_business_then_delegates()
         {
-            var dto = new CreateServiceDto(BusinessId: 7, Name: "Corte", Description: null, DurationMinutes: 30, Price: 15m);
+            var dto = new CreateServiceDto(BusinessId: 7, DurationMinutes: 30);
             var expected = Result();
             _service.CreateAsync(dto, Arg.Any<CancellationToken>()).Returns(expected);
 
@@ -44,7 +41,7 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
         [Fact]
         public async Task Update_authorizes_the_existing_service_then_delegates()
         {
-            var dto = new UpdateServiceDto(1, "Corte", null, 30, 15m);
+            var dto = new UpdateServiceDto(1, 30);
             var expected = Result();
             _service.UpdateAsync(dto, Arg.Any<CancellationToken>()).Returns(expected);
 
@@ -63,7 +60,7 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
 
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
                 new UpdateServiceCommandHandler(_service, _auth)
-                    .Handle(new UpdateServiceCommand(new UpdateServiceDto(1, "X", null, 30, 10m)), default));
+                    .Handle(new UpdateServiceCommand(new UpdateServiceDto(1, 30)), default));
 
             await _service.DidNotReceive().UpdateAsync(Arg.Any<UpdateServiceDto>(), Arg.Any<CancellationToken>());
         }
@@ -81,17 +78,11 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
         }
 
         [Fact]
-        public async Task Restore_GetAll_GetById_delegate()
+        public async Task Restore_delegates()
         {
             _service.RestoreAsync(4, Arg.Any<CancellationToken>()).Returns(true);
-            var page = PagedResult<ServiceDto>.Create(Array.Empty<ServiceDto>(), 0, 1, 50);
-            _service.GetPagedAsync(1, 50, Arg.Any<CancellationToken>()).Returns(page);
-            var one = Result();
-            _service.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(one);
 
             Assert.True(await new RestoreServiceCommandHandler(_service).Handle(new RestoreServiceCommand(4), default));
-            Assert.Same(page, await new GetAllServicesQueryHandler(_service).Handle(new GetAllServicesQuery(1, 50), default));
-            Assert.Same(one, await new GetServiceByIdQueryHandler(_service).Handle(new GetServiceByIdQuery(1), default));
         }
     }
 }

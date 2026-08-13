@@ -107,7 +107,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         {
             var owner = await RegisterOwnerAsync(slug);
             await GenerateScheduleAsync(owner);
-            var service = await CreateServiceAsAsync(owner, "Corte");
+            var service = await CreateServiceAsAsync(owner);
             var employeeId = owner.EmployeeId;
             var (clientUserId, clientToken) = TestProvisioning.ProvisionClient(slug);
             var appointment = await BookAppointmentAsync(owner, clientUserId, employeeId, service.Id);
@@ -172,9 +172,9 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             (await _client.SendAsync(gen)).EnsureSuccessStatusCode();
         }
 
-        private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner, string name)
+        private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner)
         {
-            var dto = new CreateServiceDto(owner.Business.Id, name, null, 30, 20m);
+            var dto = new CreateServiceDto(owner.Business.Id, 30);
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Service") { Content = JsonContent.Create(dto) };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
             var response = await _client.SendAsync(request);

@@ -1,18 +1,20 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Services.DTO;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Application.Services.Commands.Create;
 using MRC.Agendia.Application.Services.Commands.Delete;
 using MRC.Agendia.Application.Services.Commands.Restore;
 using MRC.Agendia.Application.Services.Commands.Update;
-using MRC.Agendia.Application.Services.Queries.GetAll;
-using MRC.Agendia.Application.Services.Queries.GetById;
 
 namespace MRC.Agendia.Api.Controllers
 {
+    /// <summary>
+    /// Provisioning of a service's scheduling projection (its duration). Agendia does
+    /// not own the service catalog (name/description/price), so there are no public
+    /// reads here; the management/catalog service creates and updates the projection.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
@@ -25,32 +27,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
-        /// <summary>Gets a paged list of services.</summary>
-        [AllowAnonymous]
-        [HttpGet]
-        [ProducesResponseType(typeof(PagedResult<ServiceDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<PagedResult<ServiceDto>>> GetAll(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 50)
-        {
-            var result = await _mediator.Send(new GetAllServicesQuery(page, pageSize));
-            return Ok(result);
-        }
-
-        /// <summary>Gets a service by its identifier.</summary>
-        [AllowAnonymous]
-        [HttpGet("{id}")]
-        [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ServiceDto>> GetById(int id)
-        {
-            var result = await _mediator.Send(new GetServiceByIdQuery(id));
-            if (result is null) return NotFound();
-            return Ok(result);
-        }
-
-        /// <summary>Creates a new service.</summary>
+        /// <summary>Creates a new service (duration projection). Provisioned by the catalog service.</summary>
         [Authorize(Roles = RolePolicies.AdminOrOwner)]
         [HttpPost]
         [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status201Created)]
@@ -58,7 +35,7 @@ namespace MRC.Agendia.Api.Controllers
         public async Task<ActionResult<ServiceDto>> Create([FromBody] CreateServiceDto dto)
         {
             var result = await _mediator.Send(new CreateServiceCommand(dto));
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            return Created($"/api/service/{result.Id}", result);
         }
 
         /// <summary>Updates an existing service.</summary>
