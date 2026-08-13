@@ -3,10 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.DeviceTokens.DTO;
-using MRC.Agendia.Application.Schedules.DTO;
-using MRC.Agendia.Application.Services.DTO;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Tests.Integration.Infrastructure;
@@ -14,20 +11,13 @@ using MRC.Agendia.Tests.Integration.Infrastructure;
 namespace MRC.Agendia.Tests.Integration.Notifications
 {
     /// <summary>
-    /// End-to-end coverage for push device tokens (#51): a client registers a token,
-    /// then a booking confirmation fans out a push to it; register/remove round-trips
-    /// to the DB; and the endpoint requires authentication.
-    ///
-    /// The device token is keyed by the caller's user id, and the client books for
-    /// themselves, so the forged token must carry the same user id stored in
-    /// Client.UserId.
+    /// End-to-end coverage for push device tokens (#51): register/remove round-trips to
+    /// the DB, and the endpoint requires authentication. The token is keyed by the
+    /// caller's user id (the JWT "sub"). Push delivery on booking is not covered here:
+    /// notification delivery is a no-op until it moves to events (#246).
     /// </summary>
     public class DeviceTokenIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
-        private const int Year = 2035;
-        private static readonly DateOnly SlotDate = new(Year, 6, 4);
-        private static readonly TimeOnly SlotTime = new(10, 0);
-
         private readonly CustomWebApplicationFactory _factory;
         private readonly HttpClient _client;
 
@@ -38,31 +28,9 @@ namespace MRC.Agendia.Tests.Integration.Notifications
         }
 
         [Fact]
-        public async Task ReservarTrasRegistrarToken_EnviaPushAlCliente()
-        {
-            var owner = await RegisterOwnerAsync("push-ok");
-            await GenerateScheduleAsync(owner);
-            var service = await CreateServiceAsync(owner, "Corte", 30, 20m);
-            var (_, clientToken, clientId) = await TestProvisioning.ProvisionClientAsync(_client, "push-c");
-
-            var deviceToken = $"tok-{Guid.NewGuid():N}";
-            var reg = await RegisterDeviceTokenAsync(clientToken, deviceToken, DevicePlatform.Android);
-            Assert.Equal(HttpStatusCode.NoContent, reg.StatusCode);
-
-            // The client books their own appointment -> confirmation -> push fan-out.
-            var start = SlotDate.ToDateTime(SlotTime);
-            var book = await BookAsClientAsync(clientToken, clientId, owner.EmployeeId, service.Id, start);
-            Assert.Equal(HttpStatusCode.Created, book.StatusCode);
-
-            var push = await _factory.PushSender.WaitForTokenAsync(deviceToken);
-            Assert.NotNull(push);
-            Assert.Contains("confirmada", push!.Title, StringComparison.OrdinalIgnoreCase);
-        }
-
-        [Fact]
         public async Task RegistrarYDarDeBajaToken_ActualizaLaBaseDeDatos()
         {
-            var clientToken = (await TestProvisioning.ProvisionClientAsync(_client, "push-rm")).Token;
+            var clientToken = TestProvisioning.ProvisionClient("push-rm").Token;
             var deviceToken = $"tok-{Guid.NewGuid():N}";
 
             (await RegisterDeviceTokenAsync(clientToken, deviceToken, DevicePlatform.Ios)).EnsureSuccessStatusCode();
@@ -112,57 +80,5 @@ namespace MRC.Agendia.Tests.Integration.Notifications
             var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
             return await db.DeviceTokens.AnyAsync(d => d.Token == deviceToken);
         }
-
-        private async Task<HttpResponseMessage> BookAsClientAsync(string clientToken, int clientId, int employeeId, int serviceId, DateTime start)
-        {
-            var dto = new CreateAppointmentDto(clientId, employeeId, serviceId, start, start.AddMinutes(30), Notes: null);
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Appointment") { Content = JsonContent.Create(dto) };
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", clientToken);
-            return await _client.SendAsync(request);
-        }
-
-        private async Task GenerateScheduleAsync(ProvisionedOwner owner)
-        {
-            var request = new GenerateScheduleRequestDto(
-                BusinessId: owner.Business.Id,
-                Year: Year,
-                Templates: new List<GenerateScheduleTemplateInputDto>
-                {
-                    new(
-                        Name: "Base",
-                        EffectiveFrom: new DateOnly(Year, 1, 1),
-                        EffectiveTo: new DateOnly(Year, 12, 31),
-                        IsDefault: true,
-                        WeeklySlots: Enum.GetValues<DayOfWeek>()
-                            .Select(d => new CreateWeeklyTimeSlotDto(d, new TimeOnly(9, 0), new TimeOnly(18, 0), TimeSlotType.Regular))
-                            .ToList()),
-                },
-                IncludeNationalHolidays: false,
-                IncludeLocalHolidays: false,
-                VacationPeriods: null,
-                CustomClosedDates: null);
-
-            using var gen = new HttpRequestMessage(HttpMethod.Post, $"/api/businesses/{owner.Business.Id}/schedules/generate")
-            {
-                Content = JsonContent.Create(request)
-            };
-            gen.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
-            (await _client.SendAsync(gen)).EnsureSuccessStatusCode();
-        }
-
-        private async Task<ServiceDto> CreateServiceAsync(ProvisionedOwner owner, string name, int durationMinutes, decimal price)
-        {
-            var dto = new CreateServiceDto(owner.Business.Id, name, null, durationMinutes, price);
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Service") { Content = JsonContent.Create(dto) };
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
-            var response = await _client.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-            var created = await response.Content.ReadFromJsonAsync<ServiceDto>();
-            Assert.NotNull(created);
-            return created!;
-        }
-
-        private Task<ProvisionedOwner> RegisterOwnerAsync(string slug) =>
-            TestProvisioning.ProvisionOwnerAsync(_client, slug);
     }
 }

@@ -1,12 +1,9 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Schedules.DTO;
 using MRC.Agendia.Application.Services.DTO;
-using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
-using MRC.Agendia.Infrastructure;
 
 namespace MRC.Agendia.Tests.Integration.Infrastructure
 {
@@ -14,8 +11,8 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
     public sealed record ApiError(string Code, string Message, string? TraceId);
 
     /// <summary>A provisioned, bookable business: owner + a full-week schedule for the
-    /// year, a service, the owner's employee and a counter client.</summary>
-    public sealed record BookableBusiness(ProvisionedOwner Owner, ServiceDto Service, int EmployeeId, int ClientId)
+    /// year, a service, the owner's employee and a counter client user id.</summary>
+    public sealed record BookableBusiness(ProvisionedOwner Owner, ServiceDto Service, int EmployeeId, string ClientUserId)
     {
         public int BusinessId => Owner.Business.Id;
         public string OwnerToken => Owner.Token;
@@ -38,8 +35,8 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
             var owner = await TestProvisioning.ProvisionOwnerAsync(client, slug);
             await GenerateFullWeekScheduleAsync(client, owner, year);
             var service = await CreateServiceAsync(client, owner, "Servicio", durationMinutes, price);
-            var clientId = SeedCounterClient(services);
-            return new BookableBusiness(owner, service, owner.EmployeeId, clientId);
+            var clientUserId = CounterClientUserId();
+            return new BookableBusiness(owner, service, owner.EmployeeId, clientUserId);
         }
 
         public static async Task GenerateFullWeekScheduleAsync(HttpClient client, ProvisionedOwner owner, int year)
@@ -80,15 +77,12 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
             return created!;
         }
 
-        public static int SeedCounterClient(IServiceProvider services)
-        {
-            using var scope = services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
-            var client = new Client { Name = "Cliente Mostrador", Phone = "600111222", Email = $"c-{Guid.NewGuid():N}@test.local" };
-            db.Clients.Add(client);
-            db.SaveChanges();
-            return client.Id;
-        }
+        /// <summary>
+        /// A synthetic Harmony user id standing in for a walk-in/counter client. The
+        /// Client entity is gone, so nothing is persisted: an appointment just carries
+        /// this user id in ClientUserId.
+        /// </summary>
+        public static string CounterClientUserId() => $"harmony-counter-{Guid.NewGuid():N}";
 
         public static Task<HttpResponseMessage> PostAppointmentAsync(HttpClient client, string token, CreateAppointmentDto dto)
             => SendAsync(client, HttpMethod.Post, "/api/Appointment", token, dto);

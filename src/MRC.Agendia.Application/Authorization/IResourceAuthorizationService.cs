@@ -36,11 +36,6 @@ namespace MRC.Agendia.Application.Authorization
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         Task EnsureCanDeleteEmployeeAsync(int employeeId, CancellationToken cancellationToken = default);
 
-        /// <summary>Admin or the client themselves.</summary>
-        /// <param name="clientId">Id of the client to manage.</param>
-        /// <param name="cancellationToken">Token to cancel the operation.</param>
-        Task EnsureCanManageClientAsync(int clientId, CancellationToken cancellationToken = default);
-
         /// <summary>
         /// Admin, owner/employee of the appointment's business, or the
         /// appointment's client.
@@ -53,12 +48,12 @@ namespace MRC.Agendia.Application.Authorization
         /// When creating an appointment:
         /// - Admin: always allowed.
         /// - Owner/Employee of the appointment employee's business: allowed.
-        /// - Client: only if the appointment is for their own Client.Id.
+        /// - Client: only if the appointment is for their own user id.
         /// </summary>
-        /// <param name="clientId">Id of the client the appointment is for.</param>
+        /// <param name="clientUserId">Harmony user id of the client the appointment is for.</param>
         /// <param name="employeeId">Id of the employee the appointment is assigned to.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
-        Task EnsureCanCreateAppointmentAsync(int clientId, int employeeId, CancellationToken cancellationToken = default);
+        Task EnsureCanCreateAppointmentAsync(string clientUserId, int employeeId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Admin or owner/employee of the business that owns the series. Resolves

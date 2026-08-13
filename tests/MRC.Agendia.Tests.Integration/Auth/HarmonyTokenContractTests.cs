@@ -28,7 +28,7 @@ namespace MRC.Agendia.Tests.Integration.Auth
         [Fact]
         public async Task Request_without_token_is_rejected()
         {
-            var response = await _client.GetAsync("/api/Client?page=1&pageSize=10");
+            var response = await _client.GetAsync("/api/Employee?page=1&pageSize=10");
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
@@ -36,7 +36,7 @@ namespace MRC.Agendia.Tests.Integration.Auth
         [Fact]
         public async Task Role_claim_from_harmony_grants_access_to_a_role_gated_endpoint()
         {
-            var response = await GetAsync("/api/Client?page=1&pageSize=10",
+            var response = await GetAsync("/api/Employee?page=1&pageSize=10",
                 TestTokenFactory.Create("harmony-admin-1", Roles.Admin));
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -45,7 +45,7 @@ namespace MRC.Agendia.Tests.Integration.Auth
         [Fact]
         public async Task Token_without_the_required_role_is_forbidden()
         {
-            var response = await GetAsync("/api/Client?page=1&pageSize=10",
+            var response = await GetAsync("/api/Employee?page=1&pageSize=10",
                 TestTokenFactory.Create("harmony-client-1", Roles.Client));
 
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -73,7 +73,7 @@ namespace MRC.Agendia.Tests.Integration.Auth
                 roles: new[] { Roles.Admin },
                 signingKey: "a-completely-different-key-that-agendia-does-not-know-0123456789");
 
-            var response = await GetAsync("/api/Client?page=1&pageSize=10", forged);
+            var response = await GetAsync("/api/Employee?page=1&pageSize=10", forged);
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
@@ -85,7 +85,7 @@ namespace MRC.Agendia.Tests.Integration.Auth
                 roles: new[] { Roles.Admin },
                 issuer: "https://not-harmony.example");
 
-            var response = await GetAsync("/api/Client?page=1&pageSize=10", token);
+            var response = await GetAsync("/api/Employee?page=1&pageSize=10", token);
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
@@ -99,7 +99,7 @@ namespace MRC.Agendia.Tests.Integration.Auth
                 roles: new[] { Roles.Admin },
                 audience: "some-other-harmony-service");
 
-            var response = await GetAsync("/api/Client?page=1&pageSize=10", token);
+            var response = await GetAsync("/api/Employee?page=1&pageSize=10", token);
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
@@ -112,7 +112,7 @@ namespace MRC.Agendia.Tests.Integration.Auth
                 roles: new[] { Roles.Admin },
                 expires: DateTime.UtcNow.AddMinutes(-30));
 
-            var response = await GetAsync("/api/Client?page=1&pageSize=10", token);
+            var response = await GetAsync("/api/Employee?page=1&pageSize=10", token);
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }

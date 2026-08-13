@@ -36,9 +36,6 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         private const int EmployeeActiveId = 10;
         private const int EmployeeInactiveId = 11;
         private const int EmployeeOtherBusinessId = 20;
-        private const int Client1Id = 100;
-        private const int OtherClientId = 101;
-        private const int BusinessClientId = 102;
         private const int Service1Id = 1000;
         private const int Appointment1Id = 10000;
         private const int ScheduleTemplate1Id = 200;
@@ -299,68 +296,6 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         #endregion
 
         // ===================================================================
-        //  EnsureCanManageClientAsync
-        // ===================================================================
-        #region EnsureCanManageClientAsync
-
-        [Fact]
-        public async Task ManageClient_Admin_Passes()
-        {
-            var (sut, _) = await BuildAsync(AsAdmin());
-            await sut.EnsureCanManageClientAsync(Client1Id);
-        }
-
-        [Fact]
-        public async Task ManageClient_NotAuthenticated_Throws()
-        {
-            var (sut, _) = await BuildAsync(NotAuthenticated());
-            await Assert.ThrowsAsync<UnauthorizedAccessException>(
-                () => sut.EnsureCanManageClientAsync(Client1Id));
-        }
-
-        [Fact]
-        public async Task ManageClient_SelfClient_Passes()
-        {
-            var (sut, _) = await BuildAsync(AsUser(ClientUserId));
-            await sut.EnsureCanManageClientAsync(Client1Id);
-        }
-
-        [Fact]
-        public async Task ManageClient_DifferentClient_Throws()
-        {
-            var (sut, _) = await BuildAsync(AsUser(OtherClientUserId));
-            var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
-                () => sut.EnsureCanManageClientAsync(Client1Id));
-            Assert.Equal("No tienes permiso para gestionar este cliente.", ex.Message);
-        }
-
-        [Fact]
-        public async Task ManageClient_BusinessOwner_OfBusinessClient_Passes()
-        {
-            // A business-owned client (BusinessId set, no user account) can be managed
-            // by the owner of that business.
-            var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
-            await sut.EnsureCanManageClientAsync(BusinessClientId);
-        }
-
-        [Fact]
-        public async Task ManageClient_ActiveEmployee_OfBusinessClient_Passes()
-        {
-            var (sut, _) = await BuildAsync(AsUser(EmployeeUserId));
-            await sut.EnsureCanManageClientAsync(BusinessClientId);
-        }
-
-        [Fact]
-        public async Task ManageClient_OtherOwner_OfBusinessClient_Throws()
-        {
-            var (sut, _) = await BuildAsync(AsUser(OtherOwnerUserId));
-            await Assert.ThrowsAsync<UnauthorizedAccessException>(
-                () => sut.EnsureCanManageClientAsync(BusinessClientId));
-        }
-
-        #endregion
-
-        // ===================================================================
         //  EnsureCanManageAppointmentAsync
         // ===================================================================
         #region EnsureCanManageAppointmentAsync
@@ -439,7 +374,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         public async Task CreateAppointment_Admin_Passes()
         {
             var (sut, _) = await BuildAsync(AsAdmin());
-            await sut.EnsureCanCreateAppointmentAsync(Client1Id, EmployeeActiveId);
+            await sut.EnsureCanCreateAppointmentAsync(ClientUserId, EmployeeActiveId);
         }
 
         [Fact]
@@ -447,28 +382,28 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
             await Assert.ThrowsAnyAsync<NotFoundException>(
-                () => sut.EnsureCanCreateAppointmentAsync(Client1Id, 999_999));
+                () => sut.EnsureCanCreateAppointmentAsync(ClientUserId, 999_999));
         }
 
         [Fact]
         public async Task CreateAppointment_OwnerOfBusinessOfEmployee_Passes()
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
-            await sut.EnsureCanCreateAppointmentAsync(Client1Id, EmployeeActiveId);
+            await sut.EnsureCanCreateAppointmentAsync(ClientUserId, EmployeeActiveId);
         }
 
         [Fact]
         public async Task CreateAppointment_ActiveEmployeeOfBusiness_Passes()
         {
             var (sut, _) = await BuildAsync(AsUser(EmployeeUserId));
-            await sut.EnsureCanCreateAppointmentAsync(Client1Id, EmployeeActiveId);
+            await sut.EnsureCanCreateAppointmentAsync(ClientUserId, EmployeeActiveId);
         }
 
         [Fact]
         public async Task CreateAppointment_Client_ForSelf_Passes()
         {
             var (sut, _) = await BuildAsync(AsUser(ClientUserId).WithRole(Roles.Client));
-            await sut.EnsureCanCreateAppointmentAsync(Client1Id, EmployeeActiveId);
+            await sut.EnsureCanCreateAppointmentAsync(ClientUserId, EmployeeActiveId);
         }
 
         [Fact]
@@ -476,7 +411,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         {
             var (sut, _) = await BuildAsync(AsUser(ClientUserId).WithRole(Roles.Client));
             var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
-                () => sut.EnsureCanCreateAppointmentAsync(OtherClientId, EmployeeActiveId));
+                () => sut.EnsureCanCreateAppointmentAsync(OtherClientUserId, EmployeeActiveId));
             Assert.Equal("Solo puedes crear citas para tu propia cuenta de cliente.", ex.Message);
         }
 
@@ -485,7 +420,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         {
             var (sut, _) = await BuildAsync(AsUser(StrangerUserId));
             var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
-                () => sut.EnsureCanCreateAppointmentAsync(Client1Id, EmployeeActiveId));
+                () => sut.EnsureCanCreateAppointmentAsync(ClientUserId, EmployeeActiveId));
             Assert.Equal("No tienes permiso para crear esta cita.", ex.Message);
         }
 
@@ -644,29 +579,6 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
                 MaxConcurrentAppointments = 1,
             };
 
-            var client1 = new Client
-            {
-                Id = Client1Id,
-                Name = "Client One",
-                Phone = "100",
-                UserId = ClientUserId,
-            };
-            var client2 = new Client
-            {
-                Id = OtherClientId,
-                Name = "Client Other",
-                Phone = "101",
-                UserId = OtherClientUserId,
-            };
-            var clientBusiness = new Client
-            {
-                Id = BusinessClientId,
-                Name = "Walk-in Client",
-                Phone = "102",
-                BusinessId = Business1Id,
-                // No UserId: an account-less client managed by the business.
-            };
-
             var service1 = new Service
             {
                 Id = Service1Id,
@@ -679,7 +591,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             var appointment1 = new Appointment
             {
                 Id = Appointment1Id,
-                ClientId = Client1Id,
+                ClientUserId = ClientUserId,
                 EmployeeId = EmployeeActiveId,
                 ServiceId = Service1Id,
                 StartDate = new DateTime(2026, 5, 18, 10, 0, 0),
@@ -708,7 +620,6 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
 
             await db.Businesses.AddRangeAsync(business1, business2);
             await db.Employees.AddRangeAsync(employeeActive, employeeInactive, employeeOther);
-            await db.Clients.AddRangeAsync(client1, client2, clientBusiness);
             await db.Services.AddAsync(service1);
             await db.Appointments.AddAsync(appointment1);
             await db.ScheduleTemplates.AddAsync(scheduleTemplate1);

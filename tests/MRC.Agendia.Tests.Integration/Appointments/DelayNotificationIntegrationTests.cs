@@ -73,14 +73,11 @@ namespace MRC.Agendia.Tests.Integration.Appointments
                 Skip.If(now.Hour >= 22, "No hay margen para una cita futura el mismo dia.");
 
                 var employeeId = owner.EmployeeId;
-                var client = new Client { Name = "Cliente Test", Phone = "600111222", Email = "cli@test.local" };
-                db.Clients.Add(client);
-                await db.SaveChangesAsync();
 
                 var start = now.AddHours(1);
                 db.Appointments.Add(new Appointment
                 {
-                    ClientId = client.Id,
+                    ClientUserId = "harmony-delay-test",
                     EmployeeId = employeeId,
                     ServiceId = service.Id,
                     StartDate = start,

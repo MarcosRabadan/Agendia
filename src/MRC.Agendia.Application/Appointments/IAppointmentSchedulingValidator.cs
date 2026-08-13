@@ -20,7 +20,6 @@ namespace MRC.Agendia.Application.Appointments
         /// Null when validating a new appointment, set to the existing id
         /// when validating an update (so it is excluded from the conflict check).
         /// </param>
-        /// <param name="clientId">Id of the client the appointment is for.</param>
         /// <param name="employeeId">Id of the employee that will attend it (must be active).</param>
         /// <param name="serviceId">Id of the primary service being booked.</param>
         /// <param name="startDate">Wall-clock start of the appointment; cannot be in the past.</param>
@@ -32,7 +31,6 @@ namespace MRC.Agendia.Application.Appointments
         /// </param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         Task EnsureValidAsync(int? appointmentId,
-                              int clientId,
                               int employeeId,
                               int serviceId,
                               DateTime startDate,

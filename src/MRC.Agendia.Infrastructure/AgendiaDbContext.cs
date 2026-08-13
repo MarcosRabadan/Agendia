@@ -17,7 +17,6 @@ public class AgendiaDbContext : DbContext
     }
 
     public DbSet<Business> Businesses => Set<Business>();
-    public DbSet<Client> Clients => Set<Client>();
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Service> Services => Set<Service>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
@@ -49,11 +48,11 @@ public class AgendiaDbContext : DbContext
             .Property(s => s.Price)
             .HasPrecision(10, 2);
 
+        // The booking client is a Harmony user id (the JWT sub), not a local entity:
+        // stored as a plain scalar column with an index, no cross-service FK.
         modelBuilder.Entity<Appointment>()
-            .HasOne(a => a.Client)
-            .WithMany(c => c.Appointments)
-            .HasForeignKey(a => a.ClientId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .HasIndex(a => a.ClientUserId)
+            .HasDatabaseName("IX_Appointment_ClientUserId");
 
         modelBuilder.Entity<Appointment>()
             .HasOne(a => a.Employee)
@@ -132,22 +131,6 @@ public class AgendiaDbContext : DbContext
             .HasIndex(e => e.UserId)
             .HasDatabaseName("IX_Employee_UserId");
 
-        modelBuilder.Entity<Client>()
-            .HasIndex(c => c.UserId)
-            .HasDatabaseName("IX_Client_UserId");
-
-        // Optional owning business for business-managed clients. No cascade: deleting
-        // a business never deletes its clients (history is kept, like the other entities).
-        modelBuilder.Entity<Client>()
-            .HasOne<Business>()
-            .WithMany()
-            .HasForeignKey(c => c.BusinessId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        modelBuilder.Entity<Client>()
-            .HasIndex(c => c.BusinessId)
-            .HasDatabaseName("IX_Client_BusinessId");
-
         // AuditLog
         modelBuilder.Entity<AuditLog>()
             .Property(a => a.Action)
@@ -181,7 +164,6 @@ public class AgendiaDbContext : DbContext
         // Those stay protected by resource authorization.
         modelBuilder.Entity<Business>().HasQueryFilter(b => !b.IsDeleted
             && (!_businessScope.IsRestricted || _businessScope.BusinessIds.Contains(b.Id)));
-        modelBuilder.Entity<Client>().HasQueryFilter(c => !c.IsDeleted);
         modelBuilder.Entity<Employee>().HasQueryFilter(e => !e.IsDeleted
             && (!_businessScope.IsRestricted || _businessScope.BusinessIds.Contains(e.BusinessId)));
         modelBuilder.Entity<Service>().HasQueryFilter(s => !s.IsDeleted
@@ -191,7 +173,6 @@ public class AgendiaDbContext : DbContext
         // Backfill CreatedAt for rows that existed before audit fields were added.
         // New rows get their value from AuditableSaveChangesInterceptor before insert.
         modelBuilder.Entity<Business>().Property(b => b.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-        modelBuilder.Entity<Client>().Property(c => c.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
         modelBuilder.Entity<Employee>().Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
         modelBuilder.Entity<Service>().Property(s => s.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
         modelBuilder.Entity<Appointment>().Property(a => a.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
@@ -199,7 +180,6 @@ public class AgendiaDbContext : DbContext
         // Index IsDeleted: every query now carries "WHERE IsDeleted = 0" from the
         // global filter above.
         modelBuilder.Entity<Business>().HasIndex(b => b.IsDeleted);
-        modelBuilder.Entity<Client>().HasIndex(c => c.IsDeleted);
         modelBuilder.Entity<Employee>().HasIndex(e => e.IsDeleted);
         modelBuilder.Entity<Service>().HasIndex(s => s.IsDeleted);
         modelBuilder.Entity<Appointment>().HasIndex(a => a.IsDeleted);
@@ -216,12 +196,11 @@ public class AgendiaDbContext : DbContext
             .HasDatabaseName("IX_Appointment_SeriesId")
             .HasFilter("[SeriesId] IS NOT NULL");
 
-        // Waitlist (#167)
+        // Waitlist (#167). The waiting client is a Harmony user id (no local entity),
+        // stored as a scalar column with an index for the "my entries" lookup.
         modelBuilder.Entity<WaitlistEntry>()
-            .HasOne(w => w.Client)
-            .WithMany()
-            .HasForeignKey(w => w.ClientId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .HasIndex(w => w.ClientUserId)
+            .HasDatabaseName("IX_WaitlistEntry_ClientUserId");
 
         modelBuilder.Entity<WaitlistEntry>()
             .HasOne(w => w.Service)
@@ -251,10 +230,8 @@ public class AgendiaDbContext : DbContext
         // and can race. Filtered to Waiting (Status = 0) so a client can re-join after
         // leaving (Cancelled) or being Notified. SQL Server treats equal NULLs as a
         // duplicate, so "any employee" (EmployeeId NULL) entries are deduped per slot too.
-        // ClientId is placed last (the index is filtered, so leading with it would make
-        // EF drop the standalone FK index on ClientId that other reads still rely on).
         modelBuilder.Entity<WaitlistEntry>()
-            .HasIndex(w => new { w.BusinessId, w.ServiceId, w.Date, w.StartTime, w.EmployeeId, w.ClientId })
+            .HasIndex(w => new { w.BusinessId, w.ServiceId, w.Date, w.StartTime, w.EmployeeId, w.ClientUserId })
             .IsUnique()
             .HasFilter("[Status] = 0")
             .HasDatabaseName("IX_WaitlistEntry_UniqueWaiting");

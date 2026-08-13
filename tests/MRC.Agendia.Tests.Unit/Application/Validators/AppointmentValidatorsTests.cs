@@ -19,7 +19,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         private static readonly DateTime Start = new(2026, 6, 1, 10, 0, 0);
         private static readonly DateTime End = new(2026, 6, 1, 10, 30, 0);
 
-        private static CreateAppointmentDto ValidCreate() => new(1, 1, 1, Start, End, null);
+        private static CreateAppointmentDto ValidCreate() => new("client-1", 1, 1, Start, End, null);
 
         // ---------- Create ----------
 
@@ -27,13 +27,17 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         public void Create_valid_passes()
             => new CreateAppointmentCommandValidator().Check(new CreateAppointmentCommand(ValidCreate())).ShouldBeValid();
 
-        [Theory]
-        [InlineData(0, 1, 1, "Dto.ClientId")]
-        [InlineData(1, 0, 1, "Dto.EmployeeId")]
-        [InlineData(1, 1, 0, "Dto.ServiceId")]
-        public void Create_ids_must_be_positive(int client, int emp, int svc, string prop)
+        [Fact]
+        public void Create_empty_client_user_id_fails()
             => new CreateAppointmentCommandValidator()
-                .Check(new CreateAppointmentCommand(ValidCreate() with { ClientId = client, EmployeeId = emp, ServiceId = svc }))
+                .Check(new CreateAppointmentCommand(ValidCreate() with { ClientUserId = "" })).ShouldFailOn("Dto.ClientUserId");
+
+        [Theory]
+        [InlineData(0, 1, "Dto.EmployeeId")]
+        [InlineData(1, 0, "Dto.ServiceId")]
+        public void Create_ids_must_be_positive(int emp, int svc, string prop)
+            => new CreateAppointmentCommandValidator()
+                .Check(new CreateAppointmentCommand(ValidCreate() with { EmployeeId = emp, ServiceId = svc }))
                 .ShouldFailOn(prop);
 
         [Fact]
@@ -89,7 +93,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
 
         // ---------- Update ----------
 
-        private static UpdateAppointmentDto ValidUpdate() => new(1, 1, 1, 1, Start, End, AppointmentStatus.Confirmed, null);
+        private static UpdateAppointmentDto ValidUpdate() => new(1, "client-1", 1, 1, Start, End, AppointmentStatus.Confirmed, null);
 
         [Fact]
         public void Update_valid_passes()

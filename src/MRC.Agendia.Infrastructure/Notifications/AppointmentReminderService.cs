@@ -104,7 +104,6 @@ namespace MRC.Agendia.Infrastructure.Notifications
             var due = await context.Appointments
                 .IgnoreQueryFilters()
                 .Where(a => !a.IsDeleted
-                    && !a.Client.IsDeleted
                     && !a.Employee.IsDeleted
                     && a.Employee.IsActive
                     && !a.Employee.Business.IsDeleted

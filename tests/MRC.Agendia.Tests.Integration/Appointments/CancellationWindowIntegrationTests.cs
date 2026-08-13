@@ -63,7 +63,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await SetCancellationWindowAsync(owner.Business.Id, BlockingWindowHours);
 
             var update = new UpdateAppointmentDto(
-                appointment.Id, appointment.ClientId, appointment.EmployeeId, appointment.ServiceId,
+                appointment.Id, appointment.ClientUserId, appointment.EmployeeId, appointment.ServiceId,
                 appointment.StartDate, appointment.EndDate, AppointmentStatus.Cancelled, appointment.Notes);
 
             using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/Appointment/{appointment.Id}")
@@ -109,8 +109,8 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await GenerateScheduleAsync(owner);
             var service = await CreateServiceAsAsync(owner, "Corte");
             var employeeId = owner.EmployeeId;
-            var (_, clientToken, clientId) = await TestProvisioning.ProvisionClientAsync(_client, slug);
-            var appointment = await BookAppointmentAsync(owner, clientId, employeeId, service.Id);
+            var (clientUserId, clientToken) = TestProvisioning.ProvisionClient(slug);
+            var appointment = await BookAppointmentAsync(owner, clientUserId, employeeId, service.Id);
             return (owner, clientToken, appointment);
         }
 
@@ -130,10 +130,10 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await db.SaveChangesAsync();
         }
 
-        private async Task<AppointmentDto> BookAppointmentAsync(ProvisionedOwner owner, int clientId, int employeeId, int serviceId)
+        private async Task<AppointmentDto> BookAppointmentAsync(ProvisionedOwner owner, string clientUserId, int employeeId, int serviceId)
         {
             var start = SlotDate.ToDateTime(SlotTime);
-            var dto = new CreateAppointmentDto(clientId, employeeId, serviceId, start, start.AddMinutes(30), Notes: null);
+            var dto = new CreateAppointmentDto(clientUserId, employeeId, serviceId, start, start.AddMinutes(30), Notes: null);
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Appointment") { Content = JsonContent.Create(dto) };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
             var response = await _client.SendAsync(request);

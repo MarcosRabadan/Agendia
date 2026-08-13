@@ -18,8 +18,8 @@ namespace MRC.Agendia.Domain.Interfaces
         Task<Appointment?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Gets an appointment by id with its client, service, extra services and
-        /// employee (plus the employee's business) loaded, for read-to-DTO. Untracked.
+        /// Gets an appointment by id with its service, extra services and employee
+        /// (plus the employee's business) loaded, for read-to-DTO. Untracked.
         /// Ignores ALL soft-delete filters, including the appointment's OWN: the
         /// waitlist-on-delete flow looks the appointment up AFTER it has been
         /// soft-deleted to learn which slot was freed, so a soft-deleted appointment
@@ -49,15 +49,15 @@ namespace MRC.Agendia.Domain.Interfaces
         Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default);
 
         /// <summary>Gets a page of a client's live appointments with their extra services, newest start date first.</summary>
-        /// <param name="clientId">Client id.</param>
+        /// <param name="clientUserId">Harmony user id of the client.</param>
         /// <param name="page">1-based page number.</param>
         /// <param name="pageSize">Page size.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The page of the client's appointments and the total count.</returns>
-        Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedByClientIdAsync(int clientId,
-                                                                                         int page,
-                                                                                         int pageSize,
-                                                                                         CancellationToken cancellationToken = default);
+        Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedByClientUserIdAsync(string clientUserId,
+                                                                                            int page,
+                                                                                            int pageSize,
+                                                                                            CancellationToken cancellationToken = default);
 
         /// <summary>Adds a new appointment to the context.</summary>
         /// <param name="appointment">The appointment to add.</param>

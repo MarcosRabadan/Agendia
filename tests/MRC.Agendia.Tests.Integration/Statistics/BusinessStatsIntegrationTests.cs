@@ -58,7 +58,7 @@ namespace MRC.Agendia.Tests.Integration.Statistics
         public async Task GetStats_ComoCliente_DevuelveForbidden()
         {
             var owner = await RegisterOwnerAsync("stats-cli");
-            var clientToken = (await TestProvisioning.ProvisionClientAsync(_client, "stats-c")).Token;
+            var clientToken = TestProvisioning.ProvisionClient("stats-c").Token;
 
             var response = await SendStatsAsync(clientToken, owner.Business.Id, "2026-05-01", "2026-05-31");
 
@@ -87,21 +87,20 @@ namespace MRC.Agendia.Tests.Integration.Statistics
 
             var service = new Service { BusinessId = owner.Business.Id, Name = "Corte", DurationMinutes = 30, Price = 30m };
             db.Services.Add(service);
-            var client = new Client { Name = "Cliente Test", Phone = "600111222" };
-            db.Clients.Add(client);
             await db.SaveChangesAsync();
 
+            const string clientUserId = "harmony-stats-test";
             db.Appointments.AddRange(
-                Appointment(client.Id, owner.EmployeeId, service.Id, new DateTime(2026, 5, 4, 10, 0, 0), AppointmentStatus.Completed),
-                Appointment(client.Id, owner.EmployeeId, service.Id, new DateTime(2026, 5, 4, 11, 0, 0), AppointmentStatus.Confirmed),
-                Appointment(client.Id, owner.EmployeeId, service.Id, new DateTime(2026, 5, 6, 16, 0, 0), AppointmentStatus.NoShow));
+                Appointment(clientUserId, owner.EmployeeId, service.Id, new DateTime(2026, 5, 4, 10, 0, 0), AppointmentStatus.Completed),
+                Appointment(clientUserId, owner.EmployeeId, service.Id, new DateTime(2026, 5, 4, 11, 0, 0), AppointmentStatus.Confirmed),
+                Appointment(clientUserId, owner.EmployeeId, service.Id, new DateTime(2026, 5, 6, 16, 0, 0), AppointmentStatus.NoShow));
             await db.SaveChangesAsync();
         }
 
-        private static Appointment Appointment(int clientId, int employeeId, int serviceId, DateTime start, AppointmentStatus status)
+        private static Appointment Appointment(string clientUserId, int employeeId, int serviceId, DateTime start, AppointmentStatus status)
             => new()
             {
-                ClientId = clientId,
+                ClientUserId = clientUserId,
                 EmployeeId = employeeId,
                 ServiceId = serviceId,
                 StartDate = start,

@@ -27,15 +27,15 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             _client = factory.CreateClient();
         }
 
-        private static CreateAppointmentDto Booking(BookableBusiness s, int clientId, TimeOnly at, int minutes = 30)
+        private static CreateAppointmentDto Booking(BookableBusiness s, string clientUserId, TimeOnly at, int minutes = 30)
         {
             var start = Day.ToDateTime(at);
-            return new CreateAppointmentDto(clientId, s.EmployeeId, s.Service.Id, start, start.AddMinutes(minutes), null);
+            return new CreateAppointmentDto(clientUserId, s.EmployeeId, s.Service.Id, start, start.AddMinutes(minutes), null);
         }
 
         private Task<HttpResponseMessage> PutStatusAsync(string token, AppointmentDto appt, AppointmentStatus status)
             => BookableBusinessFactory.SendAsync(_client, HttpMethod.Put, $"/api/Appointment/{appt.Id}", token,
-                new UpdateAppointmentDto(appt.Id, appt.ClientId, appt.EmployeeId, appt.ServiceId,
+                new UpdateAppointmentDto(appt.Id, appt.ClientUserId, appt.EmployeeId, appt.ServiceId,
                     appt.StartDate, appt.EndDate, status, appt.Notes));
 
         [Fact]
@@ -44,7 +44,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             var setup = await BookableBusinessFactory.CreateAsync(_client, _factory.Services, "life-default", Year);
 
             var response = await BookableBusinessFactory.PostAppointmentAsync(_client, setup.OwnerToken,
-                Booking(setup, setup.ClientId, new TimeOnly(9, 0)));
+                Booking(setup, setup.ClientUserId, new TimeOnly(9, 0)));
 
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
             var created = await response.Content.ReadFromJsonAsync<AppointmentDto>();
@@ -56,7 +56,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         {
             var setup = await BookableBusinessFactory.CreateAsync(_client, _factory.Services, "life-advance", Year);
             var created = await (await BookableBusinessFactory.PostAppointmentAsync(_client, setup.OwnerToken,
-                Booking(setup, setup.ClientId, new TimeOnly(9, 0)))).Content.ReadFromJsonAsync<AppointmentDto>();
+                Booking(setup, setup.ClientUserId, new TimeOnly(9, 0)))).Content.ReadFromJsonAsync<AppointmentDto>();
 
             var confirmed = await PutStatusAsync(setup.OwnerToken, created!, AppointmentStatus.Confirmed);
             Assert.Equal(HttpStatusCode.OK, confirmed.StatusCode);
@@ -73,7 +73,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         {
             var setup = await BookableBusinessFactory.CreateAsync(_client, _factory.Services, "life-terminal", Year);
             var created = await (await BookableBusinessFactory.PostAppointmentAsync(_client, setup.OwnerToken,
-                Booking(setup, setup.ClientId, new TimeOnly(9, 0)))).Content.ReadFromJsonAsync<AppointmentDto>();
+                Booking(setup, setup.ClientUserId, new TimeOnly(9, 0)))).Content.ReadFromJsonAsync<AppointmentDto>();
             var completed = await (await PutStatusAsync(setup.OwnerToken, created!, AppointmentStatus.Completed))
                 .Content.ReadFromJsonAsync<AppointmentDto>();
 
@@ -88,10 +88,10 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         public async Task Double_booking_the_last_slot_conflicts()
         {
             var setup = await BookableBusinessFactory.CreateAsync(_client, _factory.Services, "life-conflict", Year);
-            var second = BookableBusinessFactory.SeedCounterClient(_factory.Services);
+            var second = BookableBusinessFactory.CounterClientUserId();
 
             (await BookableBusinessFactory.PostAppointmentAsync(_client, setup.OwnerToken,
-                Booking(setup, setup.ClientId, new TimeOnly(10, 0)))).EnsureSuccessStatusCode();
+                Booking(setup, setup.ClientUserId, new TimeOnly(10, 0)))).EnsureSuccessStatusCode();
 
             var response = await BookableBusinessFactory.PostAppointmentAsync(_client, setup.OwnerToken,
                 Booking(setup, second, new TimeOnly(10, 0)));
@@ -108,7 +108,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
 
             // Schedule is 09:00–18:00; 20:00 is closed.
             var response = await BookableBusinessFactory.PostAppointmentAsync(_client, setup.OwnerToken,
-                Booking(setup, setup.ClientId, new TimeOnly(20, 0)));
+                Booking(setup, setup.ClientUserId, new TimeOnly(20, 0)));
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             var error = await response.Content.ReadFromJsonAsync<ApiError>();
@@ -119,11 +119,11 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         public async Task Client_may_cancel_own_but_not_confirm()
         {
             var setup = await BookableBusinessFactory.CreateAsync(_client, _factory.Services, "life-client", Year);
-            var clientAccount = await TestProvisioning.ProvisionClientAsync(_client, "life");
+            var clientAccount = TestProvisioning.ProvisionClient("life");
 
             // The client books their own appointment.
             var created = await (await BookableBusinessFactory.PostAppointmentAsync(_client, clientAccount.Token,
-                Booking(setup, clientAccount.ClientId, new TimeOnly(12, 0)))).Content.ReadFromJsonAsync<AppointmentDto>();
+                Booking(setup, clientAccount.UserId, new TimeOnly(12, 0)))).Content.ReadFromJsonAsync<AppointmentDto>();
 
             // Confirm is staff-only -> 403 for a client.
             var confirm = await PutStatusAsync(clientAccount.Token, created!, AppointmentStatus.Confirmed);

@@ -18,7 +18,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
         // Most reads below IgnoreQueryFilters and re-apply !a.IsDeleted explicitly:
-        // Client/Employee/Service are required navigations with a soft-delete filter,
+        // Employee/Service are required navigations with a soft-delete filter,
         // so an Include without IgnoreQueryFilters turns into an INNER JOIN that drops
         // any appointment whose parent was soft-deleted. That would hide live bookings
         // from listings AND from the capacity/conflict count (enabling double-booking).
@@ -32,7 +32,6 @@ namespace MRC.Agendia.Infrastructure.Repositories
             => Set
                 .AsNoTracking()
                 .IgnoreQueryFilters()
-                .Include(a => a.Client)
                 .Include(a => a.Service)
                 .Include(a => a.ExtraServices)
                 .Include(a => a.Employee)
@@ -60,15 +59,15 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
         /// <inheritdoc />
-        public Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedByClientIdAsync(int clientId,
-                                                                                                int page,
-                                                                                                int pageSize,
-                                                                                                CancellationToken cancellationToken = default)
+        public Task<(IReadOnlyList<Appointment> Items, int TotalCount)> GetPagedByClientUserIdAsync(string clientUserId,
+                                                                                                   int page,
+                                                                                                   int pageSize,
+                                                                                                   CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
                 .IgnoreQueryFilters()
                 .Include(a => a.ExtraServices)
-                .Where(a => a.ClientId == clientId && !a.IsDeleted)
+                .Where(a => a.ClientUserId == clientUserId && !a.IsDeleted)
                 .OrderByDescending(a => a.StartDate)
                 .ToPagedListAsync(page, pageSize, cancellationToken);
 
@@ -128,8 +127,8 @@ namespace MRC.Agendia.Infrastructure.Repositories
                                                                                DateTime toExclusive,
                                                                                CancellationToken cancellationToken = default)
             // IgnoreQueryFilters + explicit liveness checks: only notify clients of
-            // live appointments whose client/employee/business are not soft-deleted
-            // and whose employee is active (BIZ-03). AsNoTracking: read-only.
+            // live appointments whose employee/business are not soft-deleted and whose
+            // employee is active (BIZ-03). AsNoTracking: read-only.
             => await Set
                 .AsNoTracking()
                 .IgnoreQueryFilters()
@@ -139,7 +138,6 @@ namespace MRC.Agendia.Infrastructure.Repositories
                     && a.StartDate >= fromInclusive
                     && a.StartDate < toExclusive
                     && (a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Confirmed)
-                    && !a.Client.IsDeleted
                     && !a.Employee.IsDeleted
                     && a.Employee.IsActive
                     && !a.Employee.Business.IsDeleted)

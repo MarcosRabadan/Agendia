@@ -17,7 +17,7 @@ namespace MRC.Agendia.Application.Appointments.Commands.Crud
 
         public async Task<AppointmentDto> Handle(CreateAppointmentCommand request, CancellationToken cancellationToken)
         {
-            await _auth.EnsureCanCreateAppointmentAsync(request.Dto.ClientId, request.Dto.EmployeeId, cancellationToken);
+            await _auth.EnsureCanCreateAppointmentAsync(request.Dto.ClientUserId, request.Dto.EmployeeId, cancellationToken);
             return await _service.CreateAsync(request.Dto, cancellationToken);
         }
     }

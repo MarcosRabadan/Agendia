@@ -1,6 +1,5 @@
 using AutoMapper;
 using MRC.Agendia.Application.Business.DTO;
-using MRC.Agendia.Application.Clients.DTO;
 using MRC.Agendia.Application.Employees.DTO;
 using MRC.Agendia.Application.Mappings;
 using MRC.Agendia.Application.Services.DTO;
@@ -23,7 +22,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Mappings
             cfg.AddProfile<BusinessProfile>();
             cfg.AddProfile<ServiceProfile>();
             cfg.AddProfile<EmployeeProfile>();
-            cfg.AddProfile<ClientProfile>();
         }).CreateMapper();
 
         [Fact]
@@ -60,18 +58,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Mappings
             Assert.Equal("user-1", entity.UserId);
             Assert.Equal("new", entity.FullName);
             Assert.Equal(3, entity.MaxConcurrentAppointments);
-        }
-
-        [Fact]
-        public void UpdateClient_preserves_BusinessId_and_UserId()
-        {
-            var entity = new Client { Id = 1, BusinessId = 7, UserId = "user-1", Name = "old" };
-
-            _mapper.Map(new UpdateClientDto(1, "new", "600", "a@b.c"), entity);
-
-            Assert.Equal(7, entity.BusinessId);
-            Assert.Equal("user-1", entity.UserId);
-            Assert.Equal("new", entity.Name);
         }
 
         [Fact]

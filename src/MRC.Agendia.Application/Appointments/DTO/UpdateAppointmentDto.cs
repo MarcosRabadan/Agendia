@@ -4,7 +4,7 @@ namespace MRC.Agendia.Application.Appointments.DTO
 {
     public record UpdateAppointmentDto(
         int Id,
-        int ClientId,
+        string ClientUserId,
         int EmployeeId,
         int ServiceId,
         DateTime StartDate,

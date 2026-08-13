@@ -50,7 +50,6 @@ namespace MRC.Agendia.Infrastructure
             // Repositories
             services.AddScoped<IAppointmentRepository, AppointmentRepository>();
             services.AddScoped<IBusinessRepository, BusinessRepository>();
-            services.AddScoped<IClientRepository, ClientRepository>();
             services.AddScoped<IEmployeeRepository, EmployeeRepository>();
             services.AddScoped<IServiceRepository, ServiceRepository>();
             services.AddScoped<IScheduleOverrideRepository, ScheduleOverrideRepository>();

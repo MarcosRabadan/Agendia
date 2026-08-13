@@ -24,7 +24,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
     public class AppointmentServiceTests
     {
         private readonly IAppointmentRepository _repository = Substitute.For<IAppointmentRepository>();
-        private readonly IClientRepository _clientRepository = Substitute.For<IClientRepository>();
         private readonly IAppointmentSchedulingValidator _validator = Substitute.For<IAppointmentSchedulingValidator>();
         private readonly IBookingConcurrencyGuard _bookingGuard = Substitute.For<IBookingConcurrencyGuard>();
         private readonly IClock _clock = Substitute.For<IClock>();
@@ -50,7 +49,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             _currentUser.IsInRole(Roles.Employee).Returns(true);
 
             _sut = new AppointmentService(
-                _repository, _clientRepository, _validator, _bookingGuard, _clock,
+                _repository, _validator, _bookingGuard, _clock,
                 _notificationService, _waitlistService, _auditLogger, _currentUser, _unitOfWork, _mapper);
         }
 
@@ -61,7 +60,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
 
             var dto = new CreateAppointmentDto(
-                ClientId: 1, EmployeeId: 2, ServiceId: 3,
+                ClientUserId: "user-1", EmployeeId: 2, ServiceId: 3,
                 StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
                 EndDate: new DateTime(2030, 1, 1, 9, 30, 0, DateTimeKind.Utc),
                 Notes: null);
@@ -73,7 +72,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                 dto.EmployeeId, DateOnly.FromDateTime(dto.StartDate),
                 Arg.Any<Func<Task<Appointment>>>(), Arg.Any<CancellationToken>());
             await _validator.Received(1).EnsureValidAsync(
-                Arg.Any<int?>(), dto.ClientId, dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
+                Arg.Any<int?>(), dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
             await _repository.Received(1).AddAsync(Arg.Any<Appointment>(), Arg.Any<CancellationToken>());
         }
 
@@ -84,7 +83,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
 
             var dto = new CreateAppointmentDto(
-                ClientId: 1, EmployeeId: 2, ServiceId: 3,
+                ClientUserId: "user-1", EmployeeId: 2, ServiceId: 3,
                 StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
                 EndDate: new DateTime(2030, 1, 1, 10, 0, 0, DateTimeKind.Utc),
                 Notes: null,
@@ -98,7 +97,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                 Arg.Any<CancellationToken>());
             // ...and forwarded to the scheduling validator (total-duration check).
             await _validator.Received(1).EnsureValidAsync(
-                Arg.Any<int?>(), dto.ClientId, dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate,
+                Arg.Any<int?>(), dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate,
                 Arg.Is<IReadOnlyCollection<int>>(x => x != null && x.SequenceEqual(new[] { 5, 7 })),
                 Arg.Any<CancellationToken>());
         }
@@ -111,7 +110,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // Default caller is staff (Employee).
 
             var dto = new CreateAppointmentDto(
-                ClientId: 1, EmployeeId: 2, ServiceId: 3,
+                ClientUserId: "user-1", EmployeeId: 2, ServiceId: 3,
                 StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
                 EndDate: new DateTime(2030, 1, 1, 9, 30, 0, DateTimeKind.Utc),
                 Notes: null,
@@ -135,7 +134,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                 .Returns(AppointmentStatus.Confirmed);
 
             var dto = new CreateAppointmentDto(
-                ClientId: 1, EmployeeId: 2, ServiceId: 3,
+                ClientUserId: "user-1", EmployeeId: 2, ServiceId: 3,
                 StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
                 EndDate: new DateTime(2030, 1, 1, 9, 30, 0, DateTimeKind.Utc),
                 Notes: null);
@@ -157,7 +156,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             // The client tries to self-confirm; it must be ignored and the business default used.
             var dto = new CreateAppointmentDto(
-                ClientId: 1, EmployeeId: 2, ServiceId: 3,
+                ClientUserId: "user-1", EmployeeId: 2, ServiceId: 3,
                 StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
                 EndDate: new DateTime(2030, 1, 1, 9, 30, 0, DateTimeKind.Utc),
                 Notes: null,
@@ -178,7 +177,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             // Same booking fields as the stored appointment; only the status changes.
             var dto = new UpdateAppointmentDto(
-                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
                 entity.StartDate, entity.EndDate, AppointmentStatus.Completed, Notes: null);
 
             await _sut.UpdateAsync(dto);
@@ -196,13 +195,13 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             // Moves the appointment to a different time -> must be re-validated.
             var dto = new UpdateAppointmentDto(
-                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
                 entity.StartDate.AddDays(1), entity.EndDate.AddDays(1), entity.Status, Notes: null);
 
             await _sut.UpdateAsync(dto);
 
             await _validator.Received(1).EnsureValidAsync(
-                entity.Id, dto.ClientId, dto.EmployeeId, dto.ServiceId,
+                entity.Id, dto.EmployeeId, dto.ServiceId,
                 dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
         }
 
@@ -214,7 +213,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a Client, not staff
 
             var dto = new UpdateAppointmentDto(
-                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
                 entity.StartDate, entity.EndDate, AppointmentStatus.Completed, Notes: null);
 
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.UpdateAsync(dto));
@@ -229,7 +228,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a Client
 
             var dto = new UpdateAppointmentDto(
-                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
                 entity.StartDate, entity.EndDate, AppointmentStatus.Cancelled, Notes: null);
 
             var result = await _sut.UpdateAsync(dto);
@@ -246,7 +245,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // default caller is staff
 
             var dto = new UpdateAppointmentDto(
-                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
                 entity.StartDate, entity.EndDate, AppointmentStatus.Cancelled, Notes: null);
 
             await Assert.ThrowsAsync<InvalidAppointmentStatusTransitionException>(() => _sut.UpdateAsync(dto));
@@ -261,7 +260,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a Client
 
             var dto = new UpdateAppointmentDto(
-                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
                 entity.StartDate, entity.EndDate, AppointmentStatus.Cancelled, Notes: null);
 
             // The terminal-state guard fires before the role check.
@@ -278,7 +277,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             // Same status (Completed); only the notes change -> allowed.
             var dto = new UpdateAppointmentDto(
-                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
                 entity.StartDate, entity.EndDate, AppointmentStatus.Completed, Notes: "actualizada");
 
             var result = await _sut.UpdateAsync(dto);
@@ -297,7 +296,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             _clock.BusinessNow.Returns(start.AddHours(-1)); // within 24h of the start
 
             var dto = new UpdateAppointmentDto(
-                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
                 entity.StartDate, entity.EndDate, AppointmentStatus.Cancelled, Notes: null);
 
             await Assert.ThrowsAsync<CancellationWindowElapsedException>(() => _sut.UpdateAsync(dto));
@@ -313,7 +312,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             _clock.BusinessNow.Returns(start.AddHours(-1)); // default caller is staff
 
             var dto = new UpdateAppointmentDto(
-                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
                 entity.StartDate, entity.EndDate, AppointmentStatus.Cancelled, Notes: null);
 
             var result = await _sut.UpdateAsync(dto);
@@ -341,7 +340,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             _clock.BusinessNow.Returns(start.AddDays(-5)); // well before the deadline
 
             var dto = new UpdateAppointmentDto(
-                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
                 entity.StartDate, entity.EndDate, AppointmentStatus.Cancelled, Notes: null);
 
             var result = await _sut.UpdateAsync(dto);
@@ -378,7 +377,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // Reschedule to a later slot (bookingChanged). The window is checked against
             // the CURRENT (imminent) start, so the client cannot escape by also moving it.
             var dto = new UpdateAppointmentDto(
-                entity.Id, entity.ClientId, entity.EmployeeId, entity.ServiceId,
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
                 entity.StartDate.AddDays(2), entity.EndDate.AddDays(2), entity.Status, Notes: null);
 
             await Assert.ThrowsAsync<CancellationWindowElapsedException>(() => _sut.UpdateAsync(dto));
@@ -391,7 +390,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         private static Appointment FutureAppointment(DateTime start) => new()
         {
             Id = 7,
-            ClientId = 1,
+            ClientUserId = "user-1",
             EmployeeId = 2,
             ServiceId = 3,
             StartDate = start,
@@ -402,7 +401,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         private static Appointment PastAppointment() => new()
         {
             Id = 7,
-            ClientId = 1,
+            ClientUserId = "user-1",
             EmployeeId = 2,
             ServiceId = 3,
             StartDate = new DateTime(2020, 1, 1, 9, 0, 0, DateTimeKind.Utc),
@@ -411,6 +410,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         };
 
         private static AppointmentDto ToDto(Appointment a) =>
-            new(a.Id, a.ClientId, a.EmployeeId, a.ServiceId, a.StartDate, a.EndDate, a.Status, a.Notes);
+            new(a.Id, a.ClientUserId, a.EmployeeId, a.ServiceId, a.StartDate, a.EndDate, a.Status, a.Notes);
     }
 }

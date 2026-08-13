@@ -3,10 +3,6 @@ using MRC.Agendia.Application.Availability.Queries;
 using MRC.Agendia.Application.Business.Commands.Delete;
 using MRC.Agendia.Application.Business.Commands.Restore;
 using MRC.Agendia.Application.Business.Queries.GetAll;
-using MRC.Agendia.Application.Clients.Commands.Delete;
-using MRC.Agendia.Application.Clients.Commands.Restore;
-using MRC.Agendia.Application.Clients.Queries.GetAll;
-using MRC.Agendia.Application.Clients.Queries.GetByBusiness;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.DeviceTokens.Commands.Register;
 using MRC.Agendia.Application.DeviceTokens.Commands.Remove;
@@ -180,8 +176,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         {
             new DeleteBusinessCommandValidator().Check(new DeleteBusinessCommand(0)).ShouldFailOn("Id");
             new RestoreBusinessCommandValidator().Check(new RestoreBusinessCommand(0)).ShouldFailOn("Id");
-            new DeleteClientCommandValidator().Check(new DeleteClientCommand(0)).ShouldFailOn("Id");
-            new RestoreClientCommandValidator().Check(new RestoreClientCommand(0)).ShouldFailOn("Id");
             new DeleteEmployeeCommandValidator().Check(new DeleteEmployeeCommand(0)).ShouldFailOn("Id");
             new RestoreEmployeeCommandValidator().Check(new RestoreEmployeeCommand(0)).ShouldFailOn("Id");
             new DeleteServiceCommandValidator().Check(new DeleteServiceCommand(0)).ShouldFailOn("Id");
@@ -201,11 +195,9 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         public void Pagination_validators_reject_out_of_range()
         {
             new GetAllBusinessesQueryValidator().Check(new GetAllBusinessesQuery(0, 50)).ShouldFailOn("Page");
-            new GetAllClientsQueryValidator().Check(new GetAllClientsQuery(1, 0)).ShouldFailOn("PageSize");
             new GetAllServicesQueryValidator().Check(new GetAllServicesQuery(1, 201)).ShouldFailOn("PageSize");
             new GetAllEmployeesQueryValidator().Check(new GetAllEmployeesQuery(0, 50)).ShouldFailOn("Page");
             new GetAuditLogsQueryValidator().Check(new GetAuditLogsQuery(null, null, null, null, null, 0, 50)).ShouldFailOn("Page");
-            new GetBusinessClientsQueryValidator().Check(new GetBusinessClientsQuery(0, 1, 50)).ShouldFailOn("BusinessId");
         }
     }
 }

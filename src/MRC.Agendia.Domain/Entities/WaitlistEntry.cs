@@ -12,7 +12,13 @@ namespace MRC.Agendia.Domain.Entities
         public int Id { get; set; }
         public int BusinessId { get; set; }
         public int ServiceId { get; set; }
-        public int ClientId { get; set; }
+
+        /// <summary>
+        /// Harmony user id (the JWT <c>sub</c>) of the waiting client. The client
+        /// identity lives in Harmony; only its opaque id is stored here (no FK).
+        /// </summary>
+        public string ClientUserId { get; set; } = null!;
+
         public int? EmployeeId { get; set; }
         public DateOnly Date { get; set; }
         public TimeOnly StartTime { get; set; }
@@ -21,7 +27,6 @@ namespace MRC.Agendia.Domain.Entities
         /// <summary>UTC creation instant; drives the FIFO order of notifications.</summary>
         public DateTime CreatedAt { get; set; }
 
-        public Client Client { get; set; } = null!;
         public Service Service { get; set; } = null!;
     }
 }

@@ -44,7 +44,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validation
         {
             var validator = new CreateAppointmentSeriesCommandValidator();
             var dto = new CreateAppointmentSeriesDto(
-                ClientId: 1,
+                ClientUserId: "client-1",
                 EmployeeId: 1,
                 ServiceId: 1,
                 StartTime: new TimeOnly(10, 0),

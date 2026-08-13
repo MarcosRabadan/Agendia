@@ -8,7 +8,7 @@ namespace MRC.Agendia.Application.Appointments.Commands.Crud
         {
             RuleFor(x => x.Dto).NotNull();
             RuleFor(x => x.Dto.Id).GreaterThan(0);
-            RuleFor(x => x.Dto.ClientId).GreaterThan(0);
+            RuleFor(x => x.Dto.ClientUserId).NotEmpty();
             RuleFor(x => x.Dto.EmployeeId).GreaterThan(0);
             RuleFor(x => x.Dto.ServiceId).GreaterThan(0);
             RuleFor(x => x.Dto.StartDate)

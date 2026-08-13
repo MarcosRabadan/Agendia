@@ -16,7 +16,6 @@ namespace MRC.Agendia.Application.Appointments
     public class AppointmentService : IAppointmentService
     {
         private readonly IAppointmentRepository _repository;
-        private readonly IClientRepository _clientRepository;
         private readonly IAppointmentSchedulingValidator _schedulingValidator;
         private readonly IBookingConcurrencyGuard _bookingGuard;
         private readonly IClock _clock;
@@ -28,7 +27,6 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IMapper _mapper;
 
         public AppointmentService(IAppointmentRepository repository,
-                                  IClientRepository clientRepository,
                                   IAppointmentSchedulingValidator schedulingValidator,
                                   IBookingConcurrencyGuard bookingGuard,
                                   IClock clock,
@@ -40,7 +38,6 @@ namespace MRC.Agendia.Application.Appointments
                                   IMapper mapper)
         {
             _repository = repository;
-            _clientRepository = clientRepository;
             _schedulingValidator = schedulingValidator;
             _bookingGuard = bookingGuard;
             _clock = clock;
@@ -67,16 +64,9 @@ namespace MRC.Agendia.Application.Appointments
                                                                                    int pageSize,
                                                                                    CancellationToken cancellationToken = default)
         {
-            // Resolve the Client entity from the authenticated user. If the user has
-            // the Client role but no Client row (e.g. row removed while the JWT is still
-            // valid), return an empty page instead of leaking existence information.
-            var client = await _clientRepository.GetByUserIdAsync(userId, cancellationToken);
-            if (client is null)
-            {
-                return PagedResult<AppointmentDto>.Create(Array.Empty<AppointmentDto>(), 0, page, pageSize);
-            }
-
-            var (items, totalCount) = await _repository.GetPagedByClientIdAsync(client.Id, page, pageSize, cancellationToken);
+            // Appointments store the client's Harmony user id directly, so filter by it
+            // without any Client-entity lookup (a user with no bookings gets an empty page).
+            var (items, totalCount) = await _repository.GetPagedByClientUserIdAsync(userId, page, pageSize, cancellationToken);
             var dtos = _mapper.Map<List<AppointmentDto>>(items);
             return PagedResult<AppointmentDto>.Create(dtos, totalCount, page, pageSize);
         }
@@ -101,7 +91,6 @@ namespace MRC.Agendia.Application.Appointments
                 {
                     await _schedulingValidator.EnsureValidAsync(
                         appointmentId: null,
-                        clientId: dto.ClientId,
                         employeeId: dto.EmployeeId,
                         serviceId: dto.ServiceId,
                         startDate: dto.StartDate,
@@ -167,7 +156,7 @@ namespace MRC.Agendia.Application.Appointments
             var bookingChanged =
                 dto.StartDate != entity.StartDate ||
                 dto.EndDate != entity.EndDate ||
-                dto.ClientId != entity.ClientId ||
+                dto.ClientUserId != entity.ClientUserId ||
                 dto.EmployeeId != entity.EmployeeId ||
                 dto.ServiceId != entity.ServiceId;
 
@@ -212,7 +201,6 @@ namespace MRC.Agendia.Application.Appointments
                     {
                         await _schedulingValidator.EnsureValidAsync(
                             appointmentId: dto.Id,
-                            clientId: dto.ClientId,
                             employeeId: dto.EmployeeId,
                             serviceId: dto.ServiceId,
                             startDate: dto.StartDate,

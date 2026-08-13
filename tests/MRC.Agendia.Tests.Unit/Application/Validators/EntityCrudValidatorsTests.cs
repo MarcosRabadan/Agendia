@@ -1,9 +1,6 @@
 using MRC.Agendia.Application.Business.Commands.Create;
 using MRC.Agendia.Application.Business.Commands.Update;
 using MRC.Agendia.Application.Business.DTO;
-using MRC.Agendia.Application.Clients.Commands.Create;
-using MRC.Agendia.Application.Clients.Commands.Update;
-using MRC.Agendia.Application.Clients.DTO;
 using MRC.Agendia.Application.Employees.Commands.Create;
 using MRC.Agendia.Application.Employees.Commands.Update;
 using MRC.Agendia.Application.Employees.DTO;
@@ -222,55 +219,5 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         public void UpdateEmployee_empty_name_fails()
             => new UpdateEmployeeCommandValidator()
                 .Check(new UpdateEmployeeCommand(new UpdateEmployeeDto(1, "", null, null, true, 2))).ShouldFailOn("Dto.FullName");
-
-        // ---------- Client ----------
-
-        private static CreateClientDto ValidClient() => new("Luis", "600999888", "luis@x.com");
-
-        [Fact]
-        public void CreateClient_valid_passes()
-            => new CreateClientCommandValidator().Check(new CreateClientCommand(ValidClient())).ShouldBeValid();
-
-        [Fact]
-        public void CreateClient_null_email_passes()
-            => new CreateClientCommandValidator()
-                .Check(new CreateClientCommand(ValidClient() with { Email = null })).ShouldBeValid();
-
-        [Theory]
-        [InlineData("", "Dto.Name")]
-        [InlineData(null, "Dto.Name")]
-        public void CreateClient_name_required(string? name, string prop)
-            => new CreateClientCommandValidator()
-                .Check(new CreateClientCommand(ValidClient() with { Name = name! })).ShouldFailOn(prop);
-
-        [Fact]
-        public void CreateClient_empty_phone_fails()
-            => new CreateClientCommandValidator()
-                .Check(new CreateClientCommand(ValidClient() with { Phone = "" })).ShouldFailOn("Dto.Phone");
-
-        [Fact]
-        public void CreateClient_invalid_email_fails()
-            => new CreateClientCommandValidator()
-                .Check(new CreateClientCommand(ValidClient() with { Email = "bad" })).ShouldFailOn("Dto.Email");
-
-        [Fact]
-        public void CreateBusinessClient_valid_passes()
-            => new CreateBusinessClientCommandValidator()
-                .Check(new CreateBusinessClientCommand(7, ValidClient())).ShouldBeValid();
-
-        [Fact]
-        public void CreateBusinessClient_business_id_must_be_positive()
-            => new CreateBusinessClientCommandValidator()
-                .Check(new CreateBusinessClientCommand(0, ValidClient())).ShouldFailOn("BusinessId");
-
-        [Fact]
-        public void UpdateClient_valid_passes()
-            => new UpdateClientCommandValidator()
-                .Check(new UpdateClientCommand(new UpdateClientDto(1, "Luis", "600", "luis@x.com"))).ShouldBeValid();
-
-        [Fact]
-        public void UpdateClient_id_must_be_positive()
-            => new UpdateClientCommandValidator()
-                .Check(new UpdateClientCommand(new UpdateClientDto(0, "Luis", "600", null))).ShouldFailOn("Dto.Id");
     }
 }
