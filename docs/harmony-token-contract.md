@@ -66,9 +66,9 @@ integración con Harmony está rota: no los relajes.
 ## El `sub` es una clave de negocio en Agendia
 
 El `sub` no se usa solo para autenticar: se **persiste**. Agendia guarda ese valor en
-`Business.OwnerUserId`, `Employee.UserId`, `Client.UserId`, `DeviceToken.UserId` y
-`AuditLog.UserId`, y la autorización por recurso compara el `sub` del token contra
-esas columnas.
+`Business.OwnerUserId`, `Employee.UserId`, `Appointment.ClientUserId`,
+`WaitlistEntry.ClientUserId`, `DeviceToken.UserId` y `AuditLog.UserId`, y la
+autorización por recurso compara el `sub` del token contra esas columnas.
 
 Por tanto, **si Harmony cambia el `sub` de un usuario, ese usuario pierde el acceso a
 todo lo suyo en Agendia**. Debe ser inmutable de por vida.
@@ -82,11 +82,13 @@ para crear la entidad de negocio correspondiente, pasando el `sub` del usuario:
 |---|---|---|---|
 | Negocio | `POST /api/Business` | `OwnerUserId` (**obligatorio**) | `Admin` |
 | Empleado | `POST /api/Employee` | `UserId` (opcional) | `Admin` u owner del negocio |
-| Cliente | `POST /api/Client` | `UserId` (opcional) | `Admin` |
 
-`UserId` es opcional en empleado y cliente porque no todos tienen cuenta: un empleado
-puede ser un recurso sin login (una sala, un sillón) y un cliente puede ser un
-registro de mostrador o de teléfono.
+`UserId` es opcional en empleado porque no todos tienen cuenta: un empleado puede ser
+un recurso sin login (una sala, un sillón). El cliente **no** se aprovisiona: una cita
+guarda directamente el `sub` de Harmony en `ClientUserId` (no hay entidad `Client`).
+El negocio es un **contenedor de agenda**: `POST /api/Business` solo lleva la config de
+agenda (idioma, ventana de cancelación, estado por defecto); el perfil del negocio
+(nombre, dirección, contacto) vive en el servicio de gestión, no en Agendia.
 
 **Ningún DTO de `Update` acepta estos campos.** Es deliberado: poder repuntar una
 entidad existente a otro usuario permitiría regalar —o robar— el acceso a un negocio

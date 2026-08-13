@@ -533,20 +533,12 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             var business1 = new Business
             {
                 Id = Business1Id,
-                Name = "Business 1",
-                Address = "Calle 1",
-                Phone = "111",
-                Email = "b1@test.local",
                 IsActive = true,
                 OwnerUserId = OwnerUserId,
             };
             var business2 = new Business
             {
                 Id = Business2Id,
-                Name = "Business 2",
-                Address = "Calle 2",
-                Phone = "222",
-                Email = "b2@test.local",
                 IsActive = true,
                 OwnerUserId = OtherOwnerUserId,
             };

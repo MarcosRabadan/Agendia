@@ -2,17 +2,19 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MRC.Agendia.Application.Business.DTO;
-using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Application.Business.Commands.Create;
 using MRC.Agendia.Application.Business.Commands.Delete;
 using MRC.Agendia.Application.Business.Commands.Restore;
 using MRC.Agendia.Application.Business.Commands.Update;
-using MRC.Agendia.Application.Business.Queries.GetAll;
-using MRC.Agendia.Application.Business.Queries.GetById;
 
 namespace MRC.Agendia.Api.Controllers
 {
+    /// <summary>
+    /// Provisioning of a business' scheduling config (Agendia does not own the business
+    /// profile/catalog, so there are no public reads here). The management/identity
+    /// service creates and updates the config; a business is a scheduling container.
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     [Produces("application/json")]
@@ -25,32 +27,7 @@ namespace MRC.Agendia.Api.Controllers
             _mediator = mediator;
         }
 
-        /// <summary>Gets a paged list of active businesses.</summary>
-        [AllowAnonymous]
-        [HttpGet]
-        [ProducesResponseType(typeof(PagedResult<BusinessPublicDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<PagedResult<BusinessPublicDto>>> GetAll(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 50)
-        {
-            var result = await _mediator.Send(new GetAllBusinessesQuery(page, pageSize));
-            return Ok(result);
-        }
-
-        /// <summary>Gets an active business by its identifier.</summary>
-        [AllowAnonymous]
-        [HttpGet("{id}")]
-        [ProducesResponseType(typeof(BusinessPublicDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<BusinessPublicDto>> GetById(int id)
-        {
-            var result = await _mediator.Send(new GetBusinessByIdQuery(id));
-            if (result is null) return NotFound();
-            return Ok(result);
-        }
-
-        /// <summary>Creates a new business.</summary>
+        /// <summary>Creates a new business (scheduling config). Provisioned by the management service.</summary>
         [Authorize(Roles = Roles.Admin)]
         [HttpPost]
         [ProducesResponseType(typeof(BusinessDto), StatusCodes.Status201Created)]
@@ -58,7 +35,7 @@ namespace MRC.Agendia.Api.Controllers
         public async Task<ActionResult<BusinessDto>> Create([FromBody] CreateBusinessDto dto)
         {
             var result = await _mediator.Send(new CreateBusinessCommand(dto));
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            return Created($"/api/business/{result.Id}", result);
         }
 
         /// <summary>Updates an existing business.</summary>

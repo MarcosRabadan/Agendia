@@ -2,7 +2,6 @@ using MRC.Agendia.Application.Auditing.Queries;
 using MRC.Agendia.Application.Availability.Queries;
 using MRC.Agendia.Application.Business.Commands.Delete;
 using MRC.Agendia.Application.Business.Commands.Restore;
-using MRC.Agendia.Application.Business.Queries.GetAll;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.DeviceTokens.Commands.Register;
 using MRC.Agendia.Application.DeviceTokens.Commands.Remove;
@@ -194,7 +193,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         [Fact]
         public void Pagination_validators_reject_out_of_range()
         {
-            new GetAllBusinessesQueryValidator().Check(new GetAllBusinessesQuery(0, 50)).ShouldFailOn("Page");
             new GetAllServicesQueryValidator().Check(new GetAllServicesQuery(1, 201)).ShouldFailOn("PageSize");
             new GetAllEmployeesQueryValidator().Check(new GetAllEmployeesQuery(0, 50)).ShouldFailOn("Page");
             new GetAuditLogsQueryValidator().Check(new GetAuditLogsQuery(null, null, null, null, null, 0, 50)).ShouldFailOn("Page");

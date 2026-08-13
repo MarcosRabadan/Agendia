@@ -150,7 +150,7 @@ namespace MRC.Agendia.Tests.Integration.Database
 
         private static async Task<BusinessEntity> SeedBusinessAsync(AgendiaDbContext db)
         {
-            var business = new BusinessEntity { Name = "B", Address = "A", Phone = "P", Email = "b@test", IsActive = true, DefaultLanguage = "es" };
+            var business = new BusinessEntity { IsActive = true, DefaultLanguage = "es" };
             db.Businesses.Add(business);
             await db.SaveChangesAsync();
             return business;
