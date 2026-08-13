@@ -8,11 +8,6 @@ namespace MRC.Agendia.Application.Business.DTO
     // to assign one afterwards (UpdateBusinessDto deliberately omits it, so the
     // owner of an existing business can never be repointed via a crafted DTO).
     public record CreateBusinessDto(
-        string Name,
-        string? Description,
-        string Address,
-        string Phone,
-        string Email,
         string OwnerUserId,
         int? CancellationWindowHours = null,
         string DefaultLanguage = SupportedLanguages.Spanish,

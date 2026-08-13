@@ -18,35 +18,14 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
     /// </summary>
     public class EntityCrudValidatorsTests
     {
-        private static string Str(int n) => new('a', n);
-
         // ---------- Business ----------
 
         private static CreateBusinessDto ValidBusiness() =>
-            new("Peluqueria Ana", "desc", "Calle Mayor 1", "600100200", "info@ana.com", "owner-1");
+            new("owner-1");
 
         [Fact]
         public void CreateBusiness_valid_passes()
             => new CreateBusinessCommandValidator().Check(new CreateBusinessCommand(ValidBusiness())).ShouldBeValid();
-
-        [Theory]
-        [InlineData("", "Dto.Name")]
-        [InlineData(null, "Dto.Name")]
-        public void CreateBusiness_name_required(string? name, string prop)
-            => new CreateBusinessCommandValidator()
-                .Check(new CreateBusinessCommand(ValidBusiness() with { Name = name! })).ShouldFailOn(prop);
-
-        [Fact]
-        public void CreateBusiness_name_too_long_fails()
-            => new CreateBusinessCommandValidator()
-                .Check(new CreateBusinessCommand(ValidBusiness() with { Name = Str(201) })).ShouldFailOn("Dto.Name");
-
-        [Theory]
-        [InlineData("")]
-        [InlineData("not-an-email")]
-        public void CreateBusiness_email_must_be_valid(string email)
-            => new CreateBusinessCommandValidator()
-                .Check(new CreateBusinessCommand(ValidBusiness() with { Email = email })).ShouldFailOn("Dto.Email");
 
         [Theory]
         [InlineData("")]
@@ -104,8 +83,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
             => new CreateBusinessCommandValidator()
                 .Check(new CreateBusinessCommand(ValidBusiness() with { DefaultAppointmentStatus = status })).ShouldBeValid();
 
-        private static UpdateBusinessDto ValidBusinessUpdate() =>
-            new(5, "Peluqueria Ana", "desc", "Calle Mayor 1", "600100200", "info@ana.com", true);
+        private static UpdateBusinessDto ValidBusinessUpdate() => new(5, IsActive: true);
 
         [Fact]
         public void UpdateBusiness_valid_passes()
@@ -117,11 +95,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         public void UpdateBusiness_id_must_be_positive(int id)
             => new UpdateBusinessCommandValidator()
                 .Check(new UpdateBusinessCommand(ValidBusinessUpdate() with { Id = id })).ShouldFailOn("Dto.Id");
-
-        [Fact]
-        public void UpdateBusiness_invalid_email_fails()
-            => new UpdateBusinessCommandValidator()
-                .Check(new UpdateBusinessCommand(ValidBusinessUpdate() with { Email = "bad" })).ShouldFailOn("Dto.Email");
 
         // ---------- Service ----------
 

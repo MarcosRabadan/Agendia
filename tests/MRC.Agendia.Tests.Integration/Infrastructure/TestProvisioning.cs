@@ -24,12 +24,7 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
             var ownerUserId = $"harmony-{slug}-{unique}";
             var adminToken = TestTokenFactory.Create($"admin-{unique}", Roles.Admin);
 
-            var createBusiness = new CreateBusinessDto(Name: $"{slug}-{unique}",
-                                                       Description: null,
-                                                       Address: "Calle Test 1",
-                                                       Phone: "910000000",
-                                                       Email: $"info-{unique}@test.local",
-                                                       OwnerUserId: ownerUserId);
+            var createBusiness = new CreateBusinessDto(OwnerUserId: ownerUserId);
 
             var business = await PostAsync<CreateBusinessDto, BusinessDto>(
                 client, "/api/Business", createBusiness, adminToken);

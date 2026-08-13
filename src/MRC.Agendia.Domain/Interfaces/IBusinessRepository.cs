@@ -17,23 +17,14 @@ namespace MRC.Agendia.Domain.Interfaces
         Task<Business?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Gets an active, non-deleted business by id for public (anonymous) reads.
-        /// Untracked; ignores the business-scope filter so it works regardless of the caller.
+        /// Gets an active, non-deleted business by id, ignoring the business-scope
+        /// filter so it works regardless of the caller. Untracked. Used by availability
+        /// to reject bookings against an inactive/deleted business.
         /// </summary>
         /// <param name="id">Business id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The active business, or null when inactive, soft-deleted, or missing.</returns>
         Task<Business?> GetActiveByIdAsync(int id, CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// Gets a page of active, non-deleted businesses for the public listing, ordered by id.
-        /// Untracked; ignores the business-scope filter.
-        /// </summary>
-        /// <param name="page">1-based page number.</param>
-        /// <param name="pageSize">Page size.</param>
-        /// <param name="cancellationToken">Token to cancel the operation.</param>
-        /// <returns>The page of active businesses and the total count.</returns>
-        Task<(IReadOnlyList<Business> Items, int TotalCount)> GetPagedActiveAsync(int page, int pageSize, CancellationToken cancellationToken = default);
 
         /// <summary>Adds a new business to the context.</summary>
         /// <param name="business">The business to add.</param>

@@ -4,9 +4,6 @@ using MRC.Agendia.Application.Business.Commands.Delete;
 using MRC.Agendia.Application.Business.Commands.Restore;
 using MRC.Agendia.Application.Business.Commands.Update;
 using MRC.Agendia.Application.Business.DTO;
-using MRC.Agendia.Application.Business.Queries.GetAll;
-using MRC.Agendia.Application.Business.Queries.GetById;
-using MRC.Agendia.Application.Common;
 using NSubstitute;
 using IBusinessService = MRC.Agendia.Application.Business.IBusinessService;
 
@@ -23,11 +20,9 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
         private readonly IBusinessService _service = Substitute.For<IBusinessService>();
         private readonly IResourceAuthorizationService _auth = Substitute.For<IResourceAuthorizationService>();
 
-        private static UpdateBusinessDto UpdateDto(int id = 5) =>
-            new(id, "N", null, "Addr", "600", "a@b.c", true);
+        private static UpdateBusinessDto UpdateDto(int id = 5) => new(id, IsActive: true);
 
-        private static BusinessDto Result(int id = 5) =>
-            new(id, "N", null, "Addr", "600", "a@b.c", true);
+        private static BusinessDto Result(int id = 5) => new(id, IsActive: true);
 
         [Fact]
         public async Task Update_authorizes_the_existing_business_then_delegates()
@@ -58,7 +53,7 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
         [Fact]
         public async Task Create_delegates_to_the_service()
         {
-            var dto = new CreateBusinessDto("N", null, "Addr", "600", "a@b.c", "owner-1");
+            var dto = new CreateBusinessDto("owner-1");
             var expected = Result();
             _service.CreateAsync(dto, Arg.Any<CancellationToken>()).Returns(expected);
 
@@ -76,18 +71,6 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
 
             Assert.True(await new DeleteBusinessCommandHandler(_service).Handle(new DeleteBusinessCommand(9), default));
             Assert.True(await new RestoreBusinessCommandHandler(_service).Handle(new RestoreBusinessCommand(9), default));
-        }
-
-        [Fact]
-        public async Task GetAll_and_GetById_delegate_to_the_public_reads()
-        {
-            var page = PagedResult<BusinessPublicDto>.Create(Array.Empty<BusinessPublicDto>(), 0, 1, 50);
-            _service.GetPagedPublicAsync(1, 50, Arg.Any<CancellationToken>()).Returns(page);
-            var one = new BusinessPublicDto(3, "N", null, "Addr", "600");
-            _service.GetPublicByIdAsync(3, Arg.Any<CancellationToken>()).Returns(one);
-
-            Assert.Same(page, await new GetAllBusinessesQueryHandler(_service).Handle(new GetAllBusinessesQuery(1, 50), default));
-            Assert.Same(one, await new GetBusinessByIdQueryHandler(_service).Handle(new GetBusinessByIdQuery(3), default));
         }
     }
 }

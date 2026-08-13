@@ -25,7 +25,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Repositories
         /// <summary>Seeds business + service + employee + one confirmed appointment.</summary>
         private static async Task<Seeded> SeedAsync(AgendiaDbContext ctx)
         {
-            var business = new Business { Name = "B", Address = "x", Phone = "1", Email = "b@x.com", IsActive = true };
+            var business = new Business { IsActive = true };
             var service = new Service { Name = "Corte", DurationMinutes = 30, Price = 10m, Business = business };
             var employee = new Employee { FullName = "Luis", Business = business, IsActive = true, MaxConcurrentAppointments = 1 };
             ctx.AddRange(business, service, employee);

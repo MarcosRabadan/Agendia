@@ -1,6 +1,5 @@
 using AutoMapper;
 using MRC.Agendia.Application.Business.DTO;
-using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 
@@ -20,21 +19,6 @@ namespace MRC.Agendia.Application.Business
         }
 
         #region CRUD
-        /// <inheritdoc />
-        public async Task<PagedResult<BusinessPublicDto>> GetPagedPublicAsync(int page, int pageSize, CancellationToken cancellationToken = default)
-        {
-            var (items, totalCount) = await _repository.GetPagedActiveAsync(page, pageSize, cancellationToken);
-            var dtos = _mapper.Map<List<BusinessPublicDto>>(items);
-            return PagedResult<BusinessPublicDto>.Create(dtos, totalCount, page, pageSize);
-        }
-
-        /// <inheritdoc />
-        public async Task<BusinessPublicDto?> GetPublicByIdAsync(int id, CancellationToken cancellationToken = default)
-        {
-            var entity = await _repository.GetActiveByIdAsync(id, cancellationToken);
-            return entity is null ? null : _mapper.Map<BusinessPublicDto>(entity);
-        }
-
         /// <inheritdoc />
         public async Task<BusinessDto> CreateAsync(CreateBusinessDto dto, CancellationToken cancellationToken = default)
         {

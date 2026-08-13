@@ -7,12 +7,14 @@ namespace MRC.Agendia.Domain.Entities
     public class Business : AuditableEntity
     {
         public int Id { get; set; }
-        public string Name { get; set; } = null!;
-        public string? Description { get; set; }
-        public string Address { get; set; } = null!;
-        public string Phone { get; set; } = null!;
-        public string Email { get; set; } = null!;
+
+        /// <summary>
+        /// Whether the business currently accepts bookings. This is scheduling state
+        /// (not profile data): the business' public profile - name, address, contact -
+        /// lives in the management/identity service, not in Agendia.
+        /// </summary>
         public bool IsActive { get; set; }
+
         public string? OwnerUserId { get; set; }
 
         /// <summary>

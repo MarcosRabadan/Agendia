@@ -27,12 +27,12 @@ namespace MRC.Agendia.Tests.Unit.Application.Mappings
         [Fact]
         public void UpdateBusiness_preserves_OwnerUserId()
         {
-            var entity = new MRC.Agendia.Domain.Entities.Business { Id = 1, OwnerUserId = "owner-1", Name = "old" };
+            var entity = new MRC.Agendia.Domain.Entities.Business { Id = 1, OwnerUserId = "owner-1", IsActive = false };
 
-            _mapper.Map(new UpdateBusinessDto(1, "new", null, "Addr", "600", "a@b.c", true), entity);
+            _mapper.Map(new UpdateBusinessDto(1, IsActive: true), entity);
 
             Assert.Equal("owner-1", entity.OwnerUserId);
-            Assert.Equal("new", entity.Name);
+            Assert.True(entity.IsActive);
         }
 
         [Fact]
@@ -64,7 +64,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Mappings
         public void CreateBusiness_and_CreateEmployee_default_IsActive_to_true()
         {
             var business = _mapper.Map<MRC.Agendia.Domain.Entities.Business>(
-                new CreateBusinessDto("N", null, "Addr", "600", "a@b.c", "owner-1"));
+                new CreateBusinessDto("owner-1"));
             var employee = _mapper.Map<Employee>(
                 new CreateEmployeeDto(BusinessId: 3, FullName: "E", Email: null, Phone: null));
 

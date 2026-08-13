@@ -97,7 +97,7 @@ namespace MRC.Agendia.Tests.Unit.Application.ServiceLayer
 
             await Assert.ThrowsAsync<BusinessNotFoundException>(() =>
                 new BusinessService(repo, _uow, _mapper)
-                    .UpdateAsync(new UpdateBusinessDto(9, "X", null, "A", "6", "a@b.c", true)));
+                    .UpdateAsync(new UpdateBusinessDto(9, IsActive: true)));
         }
 
         [Fact]
