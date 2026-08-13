@@ -4,11 +4,12 @@ using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Application.Notifications;
+using MRC.Agendia.Application.Events;
 using MRC.Agendia.Application.Waitlist;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Events;
 using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 using NSubstitute;
@@ -27,7 +28,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         private readonly IAppointmentSchedulingValidator _validator = Substitute.For<IAppointmentSchedulingValidator>();
         private readonly IBookingConcurrencyGuard _bookingGuard = Substitute.For<IBookingConcurrencyGuard>();
         private readonly IClock _clock = Substitute.For<IClock>();
-        private readonly INotificationService _notificationService = Substitute.For<INotificationService>();
+        private readonly IEventPublisher _eventPublisher = Substitute.For<IEventPublisher>();
         private readonly IWaitlistService _waitlistService = Substitute.For<IWaitlistService>();
         private readonly IAuditLogger _auditLogger = Substitute.For<IAuditLogger>();
         private readonly ICurrentUserContext _currentUser = Substitute.For<ICurrentUserContext>();
@@ -48,9 +49,16 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // Default to a staff caller so status changes (e.g. Completed) are allowed.
             _currentUser.IsInRole(Roles.Employee).Returns(true);
 
+            // A notification context so the confirmation/cancellation events fire.
+            _repository.GetNotificationContextAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(ci => new AppointmentNotificationContext(
+                    ci.Arg<int>(), BusinessId: 100, EmployeeId: 2, ClientUserId: "user-1", ServiceId: 3,
+                    StartDate: new DateTime(2030, 1, 1, 9, 0, 0),
+                    EndDate: new DateTime(2030, 1, 1, 9, 30, 0), Language: "es"));
+
             _sut = new AppointmentService(
                 _repository, _validator, _bookingGuard, _clock,
-                _notificationService, _waitlistService, _auditLogger, _currentUser, _unitOfWork, _mapper);
+                _eventPublisher, _waitlistService, _auditLogger, _currentUser, _unitOfWork, _mapper);
         }
 
         [Fact]
@@ -74,6 +82,9 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             await _validator.Received(1).EnsureValidAsync(
                 Arg.Any<int?>(), dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
             await _repository.Received(1).AddAsync(Arg.Any<Appointment>(), Arg.Any<CancellationToken>());
+            // A confirmation event is published (via the outbox) instead of an email.
+            await _eventPublisher.Received(1).PublishAsync(
+                Arg.Is<IIntegrationEvent>(e => e is AppointmentConfirmed), Arg.Any<CancellationToken>());
         }
 
         [Fact]
@@ -347,6 +358,9 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             Assert.Equal(AppointmentStatus.Cancelled, result.Status);
             await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(entity.Id, Arg.Any<CancellationToken>());
+            // A cancellation event is published (via the outbox) instead of an email.
+            await _eventPublisher.Received(1).PublishAsync(
+                Arg.Is<IIntegrationEvent>(e => e is AppointmentCancelled), Arg.Any<CancellationToken>());
         }
 
         [Fact]

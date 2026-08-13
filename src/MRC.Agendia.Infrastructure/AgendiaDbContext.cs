@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Infrastructure.Messaging;
 
 namespace MRC.Agendia.Infrastructure;
 
@@ -37,8 +38,8 @@ public class AgendiaDbContext : DbContext
     // Multiservice (#170): extra services of an appointment beyond the primary one.
     public DbSet<AppointmentExtraService> AppointmentExtraServices => Set<AppointmentExtraService>();
 
-    // Push device tokens (#51)
-    public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
+    // Transactional outbox (#246): integration events pending delivery.
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -251,18 +252,25 @@ public class AgendiaDbContext : DbContext
             .HasIndex(x => x.AppointmentId)
             .HasDatabaseName("IX_AppointmentExtraService_AppointmentId");
 
-        // Push device tokens (#51): one row per token (unique), fanned out by user.
-        modelBuilder.Entity<DeviceToken>()
-            .Property(d => d.Platform)
-            .HasConversion<int>();
+        // Transactional outbox (#246): events written with the operation that
+        // raised them and delivered later by OutboxDispatcherService.
+        modelBuilder.Entity<OutboxMessage>()
+            .HasKey(m => m.Id);
 
-        modelBuilder.Entity<DeviceToken>()
-            .HasIndex(d => d.Token)
-            .IsUnique()
-            .HasDatabaseName("IX_DeviceToken_Token");
+        modelBuilder.Entity<OutboxMessage>()
+            .Property(m => m.Type)
+            .IsRequired()
+            .HasMaxLength(200);
 
-        modelBuilder.Entity<DeviceToken>()
-            .HasIndex(d => d.UserId)
-            .HasDatabaseName("IX_DeviceToken_UserId");
+        modelBuilder.Entity<OutboxMessage>()
+            .Property(m => m.Payload)
+            .IsRequired();
+
+        // The dispatcher polls pending rows (ProcessedOnUtc IS NULL) oldest first;
+        // a filtered index keeps that scan cheap as processed rows accumulate.
+        modelBuilder.Entity<OutboxMessage>()
+            .HasIndex(m => m.OccurredOnUtc)
+            .HasFilter("[ProcessedOnUtc] IS NULL")
+            .HasDatabaseName("IX_OutboxMessage_Pending");
     }
 }

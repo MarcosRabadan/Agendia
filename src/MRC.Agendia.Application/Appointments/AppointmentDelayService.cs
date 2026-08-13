@@ -1,8 +1,9 @@
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Application.Notifications;
+using MRC.Agendia.Application.Events;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Domain.Events;
 using MRC.Agendia.Domain.Services;
 using MRC.Agendia.Domain.Interfaces;
 
@@ -12,19 +13,22 @@ namespace MRC.Agendia.Application.Appointments
     {
         private readonly IAppointmentRepository _repository;
         private readonly IScheduleResolver _scheduleResolver;
-        private readonly INotificationService _notificationService;
+        private readonly IEventPublisher _eventPublisher;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IAuditLogger _auditLogger;
         private readonly IClock _clock;
 
         public AppointmentDelayService(IAppointmentRepository repository,
                                        IScheduleResolver scheduleResolver,
-                                       INotificationService notificationService,
+                                       IEventPublisher eventPublisher,
+                                       IUnitOfWork unitOfWork,
                                        IAuditLogger auditLogger,
                                        IClock clock)
         {
             _repository = repository;
             _scheduleResolver = scheduleResolver;
-            _notificationService = notificationService;
+            _eventPublisher = eventPublisher;
+            _unitOfWork = unitOfWork;
             _auditLogger = auditLogger;
             _clock = clock;
         }
@@ -62,12 +66,26 @@ namespace MRC.Agendia.Application.Appointments
             if (dto.MaxAppointments is int max)
                 affected = affected.Take(max).ToList();
 
-            // Best-effort per-client notification (never throws out of the service).
+            // Publish a delay event per affected appointment. Enlist them all into
+            // the outbox and persist with a single Save (the consumer resolves each
+            // client's contact from ClientUserId and delivers in the business language).
             foreach (var appointment in affected)
-                await _notificationService.SendDelayNotificationAsync(appointment.Id, dto.DelayMinutes, cancellationToken);
+            {
+                var context = await _repository.GetNotificationContextAsync(appointment.Id, cancellationToken);
+                if (context is null)
+                    continue;
+
+                await _eventPublisher.PublishAsync(new AppointmentDelayed(
+                    context.AppointmentId, context.BusinessId, context.EmployeeId, context.ClientUserId,
+                    context.ServiceId, context.StartDate, context.EndDate,
+                    dto.DelayMinutes, context.Language, DateTime.UtcNow),
+                    cancellationToken);
+            }
 
             if (affected.Count > 0)
             {
+                await _unitOfWork.Save(cancellationToken);
+
                 await _auditLogger.LogAsync(
                     AuditActions.AppointmentDelayNotified, "Business", businessId.ToString(),
                     new { dto.EmployeeId, dto.DelayMinutes, notified = affected.Count }, cancellationToken);

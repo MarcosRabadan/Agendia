@@ -22,11 +22,9 @@ builder.Services
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Email sender (Logging in Dev/Test, SMTP elsewhere)
-builder.Services.AddEmailSender(builder.Configuration, builder.Environment);
-
-// Push sender (#51): only Logging in every environment for now (FCM pending)
-builder.Services.AddPushSender(builder.Environment);
+// Notifications are delivered by a downstream service: Agendia publishes
+// integration events through a transactional outbox (registered in the
+// Infrastructure layer), it no longer sends email/push itself (#246).
 
 // JWT validation (tokens are issued by the Harmony identity service)
 builder.Services.AddJwtAuthentication(builder.Configuration);

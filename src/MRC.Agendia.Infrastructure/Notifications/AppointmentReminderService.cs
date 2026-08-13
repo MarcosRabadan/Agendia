@@ -4,15 +4,18 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Application.Notifications;
+using MRC.Agendia.Application.Events;
 using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Events;
 
 namespace MRC.Agendia.Infrastructure.Notifications
 {
     /// <summary>
-    /// Hosted service that sends a reminder email for appointments starting
-    /// within the next <c>ReminderWindowHours</c> (24h by default) that have not
-    /// been reminded yet. Idempotent via <c>Appointment.ReminderSentAt</c>.
+    /// Hosted service that publishes an <see cref="AppointmentReminder"/> event for
+    /// appointments starting within the next <c>ReminderWindowHours</c> (24h by
+    /// default) that have not been reminded yet. Idempotent via
+    /// <c>Appointment.ReminderSentAt</c>. Delivery is done by the consumer; Agendia
+    /// only raises the event.
     ///
     /// Configuration (optional, with safe defaults):
     ///   "Notifications": {
@@ -90,7 +93,9 @@ namespace MRC.Agendia.Infrastructure.Notifications
         {
             using var scope = _serviceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
-            var notifications = scope.ServiceProvider.GetRequiredService<INotificationService>();
+            // Same scope as the context, so enlisting an event and marking
+            // ReminderSentAt are persisted by the same SaveChanges (outbox).
+            var eventPublisher = scope.ServiceProvider.GetRequiredService<IEventPublisher>();
 
             // Wall-clock "now" in the business timezone, to line up with the
             // wall-clock StartDate of appointments.
@@ -103,6 +108,8 @@ namespace MRC.Agendia.Infrastructure.Notifications
             // or whose employee is inactive (those must not get reminders).
             var due = await context.Appointments
                 .IgnoreQueryFilters()
+                .Include(a => a.Employee)
+                    .ThenInclude(e => e.Business)
                 .Where(a => !a.IsDeleted
                     && !a.Employee.IsDeleted
                     && a.Employee.IsActive
@@ -119,26 +126,29 @@ namespace MRC.Agendia.Infrastructure.Notifications
                 return;
             }
 
-            var sent = 0;
+            var published = 0;
             foreach (var appointment in due)
             {
-                // Only mark as reminded when the send actually succeeded, so a
-                // transient failure is retried on the next run instead of being lost.
-                if (await notifications.SendAppointmentReminderAsync(appointment.Id, cancellationToken))
-                {
-                    appointment.ReminderSentAt = DateTime.UtcNow;
-                    // Persist per item, NOT once after the whole loop: otherwise a
-                    // crash/recycle mid-batch loses every ReminderSentAt mark and
-                    // re-sends all the already-delivered reminders on the next run.
-                    // (This makes a single-instance run crash-safe. Running multiple
-                    // instances concurrently would additionally need a RowVersion /
-                    // atomic claim to avoid double-sends; single-instance today.)
-                    await context.SaveChangesAsync(cancellationToken);
-                    sent++;
-                }
+                // Enlist the reminder event and mark ReminderSentAt in the SAME save
+                // (transactional outbox): the event and the mark commit together.
+                await eventPublisher.PublishAsync(new AppointmentReminder(
+                    appointment.Id, appointment.Employee.BusinessId, appointment.EmployeeId,
+                    appointment.ClientUserId, appointment.ServiceId, appointment.StartDate,
+                    appointment.EndDate, appointment.Employee.Business.DefaultLanguage, DateTime.UtcNow),
+                    cancellationToken);
+
+                appointment.ReminderSentAt = DateTime.UtcNow;
+                // Persist per item, NOT once after the whole loop: otherwise a
+                // crash/recycle mid-batch loses every ReminderSentAt mark and
+                // re-publishes all the already-emitted reminders on the next run.
+                // (This makes a single-instance run crash-safe. Running multiple
+                // instances concurrently would additionally need a RowVersion /
+                // atomic claim to avoid double-emits; single-instance today.)
+                await context.SaveChangesAsync(cancellationToken);
+                published++;
             }
 
-            _logger.LogInformation("Enviados {Sent} de {Total} recordatorio(s) de cita.", sent, due.Count);
+            _logger.LogInformation("Publicados {Published} de {Total} recordatorio(s) de cita.", published, due.Count);
         }
     }
 }

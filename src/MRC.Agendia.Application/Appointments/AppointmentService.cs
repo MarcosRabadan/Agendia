@@ -3,11 +3,12 @@ using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Application.Notifications;
+using MRC.Agendia.Application.Events;
 using MRC.Agendia.Application.Waitlist;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Events;
 using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 
@@ -19,7 +20,7 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IAppointmentSchedulingValidator _schedulingValidator;
         private readonly IBookingConcurrencyGuard _bookingGuard;
         private readonly IClock _clock;
-        private readonly INotificationService _notificationService;
+        private readonly IEventPublisher _eventPublisher;
         private readonly IWaitlistService _waitlistService;
         private readonly IAuditLogger _auditLogger;
         private readonly ICurrentUserContext _currentUser;
@@ -30,7 +31,7 @@ namespace MRC.Agendia.Application.Appointments
                                   IAppointmentSchedulingValidator schedulingValidator,
                                   IBookingConcurrencyGuard bookingGuard,
                                   IClock clock,
-                                  INotificationService notificationService,
+                                  IEventPublisher eventPublisher,
                                   IWaitlistService waitlistService,
                                   IAuditLogger auditLogger,
                                   ICurrentUserContext currentUser,
@@ -41,7 +42,7 @@ namespace MRC.Agendia.Application.Appointments
             _schedulingValidator = schedulingValidator;
             _bookingGuard = bookingGuard;
             _clock = clock;
-            _notificationService = notificationService;
+            _eventPublisher = eventPublisher;
             _waitlistService = waitlistService;
             _auditLogger = auditLogger;
             _currentUser = currentUser;
@@ -114,12 +115,19 @@ namespace MRC.Agendia.Application.Appointments
                     }
                     await _repository.AddAsync(created, cancellationToken);
                     await _unitOfWork.Save(cancellationToken);
+
+                    // Confirmation event, written in the SAME transaction as the
+                    // appointment (transactional outbox): both commit together at the
+                    // end of the guarded critical section. The appointment id is only
+                    // known after the first Save, hence the second one here.
+                    await PublishAppointmentEventAsync(created.Id, ctx => new AppointmentConfirmed(
+                        ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId,
+                        ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, DateTime.UtcNow),
+                        cancellationToken);
+                    await _unitOfWork.Save(cancellationToken);
                     return created;
                 },
                 cancellationToken);
-
-            // Best-effort confirmation email, outside the lock (never breaks the booking).
-            await _notificationService.SendAppointmentConfirmationAsync(entity.Id, cancellationToken);
 
             return _mapper.Map<AppointmentDto>(entity);
         }
@@ -164,9 +172,9 @@ namespace MRC.Agendia.Application.Appointments
             // cannot cancel or reschedule an appointment that is already within the
             // business's cancellation window. Checked against the appointment's
             // CURRENT start time (you cannot act on an imminent appointment yourself).
-            var isSelfServiceCancellation =
+            var becomesCancelled =
                 dto.Status == AppointmentStatus.Cancelled && previousStatus != AppointmentStatus.Cancelled;
-            if (!IsStaff() && (isSelfServiceCancellation || bookingChanged))
+            if (!IsStaff() && (becomesCancelled || bookingChanged))
             {
                 var windowHours = await _repository.GetCancellationWindowHoursAsync(entity.Id, cancellationToken);
                 AppointmentCancellationPolicy.EnsureSelfServiceAllowed(previousStartDate, windowHours, _clock.BusinessNow);
@@ -180,6 +188,14 @@ namespace MRC.Agendia.Application.Appointments
                 // is sent again for the new date.
                 if (entity.StartDate != previousStartDate)
                     entity.ReminderSentAt = null;
+
+                // Cancellation event written in the SAME save as the status change
+                // (transactional outbox): a cancelled appointment always yields its event.
+                if (becomesCancelled)
+                    await PublishAppointmentEventAsync(entity.Id, ctx => new AppointmentCancelled(
+                        ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId,
+                        ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, DateTime.UtcNow),
+                        cancellationToken);
 
                 _repository.Update(entity);
                 await _unitOfWork.Save(cancellationToken);
@@ -226,9 +242,8 @@ namespace MRC.Agendia.Application.Appointments
                     cancellationToken);
             }
 
-            // Best-effort cancellation email when the appointment is cancelled.
-            if (previousStatus != AppointmentStatus.Cancelled && entity.Status == AppointmentStatus.Cancelled)
-                await _notificationService.SendAppointmentCancellationAsync(entity.Id, cancellationToken);
+            // (The cancellation event is published inside ApplyAsync so it commits
+            // with the status change; nothing to do here.)
 
             // Cancelling an occupying appointment frees a slot: notify the waitlist (best-effort).
             if (previousStatus.OccupiesCapacity() && entity.Status == AppointmentStatus.Cancelled)
@@ -296,5 +311,20 @@ namespace MRC.Agendia.Application.Appointments
             => _currentUser.IsInRole(Roles.Admin)
                || _currentUser.IsInRole(Roles.BusinessOwner)
                || _currentUser.IsInRole(Roles.Employee);
+
+        // Loads the notification context (business id + language + booking fields)
+        // for the appointment and enlists the built event into the current unit of
+        // work (outbox). Does NOT save: the caller's Save persists the event with
+        // the operation. A missing appointment is a no-op (nothing to notify about).
+        private async Task PublishAppointmentEventAsync(int appointmentId,
+                                                        Func<AppointmentNotificationContext, IIntegrationEvent> build,
+                                                        CancellationToken cancellationToken)
+        {
+            var context = await _repository.GetNotificationContextAsync(appointmentId, cancellationToken);
+            if (context is null)
+                return;
+
+            await _eventPublisher.PublishAsync(build(context), cancellationToken);
+        }
     }
 }

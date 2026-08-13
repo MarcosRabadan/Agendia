@@ -2,9 +2,10 @@ using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Application.Notifications;
+using MRC.Agendia.Application.Events;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Events;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Domain.Services;
 using NSubstitute;
@@ -23,14 +24,22 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
         private readonly IAppointmentRepository _repository = Substitute.For<IAppointmentRepository>();
         private readonly IScheduleResolver _scheduleResolver = Substitute.For<IScheduleResolver>();
-        private readonly INotificationService _notifications = Substitute.For<INotificationService>();
+        private readonly IEventPublisher _eventPublisher = Substitute.For<IEventPublisher>();
+        private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
         private readonly IAuditLogger _auditLogger = Substitute.For<IAuditLogger>();
         private readonly IClock _clock = Substitute.For<IClock>();
         private readonly AppointmentDelayService _sut;
 
         public AppointmentDelayServiceTests()
         {
-            _sut = new AppointmentDelayService(_repository, _scheduleResolver, _notifications, _auditLogger, _clock);
+            // A notification context so a delay event is published for each affected id.
+            _repository.GetNotificationContextAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(ci => new AppointmentNotificationContext(
+                    ci.Arg<int>(), BusinessId, EmployeeId: 2, ClientUserId: "client-1", ServiceId: 3,
+                    StartDate: new DateTime(2030, 6, 3, 11, 0, 0),
+                    EndDate: new DateTime(2030, 6, 3, 11, 30, 0), Language: "es"));
+
+            _sut = new AppointmentDelayService(_repository, _scheduleResolver, _eventPublisher, _unitOfWork, _auditLogger, _clock);
         }
 
         [Fact]
@@ -43,9 +52,9 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             var result = await _sut.NotifyDelayAsync(BusinessId, new NotifyDelayDto(EmployeeId: null, DelayMinutes: 15, MaxAppointments: null));
 
             Assert.Equal(2, result.Notified); // 11:00 and 12:30, not the 17:00 (afternoon)
-            await _notifications.Received(1).SendDelayNotificationAsync(11, 15, Arg.Any<CancellationToken>());
-            await _notifications.Received(1).SendDelayNotificationAsync(12, 15, Arg.Any<CancellationToken>());
-            await _notifications.DidNotReceive().SendDelayNotificationAsync(13, Arg.Any<int>(), Arg.Any<CancellationToken>());
+            await ReceivedDelayEvent(11, 15);
+            await ReceivedDelayEvent(12, 15);
+            await DidNotReceiveDelayEvent(13);
         }
 
         [Fact]
@@ -58,9 +67,9 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             var result = await _sut.NotifyDelayAsync(BusinessId, new NotifyDelayDto(null, 10, MaxAppointments: 2));
 
             Assert.Equal(2, result.Notified);
-            await _notifications.Received(1).SendDelayNotificationAsync(11, 10, Arg.Any<CancellationToken>());
-            await _notifications.Received(1).SendDelayNotificationAsync(12, 10, Arg.Any<CancellationToken>());
-            await _notifications.DidNotReceive().SendDelayNotificationAsync(13, Arg.Any<int>(), Arg.Any<CancellationToken>());
+            await ReceivedDelayEvent(11, 10);
+            await ReceivedDelayEvent(12, 10);
+            await DidNotReceiveDelayEvent(13);
         }
 
         [Fact]
@@ -73,7 +82,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             var result = await _sut.NotifyDelayAsync(BusinessId, new NotifyDelayDto(null, 20, null));
 
             Assert.Equal(1, result.Notified); // only the morning one
-            await _notifications.Received(1).SendDelayNotificationAsync(11, 20, Arg.Any<CancellationToken>());
+            await ReceivedDelayEvent(11, 20);
         }
 
         [Fact]
@@ -87,7 +96,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             Assert.Equal(0, result.Notified);
             await _repository.DidNotReceiveWithAnyArgs().GetUpcomingForDelayAsync(default, default, default, default, default);
-            await _notifications.DidNotReceiveWithAnyArgs().SendDelayNotificationAsync(default, default, default);
+            await _eventPublisher.DidNotReceiveWithAnyArgs().PublishAsync(default!, default);
         }
 
         [Fact]
@@ -99,8 +108,21 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             var result = await _sut.NotifyDelayAsync(BusinessId, new NotifyDelayDto(null, 15, null));
 
             Assert.Equal(0, result.Notified);
-            await _notifications.DidNotReceiveWithAnyArgs().SendDelayNotificationAsync(default, default, default);
+            await _eventPublisher.DidNotReceiveWithAnyArgs().PublishAsync(default!, default);
         }
+
+        private Task ReceivedDelayEvent(int appointmentId, int delayMinutes)
+            => _eventPublisher.Received(1).PublishAsync(
+                Arg.Is<IIntegrationEvent>(e => e is AppointmentDelayed
+                    && ((AppointmentDelayed)e).AppointmentId == appointmentId
+                    && ((AppointmentDelayed)e).DelayMinutes == delayMinutes),
+                Arg.Any<CancellationToken>());
+
+        private Task DidNotReceiveDelayEvent(int appointmentId)
+            => _eventPublisher.DidNotReceive().PublishAsync(
+                Arg.Is<IIntegrationEvent>(e => e is AppointmentDelayed
+                    && ((AppointmentDelayed)e).AppointmentId == appointmentId),
+                Arg.Any<CancellationToken>());
 
         private void SetNow(DateTime now) => _clock.BusinessNow.Returns(now);
 
