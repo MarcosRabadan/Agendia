@@ -2,13 +2,13 @@ using MRC.Agendia.Domain.Common;
 
 namespace MRC.Agendia.Domain.Entities
 {
+    // A bookable resource of a business (a person, a room, a chair...). Agendia holds
+    // only its scheduling attributes; the profile (name, contact) lives in the
+    // management/identity service, keyed by UserId when the resource has an account.
     public class Employee : AuditableEntity
     {
         public int Id { get; set; }
         public int BusinessId { get; set; }
-        public string FullName { get; set; } = null!;
-        public string? Email { get; set; }
-        public string? Phone { get; set; }
         public bool IsActive { get; set; }
         public string? UserId { get; set; }
 

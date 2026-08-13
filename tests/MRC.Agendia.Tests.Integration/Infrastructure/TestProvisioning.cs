@@ -31,11 +31,7 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
 
             var ownerToken = TestTokenFactory.Create(ownerUserId, Roles.BusinessOwner);
 
-            var createEmployee = new CreateEmployeeDto(BusinessId: business.Id,
-                                                       FullName: $"Owner {slug}",
-                                                       Email: $"{slug}-{unique}@test.local",
-                                                       Phone: "600000000",
-                                                       UserId: ownerUserId);
+            var createEmployee = new CreateEmployeeDto(BusinessId: business.Id, UserId: ownerUserId);
 
             var employee = await PostAsync<CreateEmployeeDto, EmployeeDto>(
                 client, "/api/Employee", createEmployee, ownerToken);

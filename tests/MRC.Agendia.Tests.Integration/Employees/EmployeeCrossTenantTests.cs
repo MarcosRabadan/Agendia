@@ -33,9 +33,6 @@ namespace MRC.Agendia.Tests.Integration.Employees
             {
                 Content = JsonContent.Create(new CreateEmployeeDto(
                     BusinessId: ownerB.Business.Id,
-                    FullName: "Hacker Stylist",
-                    Email: null,
-                    Phone: "600000999",
                     MaxConcurrentAppointments: 1))
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerA.Token);
@@ -56,9 +53,6 @@ namespace MRC.Agendia.Tests.Integration.Employees
             {
                 Content = JsonContent.Create(new CreateEmployeeDto(
                     BusinessId: ownerA.Business.Id,
-                    FullName: "New Stylist",
-                    Email: null,
-                    Phone: "600000111",
                     MaxConcurrentAppointments: 1))
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerA.Token);
@@ -98,7 +92,7 @@ namespace MRC.Agendia.Tests.Integration.Employees
             var ownerA = await RegisterOwnerAsync("emp-stay-a");
             var ownerB = await RegisterOwnerAsync("emp-stay-b");
 
-            var employee = await CreateEmployeeAsAsync(ownerA, "Stylist A");
+            var employee = await CreateEmployeeAsAsync(ownerA);
 
             // Crafted PUT: a raw "businessId" field pointing at business B. The DTO
             // no longer exposes BusinessId and the mapping ignores it, so the
@@ -130,15 +124,12 @@ namespace MRC.Agendia.Tests.Integration.Employees
 
         // ----- Helpers -----
 
-        private async Task<EmployeeDto> CreateEmployeeAsAsync(ProvisionedOwner owner, string fullName)
+        private async Task<EmployeeDto> CreateEmployeeAsAsync(ProvisionedOwner owner)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Employee")
             {
                 Content = JsonContent.Create(new CreateEmployeeDto(
                     BusinessId: owner.Business.Id,
-                    FullName: fullName,
-                    Email: null,
-                    Phone: "600000111",
                     MaxConcurrentAppointments: 1))
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);

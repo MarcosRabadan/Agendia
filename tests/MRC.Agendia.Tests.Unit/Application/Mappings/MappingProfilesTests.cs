@@ -50,13 +50,13 @@ namespace MRC.Agendia.Tests.Unit.Application.Mappings
         [Fact]
         public void UpdateEmployee_preserves_BusinessId_and_UserId()
         {
-            var entity = new Employee { Id = 1, BusinessId = 7, UserId = "user-1", FullName = "old" };
+            var entity = new Employee { Id = 1, BusinessId = 7, UserId = "user-1", IsActive = false };
 
-            _mapper.Map(new UpdateEmployeeDto(1, "new", null, null, true, 3), entity);
+            _mapper.Map(new UpdateEmployeeDto(1, IsActive: true, MaxConcurrentAppointments: 3), entity);
 
             Assert.Equal(7, entity.BusinessId);
             Assert.Equal("user-1", entity.UserId);
-            Assert.Equal("new", entity.FullName);
+            Assert.True(entity.IsActive);
             Assert.Equal(3, entity.MaxConcurrentAppointments);
         }
 
@@ -65,8 +65,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Mappings
         {
             var business = _mapper.Map<MRC.Agendia.Domain.Entities.Business>(
                 new CreateBusinessDto("owner-1"));
-            var employee = _mapper.Map<Employee>(
-                new CreateEmployeeDto(BusinessId: 3, FullName: "E", Email: null, Phone: null));
+            var employee = _mapper.Map<Employee>(new CreateEmployeeDto(BusinessId: 3));
 
             Assert.True(business.IsActive);
             Assert.True(employee.IsActive);

@@ -147,21 +147,11 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
 
         // ---------- Employee ----------
 
-        private static CreateEmployeeDto ValidEmployee() => new(7, "Ana Perez", "ana@x.com", "600", null, 1);
+        private static CreateEmployeeDto ValidEmployee() => new(7);
 
         [Fact]
         public void CreateEmployee_valid_passes()
             => new CreateEmployeeCommandValidator().Check(new CreateEmployeeCommand(ValidEmployee())).ShouldBeValid();
-
-        [Fact]
-        public void CreateEmployee_null_email_passes()
-            => new CreateEmployeeCommandValidator()
-                .Check(new CreateEmployeeCommand(ValidEmployee() with { Email = null })).ShouldBeValid();
-
-        [Fact]
-        public void CreateEmployee_invalid_email_fails()
-            => new CreateEmployeeCommandValidator()
-                .Check(new CreateEmployeeCommand(ValidEmployee() with { Email = "nope" })).ShouldFailOn("Dto.Email");
 
         [Theory]
         [InlineData(0)]
@@ -186,11 +176,14 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         [Fact]
         public void UpdateEmployee_valid_passes()
             => new UpdateEmployeeCommandValidator()
-                .Check(new UpdateEmployeeCommand(new UpdateEmployeeDto(1, "Ana", null, null, true, 2))).ShouldBeValid();
+                .Check(new UpdateEmployeeCommand(new UpdateEmployeeDto(1, IsActive: true, MaxConcurrentAppointments: 2))).ShouldBeValid();
 
-        [Fact]
-        public void UpdateEmployee_empty_name_fails()
+        [Theory]
+        [InlineData(0)]
+        [InlineData(101)]
+        public void UpdateEmployee_capacity_out_of_range_fails(int cap)
             => new UpdateEmployeeCommandValidator()
-                .Check(new UpdateEmployeeCommand(new UpdateEmployeeDto(1, "", null, null, true, 2))).ShouldFailOn("Dto.FullName");
+                .Check(new UpdateEmployeeCommand(new UpdateEmployeeDto(1, IsActive: true, MaxConcurrentAppointments: cap)))
+                .ShouldFailOn("Dto.MaxConcurrentAppointments");
     }
 }
