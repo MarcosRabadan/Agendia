@@ -169,10 +169,10 @@ public class AgendiaDbContext : DbContext
 
         // Backfill CreatedAt for rows that existed before audit fields were added.
         // New rows get their value from AuditableSaveChangesInterceptor before insert.
-        modelBuilder.Entity<Business>().Property(b => b.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-        modelBuilder.Entity<Employee>().Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-        modelBuilder.Entity<Service>().Property(s => s.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-        modelBuilder.Entity<Appointment>().Property(a => a.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+        modelBuilder.Entity<Business>().Property(b => b.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'");
+        modelBuilder.Entity<Employee>().Property(e => e.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'");
+        modelBuilder.Entity<Service>().Property(s => s.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'");
+        modelBuilder.Entity<Appointment>().Property(a => a.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'");
 
         // Index IsDeleted: every query now carries "WHERE IsDeleted = 0" from the
         // global filter above.
@@ -191,7 +191,7 @@ public class AgendiaDbContext : DbContext
         modelBuilder.Entity<Appointment>()
             .HasIndex(a => a.SeriesId)
             .HasDatabaseName("IX_Appointment_SeriesId")
-            .HasFilter("[SeriesId] IS NOT NULL");
+            .HasFilter("\"SeriesId\" IS NOT NULL");
 
         // Waitlist (#167). The waiting client is a Harmony user id (no local entity),
         // stored as a scalar column with an index for the "my entries" lookup.
@@ -225,12 +225,15 @@ public class AgendiaDbContext : DbContext
 
         // Dedup active waitlist entries at the DB level: JoinAsync is check-then-insert
         // and can race. Filtered to Waiting (Status = 0) so a client can re-join after
-        // leaving (Cancelled) or being Notified. SQL Server treats equal NULLs as a
-        // duplicate, so "any employee" (EmployeeId NULL) entries are deduped per slot too.
+        // leaving (Cancelled) or being Notified. AreNullsDistinct(false) => NULLS NOT
+        // DISTINCT, so an "any employee" (EmployeeId NULL) entry is deduped per slot too:
+        // Postgres treats NULLs as distinct by default (unlike SQL Server), which would
+        // otherwise let duplicate "any employee" waitings through.
         modelBuilder.Entity<WaitlistEntry>()
             .HasIndex(w => new { w.BusinessId, w.ServiceId, w.Date, w.StartTime, w.EmployeeId, w.ClientUserId })
             .IsUnique()
-            .HasFilter("[Status] = 0")
+            .AreNullsDistinct(false)
+            .HasFilter("\"Status\" = 0")
             .HasDatabaseName("IX_WaitlistEntry_UniqueWaiting");
 
         // Multiservice (#170): an appointment may include extra services beyond the
@@ -270,7 +273,7 @@ public class AgendiaDbContext : DbContext
         // a filtered index keeps that scan cheap as processed rows accumulate.
         modelBuilder.Entity<OutboxMessage>()
             .HasIndex(m => m.OccurredOnUtc)
-            .HasFilter("[ProcessedOnUtc] IS NULL")
+            .HasFilter("\"ProcessedOnUtc\" IS NULL")
             .HasDatabaseName("IX_OutboxMessage_Pending");
     }
 }

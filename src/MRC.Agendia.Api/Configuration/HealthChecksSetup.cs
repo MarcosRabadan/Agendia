@@ -5,7 +5,7 @@ namespace MRC.Agendia.Api.Configuration
     /// <summary>
     /// Rich health checks for deployment/orchestration:
     /// <list type="bullet">
-    ///   <item><description>SQL Server connectivity (critical, tagged "ready").</description></item>
+    ///   <item><description>PostgreSQL connectivity (critical, tagged "ready").</description></item>
     ///   <item><description>Seq reachability (non-critical: reports Degraded, never fails readiness).</description></item>
     /// </list>
     /// Endpoints are mapped in <see cref="PipelineExtensions"/>:
@@ -31,12 +31,12 @@ namespace MRC.Agendia.Api.Configuration
                     tags: new[] { ReadyTag });
 
             // The integration host uses a placeholder connection string over EF InMemory,
-            // so a real SQL probe would always report Unhealthy there. Skip it in Testing.
+            // so a real DB probe would always report Unhealthy there. Skip it in Testing.
             if (!environment.IsEnvironment("Testing"))
             {
-                healthChecks.AddSqlServer(
+                healthChecks.AddNpgSql(
                     connectionString,
-                    name: "sql-server",
+                    name: "postgres",
                     tags: new[] { ReadyTag });
             }
 

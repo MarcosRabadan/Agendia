@@ -1,19 +1,34 @@
 # Infra local para desarrollo/pruebas de Agendia (NO es para produccion).
-# Levanta dos "cajitas": Seq (visor de logs) y RabbitMQ (broker de mensajeria).
+# Levanta tres "cajitas": PostgreSQL (base de datos), Seq (visor de logs) y
+# RabbitMQ (broker de mensajeria).
 #
 # Uso (desde esta carpeta 'deploy'):
 #   docker compose up -d      arranca en segundo plano
 #   docker compose ps         ver estado
 #   docker compose down       parar (conserva los datos en los volumenes)
 #
-# UIs una vez arrancado:
-#   Seq       -> http://localhost:5341
-#   RabbitMQ  -> http://localhost:15672   (usuario: agendia  /  clave: agendia)
+# UIs / puertos una vez arrancado:
+#   PostgreSQL -> localhost:5432          (db: devAgendia  usuario/clave: agendia)
+#   Seq        -> http://localhost:5341
+#   RabbitMQ   -> http://localhost:15672  (usuario: agendia  /  clave: agendia)
 #
 # Versiones FIJADAS a proposito (no 'latest'): asi cualquiera levanta la misma
 # infra con la que se probo. Para actualizar, sube el tag conscientemente.
 
 services:
+  postgres:
+    image: postgres:16
+    container_name: agendia-postgres
+    environment:
+      POSTGRES_USER: agendia
+      POSTGRES_PASSWORD: agendia
+      POSTGRES_DB: devAgendia
+    ports:
+      - "5432:5432"               # puerto por el que la app se conecta a la BD
+    volumes:
+      - postgres-data:/var/lib/postgresql/data   # conserva los datos entre reinicios
+    restart: unless-stopped
+
   seq:
     image: datalust/seq:2024.3
     container_name: agendia-seq
@@ -39,5 +54,6 @@ services:
     restart: unless-stopped
 
 volumes:
+  postgres-data:
   seq-data:
   rabbitmq-data:

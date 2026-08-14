@@ -41,7 +41,7 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
             // the DbContext is replaced below. SqlConnectionStringBuilder
             // refuses null/empty strings during DI graph construction.
             Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection",
-                "Server=test-placeholder;Database=test;");
+                "Host=localhost;Database=test;Username=test;Password=test");
 
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
         }

@@ -35,7 +35,7 @@ namespace MRC.Agendia.Infrastructure
             // Persistence (EF Core)
             services.AddScoped<AuditableSaveChangesInterceptor>();
             services.AddDbContext<AgendiaDbContext>((sp, options) =>
-                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
+                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"))
                        .AddInterceptors(sp.GetRequiredService<AuditableSaveChangesInterceptor>())
                        // Business has a soft-delete query filter while its schedule
                        // children (ScheduleTemplate/Override) intentionally do not.
