@@ -31,7 +31,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
         // ---------- BUSINESS ----------
 
         /// <inheritdoc />
-        public async Task EnsureCanManageBusinessAsync(int businessId, CancellationToken cancellationToken = default)
+        public async Task EnsureCanManageBusinessAsync(Guid businessId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
@@ -45,7 +45,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
         }
 
         /// <inheritdoc />
-        public async Task EnsureCanManageBusinessResourcesAsync(int businessId, CancellationToken cancellationToken = default)
+        public async Task EnsureCanManageBusinessResourcesAsync(Guid businessId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
@@ -68,7 +68,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
         // ---------- EMPLOYEE ----------
 
         /// <inheritdoc />
-        public async Task EnsureCanViewEmployeeAsync(int employeeId, CancellationToken cancellationToken = default)
+        public async Task EnsureCanViewEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
@@ -93,14 +93,14 @@ namespace MRC.Agendia.Infrastructure.Authorization
         }
 
         /// <inheritdoc />
-        public async Task EnsureCanUpdateEmployeeAsync(int employeeId, CancellationToken cancellationToken = default)
+        public async Task EnsureCanUpdateEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default)
         {
             // Same rules as view: admin, owner, or the employee themselves
             await EnsureCanViewEmployeeAsync(employeeId, cancellationToken);
         }
 
         /// <inheritdoc />
-        public async Task EnsureCanDeleteEmployeeAsync(int employeeId, CancellationToken cancellationToken = default)
+        public async Task EnsureCanDeleteEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
@@ -108,7 +108,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
             var businessId = await _context.Employees
                 .AsNoTracking()
                 .Where(e => e.Id == employeeId)
-                .Select(e => (int?)e.BusinessId)
+                .Select(e => (Guid?)e.BusinessId)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (businessId is null)
@@ -125,7 +125,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
         // ---------- APPOINTMENT ----------
 
         /// <inheritdoc />
-        public async Task EnsureCanManageAppointmentAsync(int appointmentId, CancellationToken cancellationToken = default)
+        public async Task EnsureCanManageAppointmentAsync(Guid appointmentId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
@@ -160,7 +160,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
         }
 
         /// <inheritdoc />
-        public async Task EnsureCanCreateAppointmentAsync(string clientUserId, int employeeId, CancellationToken cancellationToken = default)
+        public async Task EnsureCanCreateAppointmentAsync(string clientUserId, Guid employeeId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
@@ -201,7 +201,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
             var businessId = await _context.Appointments
                 .AsNoTracking()
                 .Where(a => a.SeriesId == seriesId)
-                .Select(a => (int?)a.Employee.BusinessId)
+                .Select(a => (Guid?)a.Employee.BusinessId)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (businessId is null)
@@ -213,12 +213,12 @@ namespace MRC.Agendia.Infrastructure.Authorization
         // ---------- BUSINESS-SCOPED RESOURCES (with id lookup) ----------
 
         /// <inheritdoc />
-        public async Task EnsureCanManageServiceAsync(int serviceId, CancellationToken cancellationToken = default)
+        public async Task EnsureCanManageServiceAsync(Guid serviceId, CancellationToken cancellationToken = default)
         {
             var businessId = await _context.Services
                 .AsNoTracking()
                 .Where(s => s.Id == serviceId)
-                .Select(s => (int?)s.BusinessId)
+                .Select(s => (Guid?)s.BusinessId)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (businessId is null)
@@ -228,12 +228,12 @@ namespace MRC.Agendia.Infrastructure.Authorization
         }
 
         /// <inheritdoc />
-        public async Task EnsureCanManageScheduleTemplateAsync(int templateId, CancellationToken cancellationToken = default)
+        public async Task EnsureCanManageScheduleTemplateAsync(Guid templateId, CancellationToken cancellationToken = default)
         {
             var businessId = await _context.ScheduleTemplates
                 .AsNoTracking()
                 .Where(t => t.Id == templateId)
-                .Select(t => (int?)t.BusinessId)
+                .Select(t => (Guid?)t.BusinessId)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (businessId is null)
@@ -243,12 +243,12 @@ namespace MRC.Agendia.Infrastructure.Authorization
         }
 
         /// <inheritdoc />
-        public async Task EnsureCanManageScheduleOverrideAsync(int overrideId, CancellationToken cancellationToken = default)
+        public async Task EnsureCanManageScheduleOverrideAsync(Guid overrideId, CancellationToken cancellationToken = default)
         {
             var businessId = await _context.ScheduleOverrides
                 .AsNoTracking()
                 .Where(o => o.Id == overrideId)
-                .Select(o => (int?)o.BusinessId)
+                .Select(o => (Guid?)o.BusinessId)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (businessId is null)

@@ -3,6 +3,7 @@ using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Infrastructure.Messaging;
+using MRC.Agendia.Infrastructure.Persistence;
 
 namespace MRC.Agendia.Infrastructure;
 
@@ -275,5 +276,24 @@ public class AgendiaDbContext : DbContext
             .HasIndex(m => m.OccurredOnUtc)
             .HasFilter("\"ProcessedOnUtc\" IS NULL")
             .HasDatabaseName("IX_OutboxMessage_Pending");
+
+        // Guid primary keys are generated as sequential UUIDv7 client-side, at Add
+        // time (not by the database), so ids are known before SaveChanges - two
+        // just-added entities never collide on Guid.Empty. EF skips the generator
+        // when a value is already set, so provisioned projections keep their external
+        // Guid. The DB column has no default (the value always arrives from the app).
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            var primaryKey = entityType.FindPrimaryKey();
+            if (primaryKey is null) continue;
+
+            foreach (var property in primaryKey.Properties)
+            {
+                if (property.ClrType == typeof(Guid))
+                    modelBuilder.Entity(entityType.ClrType).Property(property.Name)
+                        .HasValueGenerator(typeof(UuidV7ValueGenerator))
+                        .ValueGeneratedOnAdd();
+            }
+        }
     }
 }

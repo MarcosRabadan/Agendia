@@ -20,12 +20,12 @@ namespace MRC.Agendia.Application.Services
         /// <param name="id">The service identifier.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns><c>true</c> when the service is deleted.</returns>
-        Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
+        Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Restores a previously soft-deleted service by its identifier.</summary>
         /// <param name="id">The service identifier.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns><c>true</c> when the service is restored or was not deleted.</returns>
-        Task<bool> RestoreAsync(int id, CancellationToken cancellationToken = default);
+        Task<bool> RestoreAsync(Guid id, CancellationToken cancellationToken = default);
     }
 }

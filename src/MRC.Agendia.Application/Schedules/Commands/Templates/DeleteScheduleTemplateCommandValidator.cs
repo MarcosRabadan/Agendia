@@ -6,7 +6,7 @@ namespace MRC.Agendia.Application.Schedules.Commands.Templates
     {
         public DeleteScheduleTemplateCommandValidator()
         {
-            RuleFor(x => x.Id).GreaterThan(0);
+            RuleFor(x => x.Id).NotEmpty();
         }
     }
 }

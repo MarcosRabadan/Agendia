@@ -19,7 +19,7 @@ namespace MRC.Agendia.Application.Holidays
         /// <param name="id">The holiday identifier.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The holiday calendar DTO, or <c>null</c> if not found.</returns>
-        Task<HolidayCalendarDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<HolidayCalendarDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Creates a new holiday calendar entry.</summary>
         /// <param name="dto">The data used to create the holiday.</param>
@@ -37,6 +37,6 @@ namespace MRC.Agendia.Application.Holidays
         /// <param name="id">The holiday identifier.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns><c>true</c> when the holiday is deleted.</returns>
-        Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
+        Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     }
 }

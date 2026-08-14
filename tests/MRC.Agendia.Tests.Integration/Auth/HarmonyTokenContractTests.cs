@@ -60,7 +60,7 @@ namespace MRC.Agendia.Tests.Integration.Auth
             // against the caller's "sub" claim, so it proves the mapping end to end.
             var owner = await TestProvisioning.ProvisionOwnerAsync(_client, "contract");
 
-            Assert.NotEqual(0, owner.EmployeeId);
+            Assert.NotEqual(Guid.Empty, owner.EmployeeId);
             Assert.Equal(owner.OwnerUserId, owner.Business.OwnerUserId);
         }
 

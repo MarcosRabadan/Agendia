@@ -42,7 +42,7 @@ namespace MRC.Agendia.Api.Controllers
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(AppointmentDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<AppointmentDto>> GetById(int id)
+        public async Task<ActionResult<AppointmentDto>> GetById(Guid id)
         {
             var result = await _mediator.Send(new GetAppointmentByIdQuery(id));
             if (result is null) return NotFound();
@@ -51,12 +51,12 @@ namespace MRC.Agendia.Api.Controllers
 
         /// <summary>Returns the appointments of a business that overlap the given date range. Staff only.</summary>
         [Authorize(Roles = RolePolicies.Staff)]
-        [HttpGet("business/{businessId:int}")]
+        [HttpGet("business/{businessId:guid}")]
         [ProducesResponseType(typeof(IEnumerable<AppointmentDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<ActionResult<IEnumerable<AppointmentDto>>> GetByBusinessAndDateRange(
-            int businessId,
+            Guid businessId,
             [FromQuery] DateTime startDate,
             [FromQuery] DateTime endDate)
         {
@@ -85,7 +85,7 @@ namespace MRC.Agendia.Api.Controllers
         [ProducesResponseType(typeof(AppointmentDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<AppointmentDto>> Update(int id, [FromBody] UpdateAppointmentDto dto)
+        public async Task<ActionResult<AppointmentDto>> Update(Guid id, [FromBody] UpdateAppointmentDto dto)
         {
             if (id != dto.Id) return BadRequest("Id mismatch.");
             var result = await _mediator.Send(new UpdateAppointmentCommand(dto));
@@ -101,7 +101,7 @@ namespace MRC.Agendia.Api.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(Guid id)
         {
             await _mediator.Send(new DeleteAppointmentCommand(id));
             return NoContent();
@@ -170,7 +170,7 @@ namespace MRC.Agendia.Api.Controllers
         [HttpPost("{id}/restore")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Restore(int id)
+        public async Task<IActionResult> Restore(Guid id)
         {
             await _mediator.Send(new RestoreAppointmentCommand(id));
             return NoContent();

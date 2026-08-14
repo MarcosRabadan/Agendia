@@ -87,7 +87,7 @@ namespace MRC.Agendia.Infrastructure.Caching
         // ----- Pass-through (not cached) -----
 
         /// <inheritdoc />
-        public Task<HolidayCalendar?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        public Task<HolidayCalendar?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
             => _inner.GetByIdAsync(id, cancellationToken);
 
         /// <inheritdoc />

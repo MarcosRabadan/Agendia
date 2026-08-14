@@ -33,38 +33,38 @@ namespace MRC.Agendia.Tests.Unit.Application.ServiceLayer
         public async Task Service_update_missing_throws()
         {
             var repo = Substitute.For<IServiceRepository>();
-            repo.GetByIdAsync(9, Arg.Any<CancellationToken>()).Returns((Service?)null);
+            repo.GetByIdAsync(TestIds.Of(9), Arg.Any<CancellationToken>()).Returns((Service?)null);
 
             await Assert.ThrowsAsync<ServiceNotFoundException>(() =>
-                BuildServices(repo).UpdateAsync(new UpdateServiceDto(9, 30)));
+                BuildServices(repo).UpdateAsync(new UpdateServiceDto(TestIds.Of(9), 30)));
         }
 
         [Fact]
         public async Task Service_delete_missing_throws()
         {
             var repo = Substitute.For<IServiceRepository>();
-            repo.GetByIdAsync(9, Arg.Any<CancellationToken>()).Returns((Service?)null);
+            repo.GetByIdAsync(TestIds.Of(9), Arg.Any<CancellationToken>()).Returns((Service?)null);
 
-            await Assert.ThrowsAsync<ServiceNotFoundException>(() => BuildServices(repo).DeleteAsync(9));
+            await Assert.ThrowsAsync<ServiceNotFoundException>(() => BuildServices(repo).DeleteAsync(TestIds.Of(9)));
         }
 
         [Fact]
         public async Task Service_restore_missing_throws()
         {
             var repo = Substitute.For<IServiceRepository>();
-            repo.GetByIdIncludingDeletedAsync(9, Arg.Any<CancellationToken>()).Returns((Service?)null);
+            repo.GetByIdIncludingDeletedAsync(TestIds.Of(9), Arg.Any<CancellationToken>()).Returns((Service?)null);
 
-            await Assert.ThrowsAsync<ServiceNotFoundException>(() => BuildServices(repo).RestoreAsync(9));
+            await Assert.ThrowsAsync<ServiceNotFoundException>(() => BuildServices(repo).RestoreAsync(TestIds.Of(9)));
         }
 
         [Fact]
         public async Task Service_restore_when_not_deleted_is_idempotent_noop()
         {
             var repo = Substitute.For<IServiceRepository>();
-            repo.GetByIdIncludingDeletedAsync(1, Arg.Any<CancellationToken>())
-                .Returns(new Service { Id = 1, IsDeleted = false });
+            repo.GetByIdIncludingDeletedAsync(TestIds.Of(1), Arg.Any<CancellationToken>())
+                .Returns(new Service { Id = TestIds.Of(1), IsDeleted = false });
 
-            var result = await BuildServices(repo).RestoreAsync(1);
+            var result = await BuildServices(repo).RestoreAsync(TestIds.Of(1));
 
             Assert.True(result);
             repo.DidNotReceive().Update(Arg.Any<Service>());
@@ -75,10 +75,10 @@ namespace MRC.Agendia.Tests.Unit.Application.ServiceLayer
         public async Task Service_restore_when_deleted_undeletes_and_saves()
         {
             var repo = Substitute.For<IServiceRepository>();
-            var entity = new Service { Id = 1, IsDeleted = true, DeletedAt = DateTime.UtcNow };
-            repo.GetByIdIncludingDeletedAsync(1, Arg.Any<CancellationToken>()).Returns(entity);
+            var entity = new Service { Id = TestIds.Of(1), IsDeleted = true, DeletedAt = DateTime.UtcNow };
+            repo.GetByIdIncludingDeletedAsync(TestIds.Of(1), Arg.Any<CancellationToken>()).Returns(entity);
 
-            var result = await BuildServices(repo).RestoreAsync(1);
+            var result = await BuildServices(repo).RestoreAsync(TestIds.Of(1));
 
             Assert.True(result);
             Assert.False(entity.IsDeleted);
@@ -93,21 +93,21 @@ namespace MRC.Agendia.Tests.Unit.Application.ServiceLayer
         public async Task Business_update_missing_throws()
         {
             var repo = Substitute.For<IBusinessRepository>();
-            repo.GetByIdAsync(9, Arg.Any<CancellationToken>()).Returns((MRC.Agendia.Domain.Entities.Business?)null);
+            repo.GetByIdAsync(TestIds.Of(9), Arg.Any<CancellationToken>()).Returns((MRC.Agendia.Domain.Entities.Business?)null);
 
             await Assert.ThrowsAsync<BusinessNotFoundException>(() =>
                 new BusinessService(repo, _uow, _mapper)
-                    .UpdateAsync(new UpdateBusinessDto(9, IsActive: true)));
+                    .UpdateAsync(new UpdateBusinessDto(TestIds.Of(9), IsActive: true)));
         }
 
         [Fact]
         public async Task Employee_delete_missing_throws()
         {
             var repo = Substitute.For<IEmployeeRepository>();
-            repo.GetByIdAsync(9, Arg.Any<CancellationToken>()).Returns((Employee?)null);
+            repo.GetByIdAsync(TestIds.Of(9), Arg.Any<CancellationToken>()).Returns((Employee?)null);
 
             await Assert.ThrowsAsync<EmployeeNotFoundException>(() =>
-                new EmployeeService(repo, _uow, _mapper).DeleteAsync(9));
+                new EmployeeService(repo, _uow, _mapper).DeleteAsync(TestIds.Of(9)));
         }
 
         // ---------- Holiday (not soft-deletable): not-found paths ----------
@@ -116,20 +116,20 @@ namespace MRC.Agendia.Tests.Unit.Application.ServiceLayer
         public async Task Holiday_update_missing_throws()
         {
             var repo = Substitute.For<IHolidayCalendarRepository>();
-            repo.GetByIdAsync(9, Arg.Any<CancellationToken>()).Returns((HolidayCalendar?)null);
+            repo.GetByIdAsync(TestIds.Of(9), Arg.Any<CancellationToken>()).Returns((HolidayCalendar?)null);
 
             await Assert.ThrowsAsync<HolidayNotFoundException>(() =>
                 new HolidayService(repo, _uow, _mapper)
-                    .UpdateAsync(new UpdateHolidayCalendarDto(9, new DateOnly(2026, 5, 1), "X", HolidayScope.National, 2026)));
+                    .UpdateAsync(new UpdateHolidayCalendarDto(TestIds.Of(9), new DateOnly(2026, 5, 1), "X", HolidayScope.National, 2026)));
         }
 
         [Fact]
         public async Task Holiday_delete_missing_throws()
         {
             var repo = Substitute.For<IHolidayCalendarRepository>();
-            repo.GetByIdAsync(9, Arg.Any<CancellationToken>()).Returns((HolidayCalendar?)null);
+            repo.GetByIdAsync(TestIds.Of(9), Arg.Any<CancellationToken>()).Returns((HolidayCalendar?)null);
 
-            await Assert.ThrowsAsync<HolidayNotFoundException>(() => new HolidayService(repo, _uow, _mapper).DeleteAsync(9));
+            await Assert.ThrowsAsync<HolidayNotFoundException>(() => new HolidayService(repo, _uow, _mapper).DeleteAsync(TestIds.Of(9)));
         }
     }
 }

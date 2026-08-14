@@ -12,7 +12,7 @@ namespace MRC.Agendia.Application.Schedules.Queries.Calendar
 
         public GetCalendarQueryValidator()
         {
-            RuleFor(x => x.BusinessId).GreaterThan(0);
+            RuleFor(x => x.BusinessId).NotEmpty();
 
             // Absolute bounds so the day-by-day resolution cannot overflow
             // DateOnly.MaxValue (would be a 500 instead of a 400).

@@ -34,15 +34,15 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         {
             // The guard just runs the critical section directly in unit tests.
             _bookingGuard.ExecuteSerializedAsync(
-                    Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task<Appointment>>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task<Appointment>>>(), Arg.Any<CancellationToken>())
                 .Returns(ci => ci.Arg<Func<Task<Appointment>>>()());
             _bookingGuard.ExecuteSerializedAsync(
-                    Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
                 .Returns(ci => ci.Arg<Func<Task>>()());
 
             _clock.BusinessNow.Returns(new DateTime(2030, 1, 1));
-            _serviceRepository.GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-                .Returns(new Service { Id = 3, BusinessId = 10, DurationMinutes = 30 });
+            _serviceRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(new Service { Id = TestIds.Of(3), BusinessId = TestIds.Of(10), DurationMinutes = 30 });
             _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
 
             _sut = new RecurringAppointmentService(
@@ -74,8 +74,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             // The 2nd occurrence is full; the rest fit.
             _validator.EnsureValidAsync(
-                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(),
-                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
                 .Returns(
                     Task.CompletedTask,
                     Task.FromException(new AppointmentConflictException("El empleado ya tiene otra cita.")),
@@ -93,7 +93,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         [Fact]
         public async Task CreateSeriesAsync_ServicioInexistente_Lanza()
         {
-            _serviceRepository.GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            _serviceRepository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                 .Returns((Service?)null);
 
             var dto = WeeklySeries(new DateOnly(2030, 1, 7), until: new DateOnly(2030, 1, 21));
@@ -124,9 +124,9 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             // The two cancelled future occurrences free their slots -> waitlist notified;
             // the past, already-cancelled and completed ones do not.
-            await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(2, Arg.Any<CancellationToken>());
-            await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(3, Arg.Any<CancellationToken>());
-            await _waitlistService.Received(2).NotifyForFreedAppointmentAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+            await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(TestIds.Of(2), Arg.Any<CancellationToken>());
+            await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(TestIds.Of(3), Arg.Any<CancellationToken>());
+            await _waitlistService.Received(2).NotifyForFreedAppointmentAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]
@@ -149,9 +149,9 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             // Only the two future, still-occupying occurrences free a slot -> waitlist
             // notified; the past completed occurrence does not.
-            await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(2, Arg.Any<CancellationToken>());
-            await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(3, Arg.Any<CancellationToken>());
-            await _waitlistService.Received(2).NotifyForFreedAppointmentAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+            await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(TestIds.Of(2), Arg.Any<CancellationToken>());
+            await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(TestIds.Of(3), Arg.Any<CancellationToken>());
+            await _waitlistService.Received(2).NotifyForFreedAppointmentAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]
@@ -167,8 +167,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             // First moves fine, second hits a closed day.
             _validator.EnsureValidAsync(
-                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(),
-                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
                 .Returns(
                     Task.CompletedTask,
                     Task.FromException(new AppointmentOutsideScheduleException("El negocio esta cerrado.")));
@@ -208,8 +208,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // rejects it; a2 -> Feb 15 fits. The a1 skip must carry the collision code,
             // not the generic conflict, so the silent collapse is visible.
             _validator.EnsureValidAsync(
-                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(),
-                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
                 .Returns(
                     Task.FromException(new AppointmentConflictException("El empleado ya tiene otra cita.")),
                     Task.CompletedTask);
@@ -231,8 +231,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // Every occurrence is full -> all skipped, none created. The action must
             // still be audited (skip-only is not "nothing happened").
             _validator.EnsureValidAsync(
-                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(),
-                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
                 .Returns(Task.FromException(new AppointmentConflictException("Lleno.")));
 
             var result = await _sut.CreateSeriesAsync(dto);
@@ -253,8 +253,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                 .Returns(new List<Appointment> { a1 });
 
             _validator.EnsureValidAsync(
-                    Arg.Any<int?>(), Arg.Any<int>(), Arg.Any<int>(),
-                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
                 .Returns(Task.FromException(new AppointmentOutsideScheduleException("Cerrado.")));
 
             var result = await _sut.MoveSeriesAsync(seriesId, new MoveAppointmentSeriesDto(NewStartTime: null, DayShift: 7));
@@ -266,18 +266,18 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         }
 
         private static CreateAppointmentSeriesDto WeeklySeries(DateOnly start, DateOnly until) => new(
-            ClientUserId: "client-1", EmployeeId: 2, ServiceId: 3,
+            ClientUserId: "client-1", EmployeeId: TestIds.Of(2), ServiceId: TestIds.Of(3),
             StartTime: new TimeOnly(16, 0),
             Frequency: RecurrenceFrequency.Weekly, Interval: 1,
             DaysOfWeek: new[] { start.DayOfWeek }, DayOfMonth: null,
             StartDate: start, UntilDate: until, Notes: "Clase");
 
-        private static Appointment Appt(int id, DateTime start, AppointmentStatus status, Guid seriesId) => new()
+        private static Appointment Appt(int idSeed, DateTime start, AppointmentStatus status, Guid seriesId) => new()
         {
-            Id = id,
+            Id = TestIds.Of(idSeed),
             ClientUserId = "client-1",
-            EmployeeId = 2,
-            ServiceId = 3,
+            EmployeeId = TestIds.Of(2),
+            ServiceId = TestIds.Of(3),
             StartDate = start,
             EndDate = start.AddMinutes(30),
             Status = status,

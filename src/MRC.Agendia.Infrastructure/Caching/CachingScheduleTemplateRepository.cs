@@ -28,14 +28,14 @@ namespace MRC.Agendia.Infrastructure.Caching
             _cache = cache;
         }
 
-        private static string Key(int businessId) => $"sched-templates:{businessId}";
+        private static string Key(Guid businessId) => $"sched-templates:{businessId}";
 
         /// <inheritdoc />
-        public async Task<IEnumerable<ScheduleTemplate>> GetByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<ScheduleTemplate>> GetByBusinessIdAsync(Guid businessId, CancellationToken cancellationToken = default)
             => await GetCachedByBusinessAsync(businessId, cancellationToken);
 
         /// <inheritdoc />
-        public async Task<ScheduleTemplate?> GetEffectiveTemplateAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default)
+        public async Task<ScheduleTemplate?> GetEffectiveTemplateAsync(Guid businessId, DateOnly date, CancellationToken cancellationToken = default)
         {
             // Same selection rule as ScheduleResolver.SelectTemplate, served from cache.
             var templates = await GetCachedByBusinessAsync(businessId, cancellationToken);
@@ -45,7 +45,7 @@ namespace MRC.Agendia.Infrastructure.Caching
                 .FirstOrDefault();
         }
 
-        private async Task<IReadOnlyList<ScheduleTemplate>> GetCachedByBusinessAsync(int businessId, CancellationToken cancellationToken)
+        private async Task<IReadOnlyList<ScheduleTemplate>> GetCachedByBusinessAsync(Guid businessId, CancellationToken cancellationToken)
         {
             if (_cache.TryGetValue(Key(businessId), out IReadOnlyList<ScheduleTemplate>? cached) && cached is not null)
                 return cached;
@@ -81,18 +81,18 @@ namespace MRC.Agendia.Infrastructure.Caching
         // ----- Pass-through (not cached) -----
 
         /// <inheritdoc />
-        public Task<ScheduleTemplate?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        public Task<ScheduleTemplate?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
             => _inner.GetByIdAsync(id, cancellationToken);
 
         /// <inheritdoc />
-        public Task<ScheduleTemplate?> GetByIdWithSlotsAsync(int id, CancellationToken cancellationToken = default)
+        public Task<ScheduleTemplate?> GetByIdWithSlotsAsync(Guid id, CancellationToken cancellationToken = default)
             => _inner.GetByIdWithSlotsAsync(id, cancellationToken);
 
         /// <inheritdoc />
-        public Task<bool> HasOverlappingTemplateAsync(int businessId,
+        public Task<bool> HasOverlappingTemplateAsync(Guid businessId,
                                                       DateOnly from,
                                                       DateOnly to,
-                                                      int? excludeId = null,
+                                                      Guid? excludeId = null,
                                                       CancellationToken cancellationToken = default)
             => _inner.HasOverlappingTemplateAsync(businessId, from, to, excludeId, cancellationToken);
     }

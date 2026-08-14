@@ -6,7 +6,7 @@ namespace MRC.Agendia.Application.Business.Commands.Delete
     {
         public DeleteBusinessCommandValidator()
         {
-            RuleFor(x => x.Id).GreaterThan(0);
+            RuleFor(x => x.Id).NotEmpty();
         }
     }
 }

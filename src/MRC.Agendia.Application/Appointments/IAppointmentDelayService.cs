@@ -15,6 +15,6 @@ namespace MRC.Agendia.Application.Appointments
         /// <param name="dto">Delay in minutes plus the scope (whole business or a single employee) and an optional cap on the number notified.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>How many clients were notified.</returns>
-        Task<DelayNotificationResultDto> NotifyDelayAsync(int businessId, NotifyDelayDto dto, CancellationToken cancellationToken = default);
+        Task<DelayNotificationResultDto> NotifyDelayAsync(Guid businessId, NotifyDelayDto dto, CancellationToken cancellationToken = default);
     }
 }

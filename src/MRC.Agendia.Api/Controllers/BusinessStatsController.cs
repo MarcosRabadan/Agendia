@@ -8,7 +8,7 @@ using MRC.Agendia.Domain.Constants;
 namespace MRC.Agendia.Api.Controllers
 {
     [ApiController]
-    [Route("api/businesses/{businessId:int}/stats")]
+    [Route("api/businesses/{businessId:guid}/stats")]
     [Produces("application/json")]
     public class BusinessStatsController : ControllerBase
     {
@@ -31,7 +31,7 @@ namespace MRC.Agendia.Api.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<ActionResult<BusinessStatsDto>> GetStats(
-            int businessId,
+            Guid businessId,
             [FromQuery] DateOnly from,
             [FromQuery] DateOnly to)
         {

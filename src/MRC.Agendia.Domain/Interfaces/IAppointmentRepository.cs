@@ -9,13 +9,13 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="id">Appointment id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The appointment, or null when it is soft-deleted or missing.</returns>
-        Task<Appointment?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<Appointment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Gets an appointment by id ignoring the soft-delete filter (for restore).</summary>
         /// <param name="id">Appointment id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The appointment even if soft-deleted, or null when missing.</returns>
-        Task<Appointment?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default);
+        Task<Appointment?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets an appointment by id with its service, extra services and employee
@@ -29,7 +29,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="id">Appointment id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The appointment with details, or null only when no row has that id.</returns>
-        Task<Appointment?> GetByIdWithDetailsAsync(int id, CancellationToken cancellationToken = default);
+        Task<Appointment?> GetByIdWithDetailsAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Live appointment (honours the soft-delete filter) with its extra
@@ -39,7 +39,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="id">Appointment id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The appointment with its extra services, or null when soft-deleted or missing.</returns>
-        Task<Appointment?> GetByIdWithExtrasAsync(int id, CancellationToken cancellationToken = default);
+        Task<Appointment?> GetByIdWithExtrasAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Gets a page of live appointments with their extra services, newest start date first.</summary>
         /// <param name="page">1-based page number.</param>
@@ -82,7 +82,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="endDate">Range end (exclusive on overlap).</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The overlapping appointments.</returns>
-        Task<IEnumerable<Appointment>> GetByBusinessIdAndDateRangeAsync(int businessId,
+        Task<IEnumerable<Appointment>> GetByBusinessIdAndDateRangeAsync(Guid businessId,
                                                                         DateTime startDate,
                                                                         DateTime endDate,
                                                                         CancellationToken cancellationToken = default);
@@ -98,10 +98,10 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="excludeAppointmentId">Appointment id to exclude (the one being rescheduled), or null.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The number of overlapping occupying appointments.</returns>
-        Task<int> CountOverlappingForEmployeeAsync(int employeeId,
+        Task<int> CountOverlappingForEmployeeAsync(Guid employeeId,
                                                    DateTime startDate,
                                                    DateTime endDate,
-                                                   int? excludeAppointmentId,
+                                                   Guid? excludeAppointmentId,
                                                    CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -124,8 +124,8 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="toExclusive">Window end (exclusive).</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The matching upcoming appointments ordered by start date.</returns>
-        Task<IReadOnlyList<Appointment>> GetUpcomingForDelayAsync(int businessId,
-                                                                  int? employeeId,
+        Task<IReadOnlyList<Appointment>> GetUpcomingForDelayAsync(Guid businessId,
+                                                                  Guid? employeeId,
                                                                   DateTime fromInclusive,
                                                                   DateTime toExclusive,
                                                                   CancellationToken cancellationToken = default);
@@ -138,7 +138,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="appointmentId">Appointment id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The extra service ids, or an empty list when there are none.</returns>
-        Task<IReadOnlyList<int>> GetExtraServiceIdsAsync(int appointmentId, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<Guid>> GetExtraServiceIdsAsync(Guid appointmentId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// The owning business's self-service cancellation window in hours for the
@@ -148,7 +148,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="appointmentId">Appointment id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The cancellation window in hours, or null when missing or not configured.</returns>
-        Task<int?> GetCancellationWindowHoursAsync(int appointmentId, CancellationToken cancellationToken = default);
+        Task<int?> GetCancellationWindowHoursAsync(Guid appointmentId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Projects the fields an appointment integration event needs (including the
@@ -159,7 +159,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="appointmentId">Appointment id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The notification context, or null when the appointment is missing.</returns>
-        Task<AppointmentNotificationContext?> GetNotificationContextAsync(int appointmentId, CancellationToken cancellationToken = default);
+        Task<AppointmentNotificationContext?> GetNotificationContextAsync(Guid appointmentId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// The owning business's default initial appointment status, resolved through
@@ -168,6 +168,6 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="employeeId">Employee the appointment is booked with.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The business's configured default initial status (Pending as fallback).</returns>
-        Task<AppointmentStatus> GetBusinessDefaultStatusByEmployeeAsync(int employeeId, CancellationToken cancellationToken = default);
+        Task<AppointmentStatus> GetBusinessDefaultStatusByEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default);
     }
 }

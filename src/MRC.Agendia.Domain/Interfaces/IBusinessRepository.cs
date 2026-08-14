@@ -8,13 +8,13 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="id">Business id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The business, or null when soft-deleted, out of scope, or missing.</returns>
-        Task<Business?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<Business?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Gets a business by id ignoring the soft-delete filter (for restore).</summary>
         /// <param name="id">Business id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The business even if soft-deleted, or null when missing.</returns>
-        Task<Business?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default);
+        Task<Business?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets an active, non-deleted business by id, ignoring the business-scope
@@ -24,7 +24,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="id">Business id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The active business, or null when inactive, soft-deleted, or missing.</returns>
-        Task<Business?> GetActiveByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<Business?> GetActiveByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Adds a new business to the context.</summary>
         /// <param name="business">The business to add.</param>

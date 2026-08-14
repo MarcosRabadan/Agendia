@@ -27,7 +27,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
         private bool _resolved;
         private bool _isRestricted;
-        private int[] _businessIds = Array.Empty<int>();
+        private Guid[] _businessIds = Array.Empty<Guid>();
 
         public CurrentBusinessScope(ICurrentUserContext currentUser, IServiceScopeFactory scopeFactory)
         {
@@ -42,7 +42,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
         }
 
         /// <inheritdoc />
-        public IReadOnlyCollection<int> BusinessIds
+        public IReadOnlyCollection<Guid> BusinessIds
         {
             get { Resolve(); return _businessIds; }
         }

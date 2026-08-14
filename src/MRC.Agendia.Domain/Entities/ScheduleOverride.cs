@@ -4,8 +4,8 @@ namespace MRC.Agendia.Domain.Entities
 {
     public class ScheduleOverride
     {
-        public int Id { get; set; }
-        public int BusinessId { get; set; }
+        public Guid Id { get; set; }
+        public Guid BusinessId { get; set; }
         public DateOnly Date { get; set; }
         public ScheduleOverrideType OverrideType { get; set; }
         public string? Reason { get; set; }

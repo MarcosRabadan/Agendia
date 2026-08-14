@@ -11,7 +11,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         }
 
         /// <inheritdoc />
-        public Task<Service?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default)
+        public Task<Service?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default)
             => Set
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
@@ -21,7 +21,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         // scope (#58); re-apply !IsDeleted explicitly since the filter is bypassed.
         // The management paths (Update/Delete/validator) keep the scoped GetByIdAsync.
         /// <inheritdoc />
-        public Task<Service?> GetByIdPublicAsync(int id, CancellationToken cancellationToken = default)
+        public Task<Service?> GetByIdPublicAsync(Guid id, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
                 .IgnoreQueryFilters()

@@ -12,7 +12,7 @@ namespace MRC.Agendia.Application.Schedules.Commands.Generation
     {
         public GenerateScheduleRequestDtoValidator()
         {
-            RuleFor(x => x.BusinessId).GreaterThan(0);
+            RuleFor(x => x.BusinessId).NotEmpty();
             RuleFor(x => x.Year)
                 .GreaterThanOrEqualTo(2000)
                 .LessThanOrEqualTo(2100);

@@ -3,5 +3,5 @@ using MRC.Agendia.Application.Schedules.DTO;
 
 namespace MRC.Agendia.Application.Schedules.Queries.Templates
 {
-    public record GetScheduleTemplatesByBusinessIdQuery(int BusinessId) : IRequest<IEnumerable<ScheduleTemplateDto>>;
+    public record GetScheduleTemplatesByBusinessIdQuery(Guid BusinessId) : IRequest<IEnumerable<ScheduleTemplateDto>>;
 }

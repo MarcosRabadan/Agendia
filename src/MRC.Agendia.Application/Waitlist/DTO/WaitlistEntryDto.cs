@@ -3,11 +3,11 @@ using MRC.Agendia.Domain.Enums;
 namespace MRC.Agendia.Application.Waitlist.DTO
 {
     public record WaitlistEntryDto(
-        int Id,
-        int BusinessId,
-        int ServiceId,
+        Guid Id,
+        Guid BusinessId,
+        Guid ServiceId,
         string ClientUserId,
-        int? EmployeeId,
+        Guid? EmployeeId,
         DateOnly Date,
         TimeOnly StartTime,
         WaitlistStatus Status,

@@ -6,11 +6,11 @@ namespace MRC.Agendia.Domain.Events
     /// <c>Appointment.ReminderSentAt</c>). The consumer delivers the reminder in
     /// <see cref="Language"/> to the client resolved from <see cref="ClientUserId"/>.
     /// </summary>
-    public sealed record AppointmentReminder(int AppointmentId,
-                                             int BusinessId,
-                                             int EmployeeId,
+    public sealed record AppointmentReminder(Guid AppointmentId,
+                                             Guid BusinessId,
+                                             Guid EmployeeId,
                                              string ClientUserId,
-                                             int ServiceId,
+                                             Guid ServiceId,
                                              DateTime StartDate,
                                              DateTime EndDate,
                                              string Language,

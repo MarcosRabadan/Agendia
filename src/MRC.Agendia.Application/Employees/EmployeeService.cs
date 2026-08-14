@@ -41,7 +41,7 @@ namespace MRC.Agendia.Application.Employees
         }
 
         /// <inheritdoc />
-        public async Task<EmployeeDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<EmployeeDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken);
             return entity is null ? null : _mapper.Map<EmployeeDto>(entity);
@@ -69,7 +69,7 @@ namespace MRC.Agendia.Application.Employees
         }
 
         /// <inheritdoc />
-        public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken)
                 ?? throw new EmployeeNotFoundException(id);
@@ -80,7 +80,7 @@ namespace MRC.Agendia.Application.Employees
         }
 
         /// <inheritdoc />
-        public async Task<bool> RestoreAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<bool> RestoreAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdIncludingDeletedAsync(id, cancellationToken)
                 ?? throw new EmployeeNotFoundException(id);

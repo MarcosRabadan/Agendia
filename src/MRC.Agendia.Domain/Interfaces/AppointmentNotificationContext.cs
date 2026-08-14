@@ -5,11 +5,11 @@ namespace MRC.Agendia.Domain.Interfaces
     /// including the owning business's default language, so building an event is a
     /// single query rather than loading the full appointment graph.
     /// </summary>
-    public sealed record AppointmentNotificationContext(int AppointmentId,
-                                                        int BusinessId,
-                                                        int EmployeeId,
+    public sealed record AppointmentNotificationContext(Guid AppointmentId,
+                                                        Guid BusinessId,
+                                                        Guid EmployeeId,
                                                         string ClientUserId,
-                                                        int ServiceId,
+                                                        Guid ServiceId,
                                                         DateTime StartDate,
                                                         DateTime EndDate,
                                                         string Language);

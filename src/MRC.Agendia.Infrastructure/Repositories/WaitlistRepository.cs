@@ -13,7 +13,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
 
         /// <inheritdoc />
         public Task<bool> ExistsWaitingAsync(
-            string clientUserId, int businessId, int serviceId, DateOnly date, TimeOnly startTime, int? employeeId,
+            string clientUserId, Guid businessId, Guid serviceId, DateOnly date, TimeOnly startTime, Guid? employeeId,
             CancellationToken cancellationToken = default)
             => Set.AnyAsync(w =>
                 w.ClientUserId == clientUserId
@@ -27,7 +27,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
 
         /// <inheritdoc />
         public Task<WaitlistEntry?> GetNextWaitingForSlotAsync(
-            int businessId, int serviceId, DateOnly date, TimeOnly startTime, int employeeId,
+            Guid businessId, Guid serviceId, DateOnly date, TimeOnly startTime, Guid employeeId,
             CancellationToken cancellationToken = default)
             // IgnoreQueryFilters + explicit liveness: never notify for a service that
             // was soft-deleted (BIZ-03). Tracked so the caller marks it Notified.

@@ -4,8 +4,8 @@ namespace MRC.Agendia.Domain.Entities
 {
     public class WeeklyTimeSlot
     {
-        public int Id { get; set; }
-        public int ScheduleTemplateId { get; set; }
+        public Guid Id { get; set; }
+        public Guid ScheduleTemplateId { get; set; }
         public DayOfWeek DayOfWeek { get; set; }
         public TimeOnly StartTime { get; set; }
         public TimeOnly EndTime { get; set; }

@@ -34,7 +34,7 @@ namespace MRC.Agendia.Tests.Integration.Concurrency
             {
                 await using var ctx = _postgres.CreateContext();
                 var guard = new BookingConcurrencyGuard(ctx);
-                await guard.ExecuteSerializedAsync(employeeId: 1, date, async () =>
+                await guard.ExecuteSerializedAsync(employeeId: TestIds.Of(1), date, async () =>
                 {
                     events.Enqueue(($"{tag}-start", DateTime.UtcNow.Ticks));
                     await Task.Delay(400);

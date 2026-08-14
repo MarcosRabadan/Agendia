@@ -114,14 +114,14 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             return (owner, clientToken, appointment);
         }
 
-        private async Task<HttpResponseMessage> DeleteAsClientAsync(int appointmentId, string token)
+        private async Task<HttpResponseMessage> DeleteAsClientAsync(Guid appointmentId, string token)
         {
             using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/Appointment/{appointmentId}");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             return await _client.SendAsync(request);
         }
 
-        private async Task SetCancellationWindowAsync(int businessId, int? hours)
+        private async Task SetCancellationWindowAsync(Guid businessId, int? hours)
         {
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
@@ -130,7 +130,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             await db.SaveChangesAsync();
         }
 
-        private async Task<AppointmentDto> BookAppointmentAsync(ProvisionedOwner owner, string clientUserId, int employeeId, int serviceId)
+        private async Task<AppointmentDto> BookAppointmentAsync(ProvisionedOwner owner, string clientUserId, Guid employeeId, Guid serviceId)
         {
             var start = SlotDate.ToDateTime(SlotTime);
             var dto = new CreateAppointmentDto(clientUserId, employeeId, serviceId, start, start.AddMinutes(30), Notes: null);

@@ -253,6 +253,6 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         private Task<ProvisionedOwner> RegisterOwnerAsync(string slug) =>
             TestProvisioning.ProvisionOwnerAsync(_client, slug);
 
-        private sealed record BookableSetup(string Token, int BusinessId, int EmployeeId, string ClientUserId, int ServiceId);
+        private sealed record BookableSetup(string Token, Guid BusinessId, Guid EmployeeId, string ClientUserId, Guid ServiceId);
     }
 }

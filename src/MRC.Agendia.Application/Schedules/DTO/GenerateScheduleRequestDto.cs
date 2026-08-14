@@ -1,7 +1,7 @@
 namespace MRC.Agendia.Application.Schedules.DTO
 {
     public record GenerateScheduleRequestDto(
-        int BusinessId,
+        Guid BusinessId,
         int Year,
         List<GenerateScheduleTemplateInputDto> Templates,
         bool IncludeNationalHolidays,

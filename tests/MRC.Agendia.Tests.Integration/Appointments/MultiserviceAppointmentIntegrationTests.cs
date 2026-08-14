@@ -161,7 +161,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             return await _client.SendAsync(request);
         }
 
-        private async Task<AppointmentDto> GetAppointmentAsync(string token, int id)
+        private async Task<AppointmentDto> GetAppointmentAsync(string token, Guid id)
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/Appointment/{id}");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -172,7 +172,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             return dto!;
         }
 
-        private static (int EmployeeId, string ClientUserId) SeedEmployeeAndClientUser(ProvisionedOwner owner)
+        private static (Guid EmployeeId, string ClientUserId) SeedEmployeeAndClientUser(ProvisionedOwner owner)
             => (owner.EmployeeId, $"harmony-ms-{Guid.NewGuid():N}");
 
         private async Task GenerateScheduleAsync(ProvisionedOwner owner)

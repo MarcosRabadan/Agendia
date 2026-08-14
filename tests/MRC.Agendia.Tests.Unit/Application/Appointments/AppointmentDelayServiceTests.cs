@@ -20,7 +20,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
     /// </summary>
     public class AppointmentDelayServiceTests
     {
-        private const int BusinessId = 10;
+        private static readonly Guid BusinessId = TestIds.Of(10);
 
         private readonly IAppointmentRepository _repository = Substitute.For<IAppointmentRepository>();
         private readonly IScheduleResolver _scheduleResolver = Substitute.For<IScheduleResolver>();
@@ -33,9 +33,9 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         public AppointmentDelayServiceTests()
         {
             // A notification context so a delay event is published for each affected id.
-            _repository.GetNotificationContextAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            _repository.GetNotificationContextAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                 .Returns(ci => new AppointmentNotificationContext(
-                    ci.Arg<int>(), BusinessId, EmployeeId: 2, ClientUserId: "client-1", ServiceId: 3,
+                    ci.Arg<Guid>(), BusinessId, EmployeeId: TestIds.Of(2), ClientUserId: "client-1", ServiceId: TestIds.Of(3),
                     StartDate: new DateTime(2030, 6, 3, 11, 0, 0),
                     EndDate: new DateTime(2030, 6, 3, 11, 30, 0), Language: "es"));
 
@@ -111,17 +111,17 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             await _eventPublisher.DidNotReceiveWithAnyArgs().PublishAsync(default!, default);
         }
 
-        private Task ReceivedDelayEvent(int appointmentId, int delayMinutes)
+        private Task ReceivedDelayEvent(int appointmentIdSeed, int delayMinutes)
             => _eventPublisher.Received(1).PublishAsync(
                 Arg.Is<IIntegrationEvent>(e => e is AppointmentDelayed
-                    && ((AppointmentDelayed)e).AppointmentId == appointmentId
+                    && ((AppointmentDelayed)e).AppointmentId == TestIds.Of(appointmentIdSeed)
                     && ((AppointmentDelayed)e).DelayMinutes == delayMinutes),
                 Arg.Any<CancellationToken>());
 
-        private Task DidNotReceiveDelayEvent(int appointmentId)
+        private Task DidNotReceiveDelayEvent(int appointmentIdSeed)
             => _eventPublisher.DidNotReceive().PublishAsync(
                 Arg.Is<IIntegrationEvent>(e => e is AppointmentDelayed
-                    && ((AppointmentDelayed)e).AppointmentId == appointmentId),
+                    && ((AppointmentDelayed)e).AppointmentId == TestIds.Of(appointmentIdSeed)),
                 Arg.Any<CancellationToken>());
 
         private void SetNow(DateTime now) => _clock.BusinessNow.Returns(now);
@@ -131,18 +131,18 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                 .Returns(new EffectiveSchedule { IsOpen = true, TimeSlots = slots.ToList() });
 
         private void ReturnCandidates(params Appointment[] appts)
-            => _repository.GetUpcomingForDelayAsync(BusinessId, Arg.Any<int?>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            => _repository.GetUpcomingForDelayAsync(BusinessId, Arg.Any<Guid?>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
                 .Returns(appts.ToList());
 
         private static EffectiveTimeSlot Slot(int startHour, int endHour)
             => new() { StartTime = new TimeOnly(startHour, 0), EndTime = new TimeOnly(endHour, 0) };
 
-        private static Appointment Appt(int id, int hour, int minute) => new()
+        private static Appointment Appt(int idSeed, int hour, int minute) => new()
         {
-            Id = id,
+            Id = TestIds.Of(idSeed),
             ClientUserId = "client-1",
-            EmployeeId = 2,
-            ServiceId = 3,
+            EmployeeId = TestIds.Of(2),
+            ServiceId = TestIds.Of(3),
             StartDate = new DateTime(2030, 6, 3, hour, minute, 0),
             EndDate = new DateTime(2030, 6, 3, hour, minute, 0).AddMinutes(30),
             Status = AppointmentStatus.Confirmed,

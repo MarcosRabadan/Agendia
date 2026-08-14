@@ -72,7 +72,7 @@ namespace MRC.Agendia.Application.Waitlist
         }
 
         /// <inheritdoc />
-        public async Task LeaveAsync(int entryId, string userId, CancellationToken cancellationToken = default)
+        public async Task LeaveAsync(Guid entryId, string userId, CancellationToken cancellationToken = default)
         {
             var entry = await _repository.GetByIdAsync(entryId, cancellationToken)
                 ?? throw new WaitlistEntryNotFoundException(entryId);
@@ -96,7 +96,7 @@ namespace MRC.Agendia.Application.Waitlist
         }
 
         /// <inheritdoc />
-        public async Task NotifyForFreedAppointmentAsync(int appointmentId, CancellationToken cancellationToken = default)
+        public async Task NotifyForFreedAppointmentAsync(Guid appointmentId, CancellationToken cancellationToken = default)
         {
             // Best-effort: this runs after the cancellation/deletion has been saved,
             // so any failure here must NOT bubble up and fail that operation.

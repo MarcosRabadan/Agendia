@@ -25,8 +25,8 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
         private readonly IResourceAuthorizationService _auth = Substitute.For<IResourceAuthorizationService>();
         private readonly ICurrentUserContext _currentUser = Substitute.For<ICurrentUserContext>();
 
-        private static EmployeeDto Result(int id = 1, int businessId = 7) =>
-            new(id, businessId, IsActive: true, MaxConcurrentAppointments: 1);
+        private static EmployeeDto Result(Guid? id = null, Guid? businessId = null) =>
+            new(id ?? TestIds.Of(1), businessId ?? TestIds.Of(7), IsActive: true, MaxConcurrentAppointments: 1);
 
         private static PagedResult<EmployeeDto> EmptyPage() =>
             PagedResult<EmployeeDto>.Create(Array.Empty<EmployeeDto>(), 0, 1, 50);
@@ -34,7 +34,7 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
         [Fact]
         public async Task Create_authorizes_the_target_business_then_delegates()
         {
-            var dto = new CreateEmployeeDto(BusinessId: 7);
+            var dto = new CreateEmployeeDto(BusinessId: TestIds.Of(7));
             var expected = Result();
             _service.CreateAsync(dto, Arg.Any<CancellationToken>()).Returns(expected);
 
@@ -42,46 +42,46 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
                 .Handle(new CreateEmployeeCommand(dto), default);
 
             Assert.Same(expected, result);
-            await _auth.Received(1).EnsureCanManageBusinessResourcesAsync(7, Arg.Any<CancellationToken>());
+            await _auth.Received(1).EnsureCanManageBusinessResourcesAsync(TestIds.Of(7), Arg.Any<CancellationToken>());
         }
 
         [Fact]
         public async Task Update_authorizes_the_existing_employee_then_delegates()
         {
-            var dto = new UpdateEmployeeDto(5, IsActive: true, MaxConcurrentAppointments: 2);
-            var expected = Result(5);
+            var dto = new UpdateEmployeeDto(TestIds.Of(5), IsActive: true, MaxConcurrentAppointments: 2);
+            var expected = Result(TestIds.Of(5));
             _service.UpdateAsync(dto, Arg.Any<CancellationToken>()).Returns(expected);
 
             var result = await new UpdateEmployeeCommandHandler(_service, _auth)
                 .Handle(new UpdateEmployeeCommand(dto), default);
 
             Assert.Same(expected, result);
-            await _auth.Received(1).EnsureCanUpdateEmployeeAsync(5, Arg.Any<CancellationToken>());
+            await _auth.Received(1).EnsureCanUpdateEmployeeAsync(TestIds.Of(5), Arg.Any<CancellationToken>());
         }
 
         [Fact]
         public async Task Delete_does_not_touch_the_service_when_authorization_fails()
         {
-            _auth.EnsureCanDeleteEmployeeAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            _auth.EnsureCanDeleteEmployeeAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                 .Returns<Task>(_ => throw new UnauthorizedAccessException());
 
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
                 new DeleteEmployeeCommandHandler(_service, _auth)
-                    .Handle(new DeleteEmployeeCommand(5), default));
+                    .Handle(new DeleteEmployeeCommand(TestIds.Of(5)), default));
 
-            await _service.DidNotReceive().DeleteAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+            await _service.DidNotReceive().DeleteAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]
         public async Task GetById_authorizes_the_view_then_delegates()
         {
-            var one = Result(5);
-            _service.GetByIdAsync(5, Arg.Any<CancellationToken>()).Returns(one);
+            var one = Result(TestIds.Of(5));
+            _service.GetByIdAsync(TestIds.Of(5), Arg.Any<CancellationToken>()).Returns(one);
 
-            var result = await new GetEmployeeByIdQueryHandler(_service, _auth).Handle(new GetEmployeeByIdQuery(5), default);
+            var result = await new GetEmployeeByIdQueryHandler(_service, _auth).Handle(new GetEmployeeByIdQuery(TestIds.Of(5)), default);
 
             Assert.Same(one, result);
-            await _auth.Received(1).EnsureCanViewEmployeeAsync(5, Arg.Any<CancellationToken>());
+            await _auth.Received(1).EnsureCanViewEmployeeAsync(TestIds.Of(5), Arg.Any<CancellationToken>());
         }
 
         [Fact]

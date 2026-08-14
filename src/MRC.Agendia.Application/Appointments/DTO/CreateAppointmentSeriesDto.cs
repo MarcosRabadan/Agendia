@@ -9,8 +9,8 @@ namespace MRC.Agendia.Application.Appointments.DTO
     /// </summary>
     public record CreateAppointmentSeriesDto(
         string ClientUserId,
-        int EmployeeId,
-        int ServiceId,
+        Guid EmployeeId,
+        Guid ServiceId,
         TimeOnly StartTime,
         RecurrenceFrequency Frequency,
         int Interval,

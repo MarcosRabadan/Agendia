@@ -19,7 +19,7 @@ namespace MRC.Agendia.Infrastructure.Services
         }
 
         /// <inheritdoc />
-        public async Task<EffectiveSchedule> GetEffectiveScheduleAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default)
+        public async Task<EffectiveSchedule> GetEffectiveScheduleAsync(Guid businessId, DateOnly date, CancellationToken cancellationToken = default)
         {
             // An override for the date wins; only hit the template store if there is none.
             var scheduleOverride = await _overrideRepository.GetByBusinessIdAndDateAsync(businessId, date, cancellationToken);
@@ -31,7 +31,7 @@ namespace MRC.Agendia.Infrastructure.Services
         }
 
         /// <inheritdoc />
-        public async Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(int businessId,
+        public async Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(Guid businessId,
                                                                                      DateOnly from,
                                                                                      DateOnly to,
                                                                                      CancellationToken cancellationToken = default)

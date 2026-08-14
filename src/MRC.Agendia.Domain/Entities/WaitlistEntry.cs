@@ -9,9 +9,9 @@ namespace MRC.Agendia.Domain.Entities
     /// </summary>
     public class WaitlistEntry
     {
-        public int Id { get; set; }
-        public int BusinessId { get; set; }
-        public int ServiceId { get; set; }
+        public Guid Id { get; set; }
+        public Guid BusinessId { get; set; }
+        public Guid ServiceId { get; set; }
 
         /// <summary>
         /// Harmony user id (the JWT <c>sub</c>) of the waiting client. The client
@@ -19,7 +19,7 @@ namespace MRC.Agendia.Domain.Entities
         /// </summary>
         public string ClientUserId { get; set; } = null!;
 
-        public int? EmployeeId { get; set; }
+        public Guid? EmployeeId { get; set; }
         public DateOnly Date { get; set; }
         public TimeOnly StartTime { get; set; }
         public WaitlistStatus Status { get; set; }

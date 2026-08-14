@@ -27,7 +27,7 @@ namespace MRC.Agendia.Application.Appointments
         /// <param name="id">Appointment id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The appointment, or null if it does not exist.</returns>
-        Task<AppointmentDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<AppointmentDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Creates an appointment after validating and reserving the slot under a per-employee/day lock, then sends a best-effort confirmation email.</summary>
         /// <param name="dto">Data of the appointment to create.</param>
@@ -45,13 +45,13 @@ namespace MRC.Agendia.Application.Appointments
         /// <param name="id">Appointment id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>True when the appointment was deleted.</returns>
-        Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
+        Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Restores a previously soft-deleted appointment; idempotent if it is not deleted.</summary>
         /// <param name="id">Appointment id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>True when the operation completes.</returns>
-        Task<bool> RestoreAsync(int id, CancellationToken cancellationToken = default);
+        Task<bool> RestoreAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Returns the appointments of a business that overlap the given date range.</summary>
         /// <param name="businessId">Business id.</param>
@@ -59,7 +59,7 @@ namespace MRC.Agendia.Application.Appointments
         /// <param name="endDate">Exclusive end of the range.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The appointments overlapping the range.</returns>
-        Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(int businessId,
+        Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(Guid businessId,
                                                                            DateTime startDate,
                                                                            DateTime endDate,
                                                                            CancellationToken cancellationToken = default);

@@ -1,6 +1,6 @@
 namespace MRC.Agendia.Application.Services.DTO
 {
     public record CreateServiceDto(
-        int BusinessId,
+        Guid BusinessId,
         int DurationMinutes);
 }

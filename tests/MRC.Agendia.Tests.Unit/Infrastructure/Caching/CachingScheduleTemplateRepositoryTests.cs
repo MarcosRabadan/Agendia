@@ -24,26 +24,26 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Caching
         [Fact]
         public async Task GetByBusinessId_SegundaLlamada_SirveDesdeCache()
         {
-            _inner.GetByBusinessIdAsync(7, Arg.Any<CancellationToken>())
-                .Returns(new List<ScheduleTemplate> { new() { Id = 1, BusinessId = 7 } });
+            _inner.GetByBusinessIdAsync(TestIds.Of(7), Arg.Any<CancellationToken>())
+                .Returns(new List<ScheduleTemplate> { new() { Id = TestIds.Of(1), BusinessId = TestIds.Of(7) } });
 
-            await _sut.GetByBusinessIdAsync(7);
-            await _sut.GetByBusinessIdAsync(7);
+            await _sut.GetByBusinessIdAsync(TestIds.Of(7));
+            await _sut.GetByBusinessIdAsync(TestIds.Of(7));
 
-            await _inner.Received(1).GetByBusinessIdAsync(7, Arg.Any<CancellationToken>());
+            await _inner.Received(1).GetByBusinessIdAsync(TestIds.Of(7), Arg.Any<CancellationToken>());
         }
 
         [Fact]
         public async Task Update_EvictaLaCacheDelNegocio()
         {
-            _inner.GetByBusinessIdAsync(7, Arg.Any<CancellationToken>())
-                .Returns(new List<ScheduleTemplate> { new() { Id = 1, BusinessId = 7 } });
+            _inner.GetByBusinessIdAsync(TestIds.Of(7), Arg.Any<CancellationToken>())
+                .Returns(new List<ScheduleTemplate> { new() { Id = TestIds.Of(1), BusinessId = TestIds.Of(7) } });
 
-            await _sut.GetByBusinessIdAsync(7);                            // caches
-            _sut.Update(new ScheduleTemplate { Id = 1, BusinessId = 7 }); // evicts business 7
-            await _sut.GetByBusinessIdAsync(7);                            // re-fetches
+            await _sut.GetByBusinessIdAsync(TestIds.Of(7));                            // caches
+            _sut.Update(new ScheduleTemplate { Id = TestIds.Of(1), BusinessId = TestIds.Of(7) }); // evicts business 7
+            await _sut.GetByBusinessIdAsync(TestIds.Of(7));                            // re-fetches
 
-            await _inner.Received(2).GetByBusinessIdAsync(7, Arg.Any<CancellationToken>());
+            await _inner.Received(2).GetByBusinessIdAsync(TestIds.Of(7), Arg.Any<CancellationToken>());
         }
 
         [Fact]
@@ -51,22 +51,22 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Caching
         {
             var template = new ScheduleTemplate
             {
-                Id = 1,
-                BusinessId = 7,
+                Id = TestIds.Of(1),
+                BusinessId = TestIds.Of(7),
                 EffectiveFrom = new DateOnly(2030, 1, 1),
                 EffectiveTo = new DateOnly(2030, 12, 31),
                 IsDefault = true
             };
-            _inner.GetByBusinessIdAsync(7, Arg.Any<CancellationToken>())
+            _inner.GetByBusinessIdAsync(TestIds.Of(7), Arg.Any<CancellationToken>())
                 .Returns(new List<ScheduleTemplate> { template });
 
-            await _sut.GetByBusinessIdAsync(7); // caches the per-business list
-            var effective = await _sut.GetEffectiveTemplateAsync(7, new DateOnly(2030, 6, 1));
+            await _sut.GetByBusinessIdAsync(TestIds.Of(7)); // caches the per-business list
+            var effective = await _sut.GetEffectiveTemplateAsync(TestIds.Of(7), new DateOnly(2030, 6, 1));
 
             Assert.NotNull(effective);
-            Assert.Equal(1, effective!.Id);
+            Assert.Equal(TestIds.Of(1), effective!.Id);
             // Answered from the cached list, not a separate DB query.
-            await _inner.DidNotReceive().GetEffectiveTemplateAsync(Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>());
+            await _inner.DidNotReceive().GetEffectiveTemplateAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>());
         }
     }
 }

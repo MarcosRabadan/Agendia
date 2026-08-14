@@ -11,13 +11,13 @@ namespace MRC.Agendia.Infrastructure.Repositories
         }
 
         /// <inheritdoc />
-        public async Task<ScheduleTemplate?> GetByIdWithSlotsAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<ScheduleTemplate?> GetByIdWithSlotsAsync(Guid id, CancellationToken cancellationToken = default)
             => await Set
                 .Include(st => st.WeeklySlots)
                 .FirstOrDefaultAsync(st => st.Id == id, cancellationToken);
 
         /// <inheritdoc />
-        public async Task<IEnumerable<ScheduleTemplate>> GetByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<ScheduleTemplate>> GetByBusinessIdAsync(Guid businessId, CancellationToken cancellationToken = default)
             => await Set
                 .AsNoTracking()
                 .Include(st => st.WeeklySlots)
@@ -26,7 +26,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
         /// <inheritdoc />
-        public async Task<ScheduleTemplate?> GetEffectiveTemplateAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default)
+        public async Task<ScheduleTemplate?> GetEffectiveTemplateAsync(Guid businessId, DateOnly date, CancellationToken cancellationToken = default)
             => await Set
                 .AsNoTracking()
                 .Include(st => st.WeeklySlots)
@@ -37,10 +37,10 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .FirstOrDefaultAsync(cancellationToken);
 
         /// <inheritdoc />
-        public async Task<bool> HasOverlappingTemplateAsync(int businessId,
+        public async Task<bool> HasOverlappingTemplateAsync(Guid businessId,
                                                             DateOnly from,
                                                             DateOnly to,
-                                                            int? excludeId = null,
+                                                            Guid? excludeId = null,
                                                             CancellationToken cancellationToken = default)
         {
             var query = Set

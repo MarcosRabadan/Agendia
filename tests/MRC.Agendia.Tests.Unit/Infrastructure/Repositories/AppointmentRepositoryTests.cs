@@ -20,7 +20,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Repositories
                     CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning))
                 .Options, new UnrestrictedBusinessScope());
 
-        private sealed record Seeded(int AppointmentId, int BusinessId, int EmployeeId, int ServiceId);
+        private sealed record Seeded(Guid AppointmentId, Guid BusinessId, Guid EmployeeId, Guid ServiceId);
 
         /// <summary>Seeds business + service + employee + one confirmed appointment.</summary>
         private static async Task<Seeded> SeedAsync(AgendiaDbContext ctx)

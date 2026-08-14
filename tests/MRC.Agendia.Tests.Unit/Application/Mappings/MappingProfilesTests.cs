@@ -27,9 +27,9 @@ namespace MRC.Agendia.Tests.Unit.Application.Mappings
         [Fact]
         public void UpdateBusiness_preserves_OwnerUserId()
         {
-            var entity = new MRC.Agendia.Domain.Entities.Business { Id = 1, OwnerUserId = "owner-1", IsActive = false };
+            var entity = new MRC.Agendia.Domain.Entities.Business { Id = TestIds.Of(1), OwnerUserId = "owner-1", IsActive = false };
 
-            _mapper.Map(new UpdateBusinessDto(1, IsActive: true), entity);
+            _mapper.Map(new UpdateBusinessDto(TestIds.Of(1), IsActive: true), entity);
 
             Assert.Equal("owner-1", entity.OwnerUserId);
             Assert.True(entity.IsActive);
@@ -38,22 +38,22 @@ namespace MRC.Agendia.Tests.Unit.Application.Mappings
         [Fact]
         public void UpdateService_preserves_BusinessId()
         {
-            var entity = new Service { Id = 1, BusinessId = 7, DurationMinutes = 30 };
+            var entity = new Service { Id = TestIds.Of(1), BusinessId = TestIds.Of(7), DurationMinutes = 30 };
 
-            _mapper.Map(new UpdateServiceDto(1, 45), entity);
+            _mapper.Map(new UpdateServiceDto(TestIds.Of(1), 45), entity);
 
-            Assert.Equal(7, entity.BusinessId);
+            Assert.Equal(TestIds.Of(7), entity.BusinessId);
             Assert.Equal(45, entity.DurationMinutes);
         }
 
         [Fact]
         public void UpdateEmployee_preserves_BusinessId_and_UserId()
         {
-            var entity = new Employee { Id = 1, BusinessId = 7, UserId = "user-1", IsActive = false };
+            var entity = new Employee { Id = TestIds.Of(1), BusinessId = TestIds.Of(7), UserId = "user-1", IsActive = false };
 
-            _mapper.Map(new UpdateEmployeeDto(1, IsActive: true, MaxConcurrentAppointments: 3), entity);
+            _mapper.Map(new UpdateEmployeeDto(TestIds.Of(1), IsActive: true, MaxConcurrentAppointments: 3), entity);
 
-            Assert.Equal(7, entity.BusinessId);
+            Assert.Equal(TestIds.Of(7), entity.BusinessId);
             Assert.Equal("user-1", entity.UserId);
             Assert.True(entity.IsActive);
             Assert.Equal(3, entity.MaxConcurrentAppointments);
@@ -64,7 +64,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Mappings
         {
             var business = _mapper.Map<MRC.Agendia.Domain.Entities.Business>(
                 new CreateBusinessDto("owner-1"));
-            var employee = _mapper.Map<Employee>(new CreateEmployeeDto(BusinessId: 3));
+            var employee = _mapper.Map<Employee>(new CreateEmployeeDto(BusinessId: TestIds.Of(3)));
 
             Assert.True(business.IsActive);
             Assert.True(employee.IsActive);

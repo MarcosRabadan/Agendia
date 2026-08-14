@@ -5,11 +5,11 @@ namespace MRC.Agendia.Domain.Events
     /// contact details from <see cref="ClientUserId"/> and delivers the
     /// confirmation in <see cref="Language"/>. Agendia carries no email/name.
     /// </summary>
-    public sealed record AppointmentConfirmed(int AppointmentId,
-                                              int BusinessId,
-                                              int EmployeeId,
+    public sealed record AppointmentConfirmed(Guid AppointmentId,
+                                              Guid BusinessId,
+                                              Guid EmployeeId,
                                               string ClientUserId,
-                                              int ServiceId,
+                                              Guid ServiceId,
                                               DateTime StartDate,
                                               DateTime EndDate,
                                               string Language,

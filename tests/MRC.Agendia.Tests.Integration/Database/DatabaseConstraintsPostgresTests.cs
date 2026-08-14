@@ -103,7 +103,7 @@ namespace MRC.Agendia.Tests.Integration.Database
             Assert.Equal(Npgsql.PostgresErrorCodes.UniqueViolation, pg!.SqlState);
         }
 
-        private static ScheduleOverride NewOverride(int businessId, DateOnly date, string reason) => new()
+        private static ScheduleOverride NewOverride(Guid businessId, DateOnly date, string reason) => new()
         {
             BusinessId = businessId,
             Date = date,
@@ -120,7 +120,7 @@ namespace MRC.Agendia.Tests.Integration.Database
             return business;
         }
 
-        private static async Task<Service> SeedServiceAsync(AgendiaDbContext db, int businessId)
+        private static async Task<Service> SeedServiceAsync(AgendiaDbContext db, Guid businessId)
         {
             var service = new Service { BusinessId = businessId, DurationMinutes = 30 };
             db.Services.Add(service);

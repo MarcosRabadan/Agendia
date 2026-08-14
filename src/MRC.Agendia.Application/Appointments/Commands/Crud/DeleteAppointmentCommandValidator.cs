@@ -6,7 +6,7 @@ namespace MRC.Agendia.Application.Appointments.Commands.Crud
     {
         public DeleteAppointmentCommandValidator()
         {
-            RuleFor(x => x.Id).GreaterThan(0);
+            RuleFor(x => x.Id).NotEmpty();
         }
     }
 }

@@ -83,33 +83,29 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
             => new CreateBusinessCommandValidator()
                 .Check(new CreateBusinessCommand(ValidBusiness() with { DefaultAppointmentStatus = status })).ShouldBeValid();
 
-        private static UpdateBusinessDto ValidBusinessUpdate() => new(5, IsActive: true);
+        private static UpdateBusinessDto ValidBusinessUpdate() => new(TestIds.Of(5), IsActive: true);
 
         [Fact]
         public void UpdateBusiness_valid_passes()
             => new UpdateBusinessCommandValidator().Check(new UpdateBusinessCommand(ValidBusinessUpdate())).ShouldBeValid();
 
-        [Theory]
-        [InlineData(0)]
-        [InlineData(-3)]
-        public void UpdateBusiness_id_must_be_positive(int id)
+        [Fact]
+        public void UpdateBusiness_empty_id_fails()
             => new UpdateBusinessCommandValidator()
-                .Check(new UpdateBusinessCommand(ValidBusinessUpdate() with { Id = id })).ShouldFailOn("Dto.Id");
+                .Check(new UpdateBusinessCommand(ValidBusinessUpdate() with { Id = Guid.Empty })).ShouldFailOn("Dto.Id");
 
         // ---------- Service ----------
 
-        private static CreateServiceDto ValidService() => new(7, 30);
+        private static CreateServiceDto ValidService() => new(TestIds.Of(7), 30);
 
         [Fact]
         public void CreateService_valid_passes()
             => new CreateServiceCommandValidator().Check(new CreateServiceCommand(ValidService())).ShouldBeValid();
 
-        [Theory]
-        [InlineData(0)]
-        [InlineData(-1)]
-        public void CreateService_business_id_must_be_positive(int businessId)
+        [Fact]
+        public void CreateService_empty_business_id_fails()
             => new CreateServiceCommandValidator()
-                .Check(new CreateServiceCommand(ValidService() with { BusinessId = businessId })).ShouldFailOn("Dto.BusinessId");
+                .Check(new CreateServiceCommand(ValidService() with { BusinessId = Guid.Empty })).ShouldFailOn("Dto.BusinessId");
 
         [Theory]
         [InlineData(0)]
@@ -128,16 +124,16 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
 
         [Fact]
         public void UpdateService_valid_passes()
-            => new UpdateServiceCommandValidator().Check(new UpdateServiceCommand(new UpdateServiceDto(1, 30))).ShouldBeValid();
+            => new UpdateServiceCommandValidator().Check(new UpdateServiceCommand(new UpdateServiceDto(TestIds.Of(1), 30))).ShouldBeValid();
 
         [Fact]
         public void UpdateService_id_must_be_positive()
             => new UpdateServiceCommandValidator()
-                .Check(new UpdateServiceCommand(new UpdateServiceDto(0, 30))).ShouldFailOn("Dto.Id");
+                .Check(new UpdateServiceCommand(new UpdateServiceDto(TestIds.Of(0), 30))).ShouldFailOn("Dto.Id");
 
         // ---------- Employee ----------
 
-        private static CreateEmployeeDto ValidEmployee() => new(7);
+        private static CreateEmployeeDto ValidEmployee() => new(TestIds.Of(7));
 
         [Fact]
         public void CreateEmployee_valid_passes()
@@ -161,19 +157,19 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         [Fact]
         public void CreateEmployee_business_id_must_be_positive()
             => new CreateEmployeeCommandValidator()
-                .Check(new CreateEmployeeCommand(ValidEmployee() with { BusinessId = 0 })).ShouldFailOn("Dto.BusinessId");
+                .Check(new CreateEmployeeCommand(ValidEmployee() with { BusinessId = TestIds.Of(0) })).ShouldFailOn("Dto.BusinessId");
 
         [Fact]
         public void UpdateEmployee_valid_passes()
             => new UpdateEmployeeCommandValidator()
-                .Check(new UpdateEmployeeCommand(new UpdateEmployeeDto(1, IsActive: true, MaxConcurrentAppointments: 2))).ShouldBeValid();
+                .Check(new UpdateEmployeeCommand(new UpdateEmployeeDto(TestIds.Of(1), IsActive: true, MaxConcurrentAppointments: 2))).ShouldBeValid();
 
         [Theory]
         [InlineData(0)]
         [InlineData(101)]
         public void UpdateEmployee_capacity_out_of_range_fails(int cap)
             => new UpdateEmployeeCommandValidator()
-                .Check(new UpdateEmployeeCommand(new UpdateEmployeeDto(1, IsActive: true, MaxConcurrentAppointments: cap)))
+                .Check(new UpdateEmployeeCommand(new UpdateEmployeeDto(TestIds.Of(1), IsActive: true, MaxConcurrentAppointments: cap)))
                 .ShouldFailOn("Dto.MaxConcurrentAppointments");
     }
 }

@@ -34,16 +34,16 @@ namespace MRC.Agendia.Tests.Unit.Application.Schedules
                 _templateRepo, _overrideRepo, _holidayRepo, _resolver, _unitOfWork, _mapper);
 
             _templateRepo.HasOverlappingTemplateAsync(
-                    Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+                    Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
                 .Returns(false);
             _mapper.Map<ScheduleTemplate>(Arg.Any<GenerateScheduleTemplateInputDto>())
                 .Returns(_ => new ScheduleTemplate());
 
             // Default: the business has no existing schedule for the year.
-            _templateRepo.GetByBusinessIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            _templateRepo.GetByBusinessIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                 .Returns(new List<ScheduleTemplate>());
             _overrideRepo.GetByBusinessIdAndDateRangeAsync(
-                    Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+                    Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
                 .Returns(new List<ScheduleOverride>());
 
             // Run the transactional work inline so the replace path actually executes.
@@ -63,7 +63,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Schedules
         {
             // Clean year (no existing schedule) so it persists directly.
             var request = new GenerateScheduleRequestDto(
-                BusinessId: 1,
+                BusinessId: TestIds.Of(1),
                 Year: 2030,
                 Templates: new List<GenerateScheduleTemplateInputDto> { AnnualTemplate(2030) },
                 IncludeNationalHolidays: false,
@@ -96,11 +96,11 @@ namespace MRC.Agendia.Tests.Unit.Application.Schedules
         public async Task Generate_SinReemplazo_CuandoYaHayHorario_Lanza_YNoPersiste()
         {
             // The business already has an override that year.
-            _overrideRepo.GetByBusinessIdAndDateRangeAsync(1, Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
-                .Returns(new List<ScheduleOverride> { new() { BusinessId = 1, Date = new DateOnly(2030, 6, 20) } });
+            _overrideRepo.GetByBusinessIdAndDateRangeAsync(TestIds.Of(1), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+                .Returns(new List<ScheduleOverride> { new() { BusinessId = TestIds.Of(1), Date = new DateOnly(2030, 6, 20) } });
 
             var request = new GenerateScheduleRequestDto(
-                BusinessId: 1,
+                BusinessId: TestIds.Of(1),
                 Year: 2030,
                 Templates: new List<GenerateScheduleTemplateInputDto> { AnnualTemplate(2030) },
                 IncludeNationalHolidays: false,
@@ -125,19 +125,19 @@ namespace MRC.Agendia.Tests.Unit.Application.Schedules
             // closure on 06-20 (the kind of "ghost" day that used to linger).
             var staleTemplate = new ScheduleTemplate
             {
-                Id = 99,
-                BusinessId = 1,
+                Id = TestIds.Of(99),
+                BusinessId = TestIds.Of(1),
                 EffectiveFrom = new DateOnly(2030, 1, 1),
                 EffectiveTo = new DateOnly(2030, 12, 31)
             };
-            var staleOverride = new ScheduleOverride { Id = 50, BusinessId = 1, Date = new DateOnly(2030, 6, 20) };
-            _templateRepo.GetByBusinessIdAsync(1, Arg.Any<CancellationToken>())
+            var staleOverride = new ScheduleOverride { Id = TestIds.Of(50), BusinessId = TestIds.Of(1), Date = new DateOnly(2030, 6, 20) };
+            _templateRepo.GetByBusinessIdAsync(TestIds.Of(1), Arg.Any<CancellationToken>())
                 .Returns(new List<ScheduleTemplate> { staleTemplate });
-            _overrideRepo.GetByBusinessIdAndDateRangeAsync(1, Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            _overrideRepo.GetByBusinessIdAndDateRangeAsync(TestIds.Of(1), Arg.Any<DateOnly>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
                 .Returns(new List<ScheduleOverride> { staleOverride });
 
             var request = new GenerateScheduleRequestDto(
-                BusinessId: 1,
+                BusinessId: TestIds.Of(1),
                 Year: 2030,
                 Templates: new List<GenerateScheduleTemplateInputDto> { AnnualTemplate(2030) },
                 IncludeNationalHolidays: false,

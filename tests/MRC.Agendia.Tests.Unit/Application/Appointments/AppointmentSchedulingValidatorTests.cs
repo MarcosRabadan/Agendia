@@ -15,10 +15,10 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
     /// </summary>
     public class AppointmentSchedulingValidatorTests
     {
-        private const int BusinessId = 1;
-        private const int EmployeeId = 10;
-        private const int PrimaryServiceId = 100;
-        private const int ExtraServiceId = 200;
+        private static readonly Guid BusinessId = TestIds.Of(1);
+        private static readonly Guid EmployeeId = TestIds.Of(10);
+        private static readonly Guid PrimaryServiceId = TestIds.Of(100);
+        private static readonly Guid ExtraServiceId = TestIds.Of(200);
 
         private readonly IBusinessRepository _businessRepository = Substitute.For<IBusinessRepository>();
         private readonly IEmployeeRepository _employeeRepository = Substitute.For<IEmployeeRepository>();
@@ -45,7 +45,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             var end = new DateTime(2026, 6, 1, 11, 30, 0);
 
             await Assert.ThrowsAsync<InvalidAppointmentTimeException>(() =>
-                _sut.EnsureValidAsync(null, employeeId: 1, serviceId: 1, start, end));
+                _sut.EnsureValidAsync(null, employeeId: TestIds.Of(1), serviceId: TestIds.Of(1), start, end));
         }
 
         [Fact]
@@ -79,7 +79,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             ArrangeOpenDayWithServices(primaryMinutes: 30, extraMinutes: 30);
             // The extra belongs to a different business than the employee.
             _serviceRepository.GetByIdAsync(ExtraServiceId)
-                .Returns(new Service { Id = ExtraServiceId, BusinessId = BusinessId + 99, DurationMinutes = 30 });
+                .Returns(new Service { Id = ExtraServiceId, BusinessId = TestIds.Of(9999), DurationMinutes = 30 });
             var start = new DateTime(2030, 6, 3, 9, 0, 0);
             var end = start.AddMinutes(60);
 
@@ -109,7 +109,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                     }
                 });
             _appointmentRepository.CountOverlappingForEmployeeAsync(
-                    Arg.Any<int>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+                    Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
                 .Returns(0);
         }
     }

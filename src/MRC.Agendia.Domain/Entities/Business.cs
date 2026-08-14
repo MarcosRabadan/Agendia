@@ -6,7 +6,7 @@ namespace MRC.Agendia.Domain.Entities
 {
     public class Business : AuditableEntity
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
 
         /// <summary>
         /// Whether the business currently accepts bookings. This is scheduling state

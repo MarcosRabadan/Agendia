@@ -5,7 +5,7 @@ namespace MRC.Agendia.Domain.Entities
 {
     public class Appointment : AuditableEntity
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
 
         /// <summary>
         /// Harmony user id (the JWT <c>sub</c>) of the client who booked. Agendia no
@@ -14,8 +14,8 @@ namespace MRC.Agendia.Domain.Entities
         /// </summary>
         public string ClientUserId { get; set; } = null!;
 
-        public int EmployeeId { get; set; }
-        public int ServiceId { get; set; }
+        public Guid EmployeeId { get; set; }
+        public Guid ServiceId { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public AppointmentStatus Status { get; set; }

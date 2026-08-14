@@ -12,9 +12,9 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
 
     /// <summary>A provisioned, bookable business: owner + a full-week schedule for the
     /// year, a service, the owner's employee and a counter client user id.</summary>
-    public sealed record BookableBusiness(ProvisionedOwner Owner, ServiceDto Service, int EmployeeId, string ClientUserId)
+    public sealed record BookableBusiness(ProvisionedOwner Owner, ServiceDto Service, Guid EmployeeId, string ClientUserId)
     {
-        public int BusinessId => Owner.Business.Id;
+        public Guid BusinessId => Owner.Business.Id;
         public string OwnerToken => Owner.Token;
     }
 
@@ -84,7 +84,7 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
         public static Task<HttpResponseMessage> PostAppointmentAsync(HttpClient client, string token, CreateAppointmentDto dto)
             => SendAsync(client, HttpMethod.Post, "/api/Appointment", token, dto);
 
-        public static async Task<AppointmentDto> GetAppointmentAsync(HttpClient client, string token, int id)
+        public static async Task<AppointmentDto> GetAppointmentAsync(HttpClient client, string token, Guid id)
         {
             var response = await SendAsync(client, HttpMethod.Get, $"/api/Appointment/{id}", token);
             response.EnsureSuccessStatusCode();

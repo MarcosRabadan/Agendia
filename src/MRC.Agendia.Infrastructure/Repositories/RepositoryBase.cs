@@ -20,7 +20,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         protected DbSet<T> Set => Context.Set<T>();
 
         /// <inheritdoc />
-        public virtual async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        public virtual async Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
             => await Set.FindAsync(new object?[] { id }, cancellationToken);
 
         /// <inheritdoc />

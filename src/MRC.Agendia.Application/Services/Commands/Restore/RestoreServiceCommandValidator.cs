@@ -6,7 +6,7 @@ namespace MRC.Agendia.Application.Services.Commands.Restore
     {
         public RestoreServiceCommandValidator()
         {
-            RuleFor(x => x.Id).GreaterThan(0);
+            RuleFor(x => x.Id).NotEmpty();
         }
     }
 }

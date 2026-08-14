@@ -40,19 +40,19 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         {
             // In unit tests the guard just runs the critical section directly.
             _bookingGuard.ExecuteSerializedAsync(
-                    Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task<Appointment>>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task<Appointment>>>(), Arg.Any<CancellationToken>())
                 .Returns(ci => ci.Arg<Func<Task<Appointment>>>()());
             _bookingGuard.ExecuteSerializedAsync(
-                    Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
                 .Returns(ci => ci.Arg<Func<Task>>()());
 
             // Default to a staff caller so status changes (e.g. Completed) are allowed.
             _currentUser.IsInRole(Roles.Employee).Returns(true);
 
             // A notification context so the confirmation/cancellation events fire.
-            _repository.GetNotificationContextAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            _repository.GetNotificationContextAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                 .Returns(ci => new AppointmentNotificationContext(
-                    ci.Arg<int>(), BusinessId: 100, EmployeeId: 2, ClientUserId: "user-1", ServiceId: 3,
+                    ci.Arg<Guid>(), BusinessId: TestIds.Of(100), EmployeeId: TestIds.Of(2), ClientUserId: "user-1", ServiceId: TestIds.Of(3),
                     StartDate: new DateTime(2030, 1, 1, 9, 0, 0),
                     EndDate: new DateTime(2030, 1, 1, 9, 30, 0), Language: "es"));
 
@@ -64,11 +64,11 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         [Fact]
         public async Task CreateAsync_EjecutaLaSeccionCriticaDentroDelGuard()
         {
-            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = 11 });
+            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = TestIds.Of(11) });
             _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
 
             var dto = new CreateAppointmentDto(
-                ClientUserId: "user-1", EmployeeId: 2, ServiceId: 3,
+                ClientUserId: "user-1", EmployeeId: TestIds.Of(2), ServiceId: TestIds.Of(3),
                 StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
                 EndDate: new DateTime(2030, 1, 1, 9, 30, 0, DateTimeKind.Utc),
                 Notes: null);
@@ -80,7 +80,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                 dto.EmployeeId, DateOnly.FromDateTime(dto.StartDate),
                 Arg.Any<Func<Task<Appointment>>>(), Arg.Any<CancellationToken>());
             await _validator.Received(1).EnsureValidAsync(
-                Arg.Any<int?>(), dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
+                Arg.Any<Guid?>(), dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
             await _repository.Received(1).AddAsync(Arg.Any<Appointment>(), Arg.Any<CancellationToken>());
             // A confirmation event is published (via the outbox) instead of an email.
             await _eventPublisher.Received(1).PublishAsync(
@@ -90,38 +90,38 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         [Fact]
         public async Task CreateAsync_ConServiciosExtra_LosAdjuntaYValidaConLaDuracionTotal()
         {
-            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = 11 });
+            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = TestIds.Of(11) });
             _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
 
             var dto = new CreateAppointmentDto(
-                ClientUserId: "user-1", EmployeeId: 2, ServiceId: 3,
+                ClientUserId: "user-1", EmployeeId: TestIds.Of(2), ServiceId: TestIds.Of(3),
                 StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
                 EndDate: new DateTime(2030, 1, 1, 10, 0, 0, DateTimeKind.Utc),
                 Notes: null,
-                ExtraServiceIds: new[] { 5, 7 });
+                ExtraServiceIds: new[] { TestIds.Of(5), TestIds.Of(7) });
 
             await _sut.CreateAsync(dto);
 
             // The extras are attached to the appointment EF persists...
             await _repository.Received(1).AddAsync(
-                Arg.Is<Appointment>(a => a.ExtraServices.Select(e => e.ServiceId).SequenceEqual(new[] { 5, 7 })),
+                Arg.Is<Appointment>(a => a.ExtraServices.Select(e => e.ServiceId).SequenceEqual(new[] { TestIds.Of(5), TestIds.Of(7) })),
                 Arg.Any<CancellationToken>());
             // ...and forwarded to the scheduling validator (total-duration check).
             await _validator.Received(1).EnsureValidAsync(
-                Arg.Any<int?>(), dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate,
-                Arg.Is<IReadOnlyCollection<int>>(x => x != null && x.SequenceEqual(new[] { 5, 7 })),
+                Arg.Any<Guid?>(), dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate,
+                Arg.Is<IReadOnlyCollection<Guid>>(x => x != null && x.SequenceEqual(new[] { TestIds.Of(5), TestIds.Of(7) })),
                 Arg.Any<CancellationToken>());
         }
 
         [Fact]
         public async Task CreateAsync_StaffEligeEstadoInicial_UsaEseEstado()
         {
-            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = 11 });
+            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = TestIds.Of(11) });
             _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
             // Default caller is staff (Employee).
 
             var dto = new CreateAppointmentDto(
-                ClientUserId: "user-1", EmployeeId: 2, ServiceId: 3,
+                ClientUserId: "user-1", EmployeeId: TestIds.Of(2), ServiceId: TestIds.Of(3),
                 StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
                 EndDate: new DateTime(2030, 1, 1, 9, 30, 0, DateTimeKind.Utc),
                 Notes: null,
@@ -132,20 +132,20 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             await _repository.Received(1).AddAsync(
                 Arg.Is<Appointment>(a => a.Status == AppointmentStatus.Confirmed), Arg.Any<CancellationToken>());
             // Staff override wins, so the business default is not consulted.
-            await _repository.DidNotReceive().GetBusinessDefaultStatusByEmployeeAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+            await _repository.DidNotReceive().GetBusinessDefaultStatusByEmployeeAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]
         public async Task CreateAsync_ClienteSinEstado_UsaElDefaultDelNegocio()
         {
-            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = 11 });
+            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = TestIds.Of(11) });
             _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
             _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a client
-            _repository.GetBusinessDefaultStatusByEmployeeAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            _repository.GetBusinessDefaultStatusByEmployeeAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                 .Returns(AppointmentStatus.Confirmed);
 
             var dto = new CreateAppointmentDto(
-                ClientUserId: "user-1", EmployeeId: 2, ServiceId: 3,
+                ClientUserId: "user-1", EmployeeId: TestIds.Of(2), ServiceId: TestIds.Of(3),
                 StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
                 EndDate: new DateTime(2030, 1, 1, 9, 30, 0, DateTimeKind.Utc),
                 Notes: null);
@@ -159,15 +159,15 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         [Fact]
         public async Task CreateAsync_ClienteIntentaElegirEstado_SeIgnoraYUsaElDefault()
         {
-            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = 11 });
+            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = TestIds.Of(11) });
             _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
             _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a client
-            _repository.GetBusinessDefaultStatusByEmployeeAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            _repository.GetBusinessDefaultStatusByEmployeeAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                 .Returns(AppointmentStatus.Pending);
 
             // The client tries to self-confirm; it must be ignored and the business default used.
             var dto = new CreateAppointmentDto(
-                ClientUserId: "user-1", EmployeeId: 2, ServiceId: 3,
+                ClientUserId: "user-1", EmployeeId: TestIds.Of(2), ServiceId: TestIds.Of(3),
                 StartDate: new DateTime(2030, 1, 1, 9, 0, 0, DateTimeKind.Utc),
                 EndDate: new DateTime(2030, 1, 1, 9, 30, 0, DateTimeKind.Utc),
                 Notes: null,
@@ -213,7 +213,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             await _validator.Received(1).EnsureValidAsync(
                 entity.Id, dto.EmployeeId, dto.ServiceId,
-                dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>());
+                dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]
@@ -329,7 +329,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             var result = await _sut.UpdateAsync(dto);
 
             Assert.NotNull(result);
-            await _repository.DidNotReceive().GetCancellationWindowHoursAsync(Arg.Any<int>(), Arg.Any<CancellationToken>());
+            await _repository.DidNotReceive().GetCancellationWindowHoursAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]
@@ -403,10 +403,10 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
         private static Appointment FutureAppointment(DateTime start) => new()
         {
-            Id = 7,
+            Id = TestIds.Of(7),
             ClientUserId = "user-1",
-            EmployeeId = 2,
-            ServiceId = 3,
+            EmployeeId = TestIds.Of(2),
+            ServiceId = TestIds.Of(3),
             StartDate = start,
             EndDate = start.AddMinutes(30),
             Status = AppointmentStatus.Confirmed,
@@ -414,10 +414,10 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
         private static Appointment PastAppointment() => new()
         {
-            Id = 7,
+            Id = TestIds.Of(7),
             ClientUserId = "user-1",
-            EmployeeId = 2,
-            ServiceId = 3,
+            EmployeeId = TestIds.Of(2),
+            ServiceId = TestIds.Of(3),
             StartDate = new DateTime(2020, 1, 1, 9, 0, 0, DateTimeKind.Utc),
             EndDate = new DateTime(2020, 1, 1, 9, 30, 0, DateTimeKind.Utc),
             Status = AppointmentStatus.Confirmed,

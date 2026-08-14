@@ -64,7 +64,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         // ---------- Templates ----------
 
         private static CreateScheduleTemplateDto ValidTemplate() =>
-            new(7, "Curso", From, To, false, new List<CreateWeeklyTimeSlotDto> { Slot() });
+            new(TestIds.Of(7), "Curso", From, To, false, new List<CreateWeeklyTimeSlotDto> { Slot() });
 
         [Fact]
         public void CreateTemplate_valid_passes()
@@ -73,7 +73,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         [Fact]
         public void CreateTemplate_business_id_must_be_positive()
             => new CreateScheduleTemplateCommandValidator()
-                .Check(new CreateScheduleTemplateCommand(ValidTemplate() with { BusinessId = 0 })).ShouldFailOn("Dto.BusinessId");
+                .Check(new CreateScheduleTemplateCommand(ValidTemplate() with { BusinessId = TestIds.Of(0) })).ShouldFailOn("Dto.BusinessId");
 
         [Fact]
         public void CreateTemplate_effective_to_before_from_fails()
@@ -98,23 +98,23 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         [Fact]
         public void UpdateTemplate_valid_passes()
             => new UpdateScheduleTemplateCommandValidator()
-                .Check(new UpdateScheduleTemplateCommand(new UpdateScheduleTemplateDto(1, "Curso", From, To, false, new List<CreateWeeklyTimeSlotDto> { Slot() })))
+                .Check(new UpdateScheduleTemplateCommand(new UpdateScheduleTemplateDto(TestIds.Of(1), "Curso", From, To, false, new List<CreateWeeklyTimeSlotDto> { Slot() })))
                 .ShouldBeValid();
 
         [Fact]
         public void UpdateTemplate_id_must_be_positive()
             => new UpdateScheduleTemplateCommandValidator()
-                .Check(new UpdateScheduleTemplateCommand(new UpdateScheduleTemplateDto(0, "Curso", From, To, false, new List<CreateWeeklyTimeSlotDto> { Slot() })))
+                .Check(new UpdateScheduleTemplateCommand(new UpdateScheduleTemplateDto(TestIds.Of(0), "Curso", From, To, false, new List<CreateWeeklyTimeSlotDto> { Slot() })))
                 .ShouldFailOn("Dto.Id");
 
         [Fact]
         public void DeleteTemplate_id_must_be_positive()
-            => new DeleteScheduleTemplateCommandValidator().Check(new DeleteScheduleTemplateCommand(0)).ShouldFailOn("Id");
+            => new DeleteScheduleTemplateCommandValidator().Check(new DeleteScheduleTemplateCommand(TestIds.Of(0))).ShouldFailOn("Id");
 
         // ---------- Overrides ----------
 
         private static CreateScheduleOverrideDto ClosedOverride() =>
-            new(7, new DateOnly(2026, 5, 1), ScheduleOverrideType.Closed, "Festivo", null);
+            new(TestIds.Of(7), new DateOnly(2026, 5, 1), ScheduleOverrideType.Closed, "Festivo", null);
 
         [Fact]
         public void CreateOverride_closed_valid_passes()
@@ -163,17 +163,17 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         [Fact]
         public void UpdateOverride_id_must_be_positive()
             => new UpdateScheduleOverrideCommandValidator()
-                .Check(new UpdateScheduleOverrideCommand(new UpdateScheduleOverrideDto(0, new DateOnly(2026, 5, 1), ScheduleOverrideType.Closed, null, null)))
+                .Check(new UpdateScheduleOverrideCommand(new UpdateScheduleOverrideDto(TestIds.Of(0), new DateOnly(2026, 5, 1), ScheduleOverrideType.Closed, null, null)))
                 .ShouldFailOn("Dto.Id");
 
         [Fact]
         public void DeleteOverride_id_must_be_positive()
-            => new DeleteScheduleOverrideCommandValidator().Check(new DeleteScheduleOverrideCommand(0)).ShouldFailOn("Id");
+            => new DeleteScheduleOverrideCommandValidator().Check(new DeleteScheduleOverrideCommand(TestIds.Of(0))).ShouldFailOn("Id");
 
         // ---------- Generation ----------
 
         private static GenerateScheduleRequestDto ValidRequest() =>
-            new(7, 2026,
+            new(TestIds.Of(7), 2026,
                 new List<GenerateScheduleTemplateInputDto> { new("Curso", From, To, false, new List<CreateWeeklyTimeSlotDto> { Slot() }) },
                 IncludeNationalHolidays: true, IncludeLocalHolidays: false,
                 VacationPeriods: null, CustomClosedDates: null);
@@ -201,24 +201,24 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
 
         [Fact]
         public void Preview_wraps_request_validation()
-            => new PreviewScheduleQueryValidator().Check(new PreviewScheduleQuery(ValidRequest() with { BusinessId = 0 })).ShouldFailOn("Dto.BusinessId");
+            => new PreviewScheduleQueryValidator().Check(new PreviewScheduleQuery(ValidRequest() with { BusinessId = TestIds.Of(0) })).ShouldFailOn("Dto.BusinessId");
 
         // ---------- Calendar ----------
 
         [Fact]
         public void Calendar_valid_passes()
-            => new GetCalendarQueryValidator().Check(new GetCalendarQuery(7, From, To)).ShouldBeValid();
+            => new GetCalendarQueryValidator().Check(new GetCalendarQuery(TestIds.Of(7), From, To)).ShouldBeValid();
 
         [Fact]
         public void Calendar_to_before_from_fails()
-            => new GetCalendarQueryValidator().Check(new GetCalendarQuery(7, To, From)).ShouldFailOn("To");
+            => new GetCalendarQueryValidator().Check(new GetCalendarQuery(TestIds.Of(7), To, From)).ShouldFailOn("To");
 
         [Fact]
         public void Calendar_over_366_days_fails()
-            => new GetCalendarQueryValidator().Check(new GetCalendarQuery(7, From, From.AddDays(400))).ShouldFailOn("");
+            => new GetCalendarQueryValidator().Check(new GetCalendarQuery(TestIds.Of(7), From, From.AddDays(400))).ShouldFailOn("");
 
         [Fact]
         public void Calendar_date_at_max_value_fails()
-            => new GetCalendarQueryValidator().Check(new GetCalendarQuery(7, DateOnly.MaxValue, DateOnly.MaxValue)).ShouldFailOn("From");
+            => new GetCalendarQueryValidator().Check(new GetCalendarQuery(TestIds.Of(7), DateOnly.MaxValue, DateOnly.MaxValue)).ShouldFailOn("From");
     }
 }

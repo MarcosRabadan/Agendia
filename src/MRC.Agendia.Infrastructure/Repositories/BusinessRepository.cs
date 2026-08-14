@@ -11,7 +11,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         }
 
         /// <inheritdoc />
-        public Task<Business?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default)
+        public Task<Business?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default)
             => Set
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
@@ -19,7 +19,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         // IgnoreQueryFilters so availability works regardless of the caller's business
         // scope (#58); re-apply !IsDeleted explicitly since the global filter is bypassed.
         /// <inheritdoc />
-        public Task<Business?> GetActiveByIdAsync(int id, CancellationToken cancellationToken = default)
+        public Task<Business?> GetActiveByIdAsync(Guid id, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
                 .IgnoreQueryFilters()

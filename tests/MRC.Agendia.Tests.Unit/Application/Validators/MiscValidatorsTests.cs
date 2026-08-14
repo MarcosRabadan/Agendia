@@ -33,7 +33,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         // ---------- Availability ----------
 
         private static GetAvailabilityQuery ValidAvailability() =>
-            new(BusinessId: 1, Date: new DateOnly(2026, 6, 1), ServiceId: 1, EmployeeId: null, StepMinutes: 30);
+            new(BusinessId: TestIds.Of(1), Date: new DateOnly(2026, 6, 1), ServiceId: TestIds.Of(1), EmployeeId: null, StepMinutes: 30);
 
         [Fact]
         public void Availability_valid_passes()
@@ -51,17 +51,17 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
 
         [Fact]
         public void Availability_employee_when_present_must_be_positive()
-            => new GetAvailabilityQueryValidator().Check(ValidAvailability() with { EmployeeId = 0 }).ShouldFailOn("EmployeeId");
+            => new GetAvailabilityQueryValidator().Check(ValidAvailability() with { EmployeeId = TestIds.Of(0) }).ShouldFailOn("EmployeeId");
 
         [Fact]
         public void Availability_extra_service_equal_to_principal_fails()
             => new GetAvailabilityQueryValidator()
-                .Check(ValidAvailability() with { ServiceId = 1, ExtraServiceIds = new[] { 1 } }).ShouldFailOn("");
+                .Check(ValidAvailability() with { ServiceId = TestIds.Of(1), ExtraServiceIds = new[] { TestIds.Of(1) } }).ShouldFailOn("");
 
         [Fact]
         public void Availability_valid_extras_pass()
             => new GetAvailabilityQueryValidator()
-                .Check(ValidAvailability() with { ExtraServiceIds = new[] { 2, 3 } }).ShouldBeValid();
+                .Check(ValidAvailability() with { ExtraServiceIds = new[] { TestIds.Of(2), TestIds.Of(3) } }).ShouldBeValid();
 
         // ---------- Waitlist ----------
 
@@ -73,7 +73,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         }
 
         private static JoinWaitlistDto ValidJoin() =>
-            new(BusinessId: 1, ServiceId: 1, Date: new DateOnly(2026, 6, 1), StartTime: new TimeOnly(10, 0), EmployeeId: null);
+            new(BusinessId: TestIds.Of(1), ServiceId: TestIds.Of(1), Date: new DateOnly(2026, 6, 1), StartTime: new TimeOnly(10, 0), EmployeeId: null);
 
         [Fact]
         public void JoinWaitlist_future_slot_passes()
@@ -88,11 +88,11 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         [Fact]
         public void JoinWaitlist_business_id_must_be_positive()
             => new JoinWaitlistCommandValidator(ClockAt(new DateTime(2026, 1, 1)))
-                .Check(new JoinWaitlistCommand(ValidJoin() with { BusinessId = 0 })).ShouldFailOn("Dto.BusinessId");
+                .Check(new JoinWaitlistCommand(ValidJoin() with { BusinessId = TestIds.Of(0) })).ShouldFailOn("Dto.BusinessId");
 
         [Fact]
         public void LeaveWaitlist_entry_id_must_be_positive()
-            => new LeaveWaitlistCommandValidator().Check(new LeaveWaitlistCommand(0)).ShouldFailOn("EntryId");
+            => new LeaveWaitlistCommandValidator().Check(new LeaveWaitlistCommand(TestIds.Of(0))).ShouldFailOn("EntryId");
 
         // ---------- Holidays ----------
 
@@ -121,12 +121,12 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         [Fact]
         public void UpdateHoliday_id_must_be_positive()
             => new UpdateHolidayCommandValidator()
-                .Check(new UpdateHolidayCommand(new UpdateHolidayCalendarDto(0, new DateOnly(2026, 5, 1), "X", HolidayScope.National, 2026)))
+                .Check(new UpdateHolidayCommand(new UpdateHolidayCalendarDto(TestIds.Of(0), new DateOnly(2026, 5, 1), "X", HolidayScope.National, 2026)))
                 .ShouldFailOn("Dto.Id");
 
         [Fact]
         public void DeleteHoliday_id_must_be_positive()
-            => new DeleteHolidayCommandValidator().Check(new DeleteHolidayCommand(0)).ShouldFailOn("Id");
+            => new DeleteHolidayCommandValidator().Check(new DeleteHolidayCommand(TestIds.Of(0))).ShouldFailOn("Id");
 
         // ---------- Service auth ----------
 
@@ -147,19 +147,19 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         [Fact]
         public void Delete_restore_id_only_validators_reject_non_positive_id()
         {
-            new DeleteBusinessCommandValidator().Check(new DeleteBusinessCommand(0)).ShouldFailOn("Id");
-            new RestoreBusinessCommandValidator().Check(new RestoreBusinessCommand(0)).ShouldFailOn("Id");
-            new DeleteEmployeeCommandValidator().Check(new DeleteEmployeeCommand(0)).ShouldFailOn("Id");
-            new RestoreEmployeeCommandValidator().Check(new RestoreEmployeeCommand(0)).ShouldFailOn("Id");
-            new DeleteServiceCommandValidator().Check(new DeleteServiceCommand(0)).ShouldFailOn("Id");
-            new RestoreServiceCommandValidator().Check(new RestoreServiceCommand(0)).ShouldFailOn("Id");
+            new DeleteBusinessCommandValidator().Check(new DeleteBusinessCommand(TestIds.Of(0))).ShouldFailOn("Id");
+            new RestoreBusinessCommandValidator().Check(new RestoreBusinessCommand(TestIds.Of(0))).ShouldFailOn("Id");
+            new DeleteEmployeeCommandValidator().Check(new DeleteEmployeeCommand(TestIds.Of(0))).ShouldFailOn("Id");
+            new RestoreEmployeeCommandValidator().Check(new RestoreEmployeeCommand(TestIds.Of(0))).ShouldFailOn("Id");
+            new DeleteServiceCommandValidator().Check(new DeleteServiceCommand(TestIds.Of(0))).ShouldFailOn("Id");
+            new RestoreServiceCommandValidator().Check(new RestoreServiceCommand(TestIds.Of(0))).ShouldFailOn("Id");
         }
 
         [Fact]
         public void Delete_restore_id_only_validators_accept_positive_id()
         {
-            new DeleteBusinessCommandValidator().Check(new DeleteBusinessCommand(1)).ShouldBeValid();
-            new RestoreServiceCommandValidator().Check(new RestoreServiceCommand(1)).ShouldBeValid();
+            new DeleteBusinessCommandValidator().Check(new DeleteBusinessCommand(TestIds.Of(1))).ShouldBeValid();
+            new RestoreServiceCommandValidator().Check(new RestoreServiceCommand(TestIds.Of(1))).ShouldBeValid();
         }
 
         // ---------- Shared pagination validators ----------

@@ -22,12 +22,12 @@ namespace MRC.Agendia.Tests.Unit.Application.Statistics
 
         private static IReadOnlyList<AppointmentStatsRow> Dataset() => new List<AppointmentStatsRow>
         {
-            new(D1, AppointmentStatus.Completed, 1),
-            new(D1Eleven, AppointmentStatus.Confirmed, 1),
-            new(D2, AppointmentStatus.Completed, 2),
-            new(D3, AppointmentStatus.NoShow, 1),
-            new(D4, AppointmentStatus.Cancelled, 2),
-            new(D1Next, AppointmentStatus.Pending, 1),
+            new(D1, AppointmentStatus.Completed, TestIds.Of(1)),
+            new(D1Eleven, AppointmentStatus.Confirmed, TestIds.Of(1)),
+            new(D2, AppointmentStatus.Completed, TestIds.Of(2)),
+            new(D3, AppointmentStatus.NoShow, TestIds.Of(1)),
+            new(D4, AppointmentStatus.Cancelled, TestIds.Of(2)),
+            new(D1Next, AppointmentStatus.Pending, TestIds.Of(1)),
         };
 
         [Fact]
@@ -62,10 +62,10 @@ namespace MRC.Agendia.Tests.Unit.Application.Statistics
 
             Assert.Equal(2, stats.Services.Count);
             // Service 1: 3 bookings (completed + confirmed + pending).
-            Assert.Equal(1, stats.Services[0].ServiceId);
+            Assert.Equal(TestIds.Of(1), stats.Services[0].ServiceId);
             Assert.Equal(3, stats.Services[0].Count);
             // Service 2: 1 booking (completed).
-            Assert.Equal(2, stats.Services[1].ServiceId);
+            Assert.Equal(TestIds.Of(2), stats.Services[1].ServiceId);
             Assert.Equal(1, stats.Services[1].Count);
         }
 

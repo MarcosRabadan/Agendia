@@ -6,11 +6,11 @@ namespace MRC.Agendia.Domain.Events
     /// <see cref="Language"/> that they can now book. <see cref="EmployeeId"/> is
     /// null for an "any employee" waitlist entry.
     /// </summary>
-    public sealed record WaitlistSlotAvailable(int WaitlistEntryId,
-                                               int BusinessId,
-                                               int? EmployeeId,
+    public sealed record WaitlistSlotAvailable(Guid WaitlistEntryId,
+                                               Guid BusinessId,
+                                               Guid? EmployeeId,
                                                string ClientUserId,
-                                               int ServiceId,
+                                               Guid ServiceId,
                                                DateOnly Date,
                                                TimeOnly StartTime,
                                                string Language,

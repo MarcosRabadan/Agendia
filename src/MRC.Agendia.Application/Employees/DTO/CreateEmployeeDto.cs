@@ -5,7 +5,7 @@ namespace MRC.Agendia.Application.Employees.DTO
     // UpdateEmployeeDto deliberately omits it so an existing employee can never be
     // repointed to another user via a crafted DTO.
     public record CreateEmployeeDto(
-        int BusinessId,
+        Guid BusinessId,
         string? UserId = null,
         int MaxConcurrentAppointments = 1);
 }

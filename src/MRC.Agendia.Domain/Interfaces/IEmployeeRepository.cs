@@ -8,7 +8,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="id">Employee id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The employee, or null when soft-deleted, out of scope, or missing.</returns>
-        Task<Employee?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<Employee?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets a non-deleted employee by id for public (booking/availability) reads.
@@ -18,13 +18,13 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="id">Employee id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The employee, or null when soft-deleted or missing.</returns>
-        Task<Employee?> GetByIdPublicAsync(int id, CancellationToken cancellationToken = default);
+        Task<Employee?> GetByIdPublicAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Gets an employee by id ignoring the soft-delete filter (for restore).</summary>
         /// <param name="id">Employee id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The employee even if soft-deleted, or null when missing.</returns>
-        Task<Employee?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default);
+        Task<Employee?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets a business's active, non-deleted employees for the public availability flow,
@@ -33,7 +33,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="businessId">Business id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The active employees of the business.</returns>
-        Task<IEnumerable<Employee>> GetActiveByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<Employee>> GetActiveByBusinessIdAsync(Guid businessId, CancellationToken cancellationToken = default);
 
         /// <summary>Gets a page of employees ordered by id. Untracked.</summary>
         /// <param name="page">1-based page number.</param>

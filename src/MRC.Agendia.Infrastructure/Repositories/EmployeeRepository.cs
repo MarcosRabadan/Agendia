@@ -11,7 +11,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         }
 
         /// <inheritdoc />
-        public Task<Employee?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default)
+        public Task<Employee?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default)
             => Set
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
@@ -21,7 +21,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         // (#58); re-apply !IsDeleted since the filter is bypassed. The caller still
         // checks BusinessId/IsActive. Management paths keep the scoped GetByIdAsync.
         /// <inheritdoc />
-        public Task<Employee?> GetByIdPublicAsync(int id, CancellationToken cancellationToken = default)
+        public Task<Employee?> GetByIdPublicAsync(Guid id, CancellationToken cancellationToken = default)
             => Set
                 .AsNoTracking()
                 .IgnoreQueryFilters()
@@ -49,7 +49,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         // authenticated owner/employee can read another business's active staff
         // (#58); re-apply !IsDeleted since the global business filter is bypassed.
         /// <inheritdoc />
-        public async Task<IEnumerable<Employee>> GetActiveByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<Employee>> GetActiveByBusinessIdAsync(Guid businessId, CancellationToken cancellationToken = default)
             => await Set.AsNoTracking()
                 .IgnoreQueryFilters()
                 .Where(e => e.BusinessId == businessId && e.IsActive && !e.IsDeleted)

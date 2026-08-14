@@ -33,12 +33,12 @@ namespace MRC.Agendia.Application.Appointments
         }
 
         /// <inheritdoc />
-        public async Task EnsureValidAsync(int? appointmentId,
-                                           int employeeId,
-                                           int serviceId,
+        public async Task EnsureValidAsync(Guid? appointmentId,
+                                           Guid employeeId,
+                                           Guid serviceId,
                                            DateTime startDate,
                                            DateTime endDate,
-                                           IReadOnlyCollection<int>? extraServiceIds = null,
+                                           IReadOnlyCollection<Guid>? extraServiceIds = null,
                                            CancellationToken cancellationToken = default)
         {
             // ---------- Basic input checks ----------

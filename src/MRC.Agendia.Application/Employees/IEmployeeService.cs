@@ -27,7 +27,7 @@ namespace MRC.Agendia.Application.Employees
         /// <param name="id">The employee identifier.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The employee DTO, or <c>null</c> if not found.</returns>
-        Task<EmployeeDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<EmployeeDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Creates a new employee.</summary>
         /// <param name="dto">The data used to create the employee.</param>
@@ -45,12 +45,12 @@ namespace MRC.Agendia.Application.Employees
         /// <param name="id">The employee identifier.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns><c>true</c> when the employee is deleted.</returns>
-        Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
+        Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Restores a previously soft-deleted employee by its identifier.</summary>
         /// <param name="id">The employee identifier.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns><c>true</c> when the employee is restored or was not deleted.</returns>
-        Task<bool> RestoreAsync(int id, CancellationToken cancellationToken = default);
+        Task<bool> RestoreAsync(Guid id, CancellationToken cancellationToken = default);
     }
 }

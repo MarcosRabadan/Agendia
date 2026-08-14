@@ -9,8 +9,8 @@ namespace MRC.Agendia.Application.Appointments.Commands.Crud
         {
             RuleFor(x => x.Dto).NotNull();
             RuleFor(x => x.Dto.ClientUserId).NotEmpty();
-            RuleFor(x => x.Dto.EmployeeId).GreaterThan(0);
-            RuleFor(x => x.Dto.ServiceId).GreaterThan(0);
+            RuleFor(x => x.Dto.EmployeeId).NotEmpty();
+            RuleFor(x => x.Dto.ServiceId).NotEmpty();
             RuleFor(x => x.Dto.StartDate)
                 .NotEqual(default(DateTime)).WithMessage("StartDate es obligatorio.");
             RuleFor(x => x.Dto.EndDate)
@@ -23,7 +23,7 @@ namespace MRC.Agendia.Application.Appointments.Commands.Crud
                 .WithMessage("El estado inicial solo puede ser Pending o Confirmed.");
             When(x => x.Dto.ExtraServiceIds is { Count: > 0 }, () =>
             {
-                RuleForEach(x => x.Dto.ExtraServiceIds).GreaterThan(0);
+                RuleForEach(x => x.Dto.ExtraServiceIds).NotEmpty();
                 RuleFor(x => x.Dto.ExtraServiceIds!.Count)
                     .LessThanOrEqualTo(10)
                     .WithMessage("No se pueden combinar mas de 10 servicios adicionales.");

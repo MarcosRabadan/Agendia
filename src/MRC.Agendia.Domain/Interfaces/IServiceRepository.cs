@@ -8,7 +8,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="id">Service id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The service, or null when soft-deleted, out of scope, or missing.</returns>
-        Task<Service?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<Service?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets a non-deleted service by id, ignoring the business-scope filter so it
@@ -18,13 +18,13 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="id">Service id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The service, or null when soft-deleted or missing.</returns>
-        Task<Service?> GetByIdPublicAsync(int id, CancellationToken cancellationToken = default);
+        Task<Service?> GetByIdPublicAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Gets a service by id ignoring the soft-delete filter (for restore).</summary>
         /// <param name="id">Service id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The service even if soft-deleted, or null when missing.</returns>
-        Task<Service?> GetByIdIncludingDeletedAsync(int id, CancellationToken cancellationToken = default);
+        Task<Service?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Adds a new service to the context.</summary>
         /// <param name="service">The service to add.</param>

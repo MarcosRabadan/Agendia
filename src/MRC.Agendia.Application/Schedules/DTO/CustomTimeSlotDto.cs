@@ -1,7 +1,7 @@
 namespace MRC.Agendia.Application.Schedules.DTO
 {
     public record CustomTimeSlotDto(
-        int Id,
+        Guid Id,
         TimeOnly StartTime,
         TimeOnly EndTime);
 }

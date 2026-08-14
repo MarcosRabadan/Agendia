@@ -43,7 +43,7 @@ namespace MRC.Agendia.Api.Controllers
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(EmployeeDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<EmployeeDto>> GetById(int id)
+        public async Task<ActionResult<EmployeeDto>> GetById(Guid id)
         {
             var result = await _mediator.Send(new GetEmployeeByIdQuery(id));
             if (result is null) return NotFound();
@@ -67,7 +67,7 @@ namespace MRC.Agendia.Api.Controllers
         [ProducesResponseType(typeof(EmployeeDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<EmployeeDto>> Update(int id, [FromBody] UpdateEmployeeDto dto)
+        public async Task<ActionResult<EmployeeDto>> Update(Guid id, [FromBody] UpdateEmployeeDto dto)
         {
             if (id != dto.Id) return BadRequest("Id mismatch.");
             var result = await _mediator.Send(new UpdateEmployeeCommand(dto));
@@ -79,7 +79,7 @@ namespace MRC.Agendia.Api.Controllers
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(Guid id)
         {
             await _mediator.Send(new DeleteEmployeeCommand(id));
             return NoContent();
@@ -90,7 +90,7 @@ namespace MRC.Agendia.Api.Controllers
         [HttpPost("{id}/restore")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Restore(int id)
+        public async Task<IActionResult> Restore(Guid id)
         {
             await _mediator.Send(new RestoreEmployeeCommand(id));
             return NoContent();

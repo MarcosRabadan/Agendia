@@ -5,11 +5,11 @@ namespace MRC.Agendia.Domain.Events
     /// minutes late, for each affected upcoming appointment. The consumer notifies
     /// the client (resolved from <see cref="ClientUserId"/>) in <see cref="Language"/>.
     /// </summary>
-    public sealed record AppointmentDelayed(int AppointmentId,
-                                            int BusinessId,
-                                            int EmployeeId,
+    public sealed record AppointmentDelayed(Guid AppointmentId,
+                                            Guid BusinessId,
+                                            Guid EmployeeId,
                                             string ClientUserId,
-                                            int ServiceId,
+                                            Guid ServiceId,
                                             DateTime StartDate,
                                             DateTime EndDate,
                                             int DelayMinutes,

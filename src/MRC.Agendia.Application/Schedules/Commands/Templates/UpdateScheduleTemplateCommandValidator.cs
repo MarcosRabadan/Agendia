@@ -8,7 +8,7 @@ namespace MRC.Agendia.Application.Schedules.Commands.Templates
         public UpdateScheduleTemplateCommandValidator()
         {
             RuleFor(x => x.Dto).NotNull();
-            RuleFor(x => x.Dto.Id).GreaterThan(0);
+            RuleFor(x => x.Dto.Id).NotEmpty();
             RuleFor(x => x.Dto.Name).NotEmpty().MaximumLength(200);
             RuleFor(x => x.Dto.EffectiveFrom).NotEqual(default(DateOnly));
             RuleFor(x => x.Dto.EffectiveTo)

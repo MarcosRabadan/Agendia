@@ -5,7 +5,7 @@ namespace MRC.Agendia.Domain.Exceptions
     {
         public override string Code => "WAITLIST_ENTRY_NOT_FOUND";
 
-        public WaitlistEntryNotFoundException(int id)
+        public WaitlistEntryNotFoundException(Guid id)
             : base($"No existe ninguna entrada de lista de espera con el identificador {id}.")
         {
         }
