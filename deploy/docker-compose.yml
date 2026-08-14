@@ -1,0 +1,43 @@
+# Infra local para desarrollo/pruebas de Agendia (NO es para produccion).
+# Levanta dos "cajitas": Seq (visor de logs) y RabbitMQ (broker de mensajeria).
+#
+# Uso (desde esta carpeta 'deploy'):
+#   docker compose up -d      arranca en segundo plano
+#   docker compose ps         ver estado
+#   docker compose down       parar (conserva los datos en los volumenes)
+#
+# UIs una vez arrancado:
+#   Seq       -> http://localhost:5341
+#   RabbitMQ  -> http://localhost:15672   (usuario: agendia  /  clave: agendia)
+#
+# Versiones FIJADAS a proposito (no 'latest'): asi cualquiera levanta la misma
+# infra con la que se probo. Para actualizar, sube el tag conscientemente.
+
+services:
+  seq:
+    image: datalust/seq:2024.3
+    container_name: agendia-seq
+    environment:
+      ACCEPT_EULA: "Y"            # acepta la licencia gratuita de Seq
+    ports:
+      - "5341:80"                 # http://localhost:5341 = web de Seq + recepcion de logs
+    volumes:
+      - seq-data:/data            # conserva los logs aunque reinicies la cajita
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management  # "-management" incluye la web de administracion
+    container_name: agendia-rabbitmq
+    ports:
+      - "5672:5672"               # puerto por el que la app hablara con RabbitMQ (AMQP)
+      - "15672:15672"             # http://localhost:15672 = web de administracion
+    environment:
+      RABBITMQ_DEFAULT_USER: agendia
+      RABBITMQ_DEFAULT_PASS: agendia
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+volumes:
+  seq-data:
+  rabbitmq-data:
