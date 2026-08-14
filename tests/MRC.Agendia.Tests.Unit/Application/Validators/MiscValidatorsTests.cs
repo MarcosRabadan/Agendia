@@ -3,9 +3,6 @@ using MRC.Agendia.Application.Availability.Queries;
 using MRC.Agendia.Application.Business.Commands.Delete;
 using MRC.Agendia.Application.Business.Commands.Restore;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Application.DeviceTokens.Commands.Register;
-using MRC.Agendia.Application.DeviceTokens.Commands.Remove;
-using MRC.Agendia.Application.DeviceTokens.DTO;
 using MRC.Agendia.Application.Employees.Commands.Delete;
 using MRC.Agendia.Application.Employees.Commands.Restore;
 using MRC.Agendia.Application.Employees.Queries.GetAll;
@@ -144,28 +141,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         public void AuthenticateService_required_fields(string clientId, string secret, string prop)
             => new AuthenticateServiceCommandValidator()
                 .Check(new AuthenticateServiceCommand(new ServiceTokenRequestDto(clientId, secret))).ShouldFailOn(prop);
-
-        // ---------- Device tokens ----------
-
-        [Fact]
-        public void RegisterDeviceToken_valid_passes()
-            => new RegisterDeviceTokenCommandValidator()
-                .Check(new RegisterDeviceTokenCommand(new RegisterDeviceTokenDto("tok", DevicePlatform.Android))).ShouldBeValid();
-
-        [Fact]
-        public void RegisterDeviceToken_empty_token_fails()
-            => new RegisterDeviceTokenCommandValidator()
-                .Check(new RegisterDeviceTokenCommand(new RegisterDeviceTokenDto("", DevicePlatform.Android))).ShouldFailOn("Dto.Token");
-
-        [Fact]
-        public void RegisterDeviceToken_platform_out_of_enum_fails()
-            => new RegisterDeviceTokenCommandValidator()
-                .Check(new RegisterDeviceTokenCommand(new RegisterDeviceTokenDto("tok", (DevicePlatform)99))).ShouldFailOn("Dto.Platform");
-
-        [Fact]
-        public void RemoveDeviceToken_empty_token_fails()
-            => new RemoveDeviceTokenCommandValidator()
-                .Check(new RemoveDeviceTokenCommand(new RemoveDeviceTokenDto(""))).ShouldFailOn("Dto.Token");
 
         // ---------- Shared id-only delete/restore ----------
 

@@ -1,10 +1,11 @@
 using AutoMapper;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Availability;
-using MRC.Agendia.Application.Notifications;
+using MRC.Agendia.Application.Events;
 using MRC.Agendia.Application.Waitlist.DTO;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Events;
 using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 
@@ -15,7 +16,7 @@ namespace MRC.Agendia.Application.Waitlist
         private readonly IWaitlistRepository _repository;
         private readonly IAvailabilityService _availabilityService;
         private readonly IAppointmentRepository _appointmentRepository;
-        private readonly INotificationService _notificationService;
+        private readonly IEventPublisher _eventPublisher;
         private readonly IBookingConcurrencyGuard _bookingGuard;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
@@ -23,7 +24,7 @@ namespace MRC.Agendia.Application.Waitlist
         public WaitlistService(IWaitlistRepository repository,
                                IAvailabilityService availabilityService,
                                IAppointmentRepository appointmentRepository,
-                               INotificationService notificationService,
+                               IEventPublisher eventPublisher,
                                IBookingConcurrencyGuard bookingGuard,
                                IUnitOfWork unitOfWork,
                                IMapper mapper)
@@ -31,7 +32,7 @@ namespace MRC.Agendia.Application.Waitlist
             _repository = repository;
             _availabilityService = availabilityService;
             _appointmentRepository = appointmentRepository;
-            _notificationService = notificationService;
+            _eventPublisher = eventPublisher;
             _bookingGuard = bookingGuard;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -133,15 +134,16 @@ namespace MRC.Agendia.Application.Waitlist
                     if (capacity is null or <= 0)
                         return;
 
-                    // Send first, then mark Notified only if it actually went out.
-                    // Marking before sending (and swallowing a failed send) would leave
-                    // the entry stuck on Notified -> GetNextWaitingForSlotAsync never
-                    // re-selects it, so the freed slot is lost with no retry. If the send
-                    // succeeds but the Save below fails, the worst case is a duplicate
-                    // notification on a later freed slot - preferable to a lost one.
-                    var notified = await _notificationService.SendWaitlistAvailabilityAsync(entry.Id, cancellationToken);
-                    if (!notified)
-                        return;
+                    // Enlist the availability event and mark the entry Notified in the
+                    // SAME save (transactional outbox): the event and the Notified mark
+                    // commit together, so the slot is never both "notified" with no event
+                    // nor announced twice. The consumer resolves the client's contact from
+                    // ClientUserId and delivers in the business language.
+                    await _eventPublisher.PublishAsync(new WaitlistSlotAvailable(
+                        entry.Id, entry.BusinessId, entry.EmployeeId, entry.ClientUserId,
+                        entry.ServiceId, entry.Date, entry.StartTime,
+                        appointment.Employee.Business.DefaultLanguage, DateTime.UtcNow),
+                        cancellationToken);
 
                     entry.Status = WaitlistStatus.Notified;
                     _repository.Update(entry);

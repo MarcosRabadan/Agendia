@@ -7,8 +7,9 @@ using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Authorization;
-using MRC.Agendia.Application.Notifications;
+using MRC.Agendia.Application.Events;
 using MRC.Agendia.Domain.Interfaces;
+using MRC.Agendia.Infrastructure.Messaging;
 using MRC.Agendia.Domain.Services;
 using MRC.Agendia.Infrastructure.Auditing;
 using MRC.Agendia.Infrastructure.Authorization;
@@ -67,7 +68,6 @@ namespace MRC.Agendia.Infrastructure
             services.AddScoped<IAuditLogRepository, AuditLogRepository>();
             services.AddScoped<IBusinessStatsRepository, BusinessStatsRepository>();
             services.AddScoped<IWaitlistRepository, WaitlistRepository>();
-            services.AddScoped<IDeviceTokenRepository, DeviceTokenRepository>();
 
             // Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -88,8 +88,12 @@ namespace MRC.Agendia.Infrastructure
             // Per-request multi-tenant business scope for the global query filter (#58).
             services.AddScoped<ICurrentBusinessScope, CurrentBusinessScope>();
 
-            // Notifications (email; push/FCM tracked separately)
-            services.AddScoped<INotificationService, NotificationService>();
+            // Notifications by domain events (#246): Agendia no longer delivers
+            // email/push. It publishes integration events through a transactional
+            // outbox; the dispatcher hands them to a swappable transport (log-only
+            // until the system-wide broker is chosen - RabbitMQ/Azure SB/Kafka).
+            services.AddScoped<IEventPublisher, OutboxEventPublisher>();
+            services.AddScoped<IEventTransport, LoggingEventTransport>();
 
             // Audit log
             services.AddScoped<IAuditLogger, AuditLogger>();
@@ -104,6 +108,7 @@ namespace MRC.Agendia.Infrastructure
 
             // Hosted services
             services.AddHostedService<AppointmentReminderService>();
+            services.AddHostedService<OutboxDispatcherService>();
 
             return services;
         }

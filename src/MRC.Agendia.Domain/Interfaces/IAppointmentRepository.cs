@@ -151,6 +151,17 @@ namespace MRC.Agendia.Domain.Interfaces
         Task<int?> GetCancellationWindowHoursAsync(int appointmentId, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Projects the fields an appointment integration event needs (including the
+        /// business default language) in a single query, or null when no row has that
+        /// id. Ignores soft-delete filters so a just-created or just-cancelled
+        /// appointment can still be read back to raise its event.
+        /// </summary>
+        /// <param name="appointmentId">Appointment id.</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>The notification context, or null when the appointment is missing.</returns>
+        Task<AppointmentNotificationContext?> GetNotificationContextAsync(int appointmentId, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// The owning business's default initial appointment status, resolved through
         /// the employee. Falls back to Pending when the employee or business is missing.
         /// </summary>

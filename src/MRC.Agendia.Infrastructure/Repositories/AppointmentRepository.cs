@@ -171,6 +171,27 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .FirstOrDefaultAsync(cancellationToken);
 
         /// <inheritdoc />
+        public Task<AppointmentNotificationContext?> GetNotificationContextAsync(int appointmentId, CancellationToken cancellationToken = default)
+            // Single projection with the business default language, resolved through
+            // employee -> business. IgnoreQueryFilters so a just-cancelled appointment
+            // (or one with a soft-deleted participant) is still read back to raise its
+            // event, consistent with the other appointment reads.
+            => Set
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Where(a => a.Id == appointmentId)
+                .Select(a => new AppointmentNotificationContext(
+                    a.Id,
+                    a.Employee.BusinessId,
+                    a.EmployeeId,
+                    a.ClientUserId,
+                    a.ServiceId,
+                    a.StartDate,
+                    a.EndDate,
+                    a.Employee.Business.DefaultLanguage))
+                .FirstOrDefaultAsync(cancellationToken);
+
+        /// <inheritdoc />
         public Task<AppointmentStatus> GetBusinessDefaultStatusByEmployeeAsync(int employeeId, CancellationToken cancellationToken = default)
             // Resolve through employee -> business. IgnoreQueryFilters so a soft-deleted
             // business does not drop the row; a missing employee falls back to
