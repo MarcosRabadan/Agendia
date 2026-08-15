@@ -35,6 +35,10 @@ namespace MRC.Agendia.Tests.Integration.Messaging
             const int total = 6;
             await using (var seed = _postgres.CreateContext())
             {
+                // Isolate from other tests sharing the container: start from an empty outbox
+                // so the "all delivered / none pending" assertions below cannot be tripped by
+                // messages another test left behind.
+                await seed.Set<OutboxMessage>().ExecuteDeleteAsync();
                 for (var i = 0; i < total; i++)
                     seed.Set<OutboxMessage>().Add(new OutboxMessage
                     {
