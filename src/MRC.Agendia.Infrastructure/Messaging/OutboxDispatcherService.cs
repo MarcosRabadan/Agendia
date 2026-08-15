@@ -1,56 +1,56 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace MRC.Agendia.Infrastructure.Messaging
 {
     /// <summary>
     /// Polls the outbox and delivers pending events through <see cref="IEventTransport"/>
-    /// (at-least-once). A message is marked processed only after a successful
-    /// delivery, so a crash or broker outage retries it on the next poll instead of
-    /// losing it. A failed delivery does not block the rest of the batch.
+    /// (at-least-once), then periodically purges old processed rows. The per-cycle work
+    /// lives in <see cref="OutboxProcessor"/>; this service only owns the timing loop.
     ///
-    /// Configuration (optional, with safe defaults):
-    ///   "Outbox": {
-    ///     "PollIntervalSeconds": 10,
-    ///     "BatchSize": 20
-    ///   }
+    /// A message is marked processed only after a successful delivery, so a crash or broker
+    /// outage retries it next poll instead of losing it. A permanently-failing message is
+    /// dead-lettered after <see cref="OutboxOptions.MaxAttempts"/> so it stops blocking the
+    /// queue (see <see cref="OutboxProcessor.DispatchPendingAsync"/>).
+    ///
+    /// <para><b>Single instance.</b> The poll does not claim rows (no <c>FOR UPDATE SKIP
+    /// LOCKED</c>), so running more than one instance would deliver each event from every
+    /// instance. That is tolerable under at-least-once with an idempotent consumer, but it
+    /// amplifies duplicates, so run ONE instance until a claim (or the real broker) is wired.</para>
+    ///
+    /// Configuration (optional, safe defaults): see <see cref="OutboxOptions"/> ("Outbox"
+    /// section: PollIntervalSeconds, BatchSize, MaxAttempts, RetentionDays, PurgeIntervalMinutes).
     /// </summary>
     public class OutboxDispatcherService : BackgroundService
     {
         private readonly IServiceProvider _serviceProvider;
+        private readonly OutboxOptions _options;
         private readonly ILogger<OutboxDispatcherService> _logger;
-        private readonly TimeSpan _interval;
-        private readonly int _batchSize;
+        private DateTime _nextPurgeUtc = DateTime.MinValue;
 
         public OutboxDispatcherService(IServiceProvider serviceProvider,
-                                       IConfiguration configuration,
+                                       IOptions<OutboxOptions> options,
                                        ILogger<OutboxDispatcherService> logger)
         {
             _serviceProvider = serviceProvider;
+            _options = options.Value;
             _logger = logger;
-
-            var section = configuration.GetSection("Outbox");
-            var intervalSeconds = section.GetValue<int?>("PollIntervalSeconds") ?? 10;
-            var batchSize = section.GetValue<int?>("BatchSize") ?? 20;
-
-            _interval = TimeSpan.FromSeconds(Math.Max(1, intervalSeconds));
-            _batchSize = Math.Max(1, batchSize);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            var interval = TimeSpan.FromSeconds(Math.Max(1, _options.PollIntervalSeconds));
             _logger.LogInformation(
-                "OutboxDispatcherService iniciado. Intervalo: {Interval}, Lote: {BatchSize}.",
-                _interval, _batchSize);
+                "OutboxDispatcherService started (single instance). Interval: {Interval}, batch: {BatchSize}, maxAttempts: {MaxAttempts}, retention: {RetentionDays}d.",
+                interval, _options.BatchSize, _options.MaxAttempts, _options.RetentionDays);
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
-                    await DispatchPendingAsync(stoppingToken);
+                    await RunCycleAsync(stoppingToken);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
@@ -58,12 +58,12 @@ namespace MRC.Agendia.Infrastructure.Messaging
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error despachando eventos del outbox. Se reintentara en {Interval}.", _interval);
+                    _logger.LogError(ex, "Outbox dispatch cycle failed; retrying in {Interval}.", interval);
                 }
 
                 try
                 {
-                    await Task.Delay(_interval, stoppingToken);
+                    await Task.Delay(interval, stoppingToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -72,43 +72,26 @@ namespace MRC.Agendia.Infrastructure.Messaging
             }
         }
 
-        private async Task DispatchPendingAsync(CancellationToken cancellationToken)
+        private async Task RunCycleAsync(CancellationToken cancellationToken)
         {
             using var scope = _serviceProvider.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
-            var transport = scope.ServiceProvider.GetRequiredService<IEventTransport>();
+            var processor = scope.ServiceProvider.GetRequiredService<OutboxProcessor>();
 
-            var pending = await context.Set<OutboxMessage>()
-                .Where(m => m.ProcessedOnUtc == null)
-                .OrderBy(m => m.OccurredOnUtc)
-                .Take(_batchSize)
-                .ToListAsync(cancellationToken);
+            var delivered = await processor.DispatchPendingAsync(cancellationToken);
+            if (delivered > 0)
+                _logger.LogInformation("Dispatched {Delivered} outbox event(s).", delivered);
 
-            if (pending.Count == 0)
-                return;
-
-            var delivered = 0;
-            foreach (var message in pending)
+            // Purge runs on its own (longer) cadence, not every poll, so it never competes
+            // with delivery latency.
+            if (DateTime.UtcNow >= _nextPurgeUtc)
             {
-                message.Attempts++;
-                try
-                {
-                    await transport.PublishAsync(message.Type, message.Payload, cancellationToken);
-                    message.ProcessedOnUtc = DateTime.UtcNow;
-                    message.Error = null;
-                    delivered++;
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    // Leave it pending (ProcessedOnUtc stays null) so it is retried
-                    // next poll; a single poison message does not stop the batch.
-                    message.Error = ex.Message;
-                    _logger.LogWarning(ex, "Fallo al despachar el evento {Id} ({Type}); se reintentara.", message.Id, message.Type);
-                }
-            }
+                var purged = await processor.PurgeProcessedAsync(cancellationToken);
+                if (purged > 0)
+                    _logger.LogInformation("Purged {Purged} processed outbox message(s) older than {RetentionDays} day(s).",
+                        purged, _options.RetentionDays);
 
-            await context.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Despachados {Delivered} de {Total} evento(s) del outbox.", delivered, pending.Count);
+                _nextPurgeUtc = DateTime.UtcNow.AddMinutes(Math.Max(1, _options.PurgeIntervalMinutes));
+            }
         }
     }
 }

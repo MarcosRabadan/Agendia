@@ -94,6 +94,8 @@ namespace MRC.Agendia.Infrastructure
             // until the system-wide broker is chosen - RabbitMQ/Azure SB/Kafka).
             services.AddScoped<IEventPublisher, OutboxEventPublisher>();
             services.AddScoped<IEventTransport, LoggingEventTransport>();
+            services.Configure<OutboxOptions>(configuration.GetSection(OutboxOptions.SectionName));
+            services.AddScoped<OutboxProcessor>();
 
             // Audit log
             services.AddScoped<IAuditLogger, AuditLogger>();
