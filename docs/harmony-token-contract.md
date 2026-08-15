@@ -67,8 +67,10 @@ integración con Harmony está rota: no los relajes.
 
 El `sub` no se usa solo para autenticar: se **persiste**. Agendia guarda ese valor en
 `Business.OwnerUserId`, `Employee.UserId`, `Appointment.ClientUserId`,
-`WaitlistEntry.ClientUserId`, `DeviceToken.UserId` y `AuditLog.UserId`, y la
-autorización por recurso compara el `sub` del token contra esas columnas.
+`WaitlistEntry.ClientUserId` y `AuditLog.UserId`, y la autorización por recurso compara
+el `sub` del token contra esas columnas. El `sub` es siempre un **string opaco** de
+Harmony: no es un GUID de Agendia y no se convierte a uno (las PK/FK internas sí son
+GUID UUIDv7 desde la Fase 6, pero el `sub` cruza el límite del servicio sin FK).
 
 Por tanto, **si Harmony cambia el `sub` de un usuario, ese usuario pierde el acceso a
 todo lo suyo en Agendia**. Debe ser inmutable de por vida.

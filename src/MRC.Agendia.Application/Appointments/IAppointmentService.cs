@@ -29,7 +29,7 @@ namespace MRC.Agendia.Application.Appointments
         /// <returns>The appointment, or null if it does not exist.</returns>
         Task<AppointmentDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-        /// <summary>Creates an appointment after validating and reserving the slot under a per-employee/day lock, then sends a best-effort confirmation email.</summary>
+        /// <summary>Creates an appointment after validating and reserving the slot under a per-employee/day lock, then publishes a best-effort confirmation integration event.</summary>
         /// <param name="dto">Data of the appointment to create.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The created appointment.</returns>

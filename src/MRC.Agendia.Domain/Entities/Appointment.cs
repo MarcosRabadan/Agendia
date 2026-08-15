@@ -22,8 +22,8 @@ namespace MRC.Agendia.Domain.Entities
         public string? Notes { get; set; }
 
         /// <summary>
-        /// When the 24h reminder email was sent, or null if not yet sent. Used by
-        /// the reminder background job to avoid sending duplicate reminders.
+        /// When the 24h reminder event was published, or null if not yet. Used by
+        /// the reminder background job to avoid publishing duplicate reminders.
         /// </summary>
         public DateTime? ReminderSentAt { get; set; }
 

@@ -27,8 +27,9 @@ namespace MRC.Agendia.Domain.Entities
 
         /// <summary>
         /// Two-letter language code (see <see cref="SupportedLanguages"/>) the
-        /// business sends its notifications in. Defaults to Spanish; selects the
-        /// localized email/push templates.
+        /// business's notifications are delivered in. Defaults to Spanish; travels in
+        /// the integration events so the downstream consumer picks the localized
+        /// template.
         /// </summary>
         public string DefaultLanguage { get; set; } = SupportedLanguages.Spanish;
 
