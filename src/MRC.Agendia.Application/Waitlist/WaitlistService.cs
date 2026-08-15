@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.Extensions.Logging;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Availability;
 using MRC.Agendia.Application.Events;
@@ -19,6 +20,7 @@ namespace MRC.Agendia.Application.Waitlist
         private readonly IEventPublisher _eventPublisher;
         private readonly IBookingConcurrencyGuard _bookingGuard;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<WaitlistService> _logger;
         private readonly IMapper _mapper;
 
         public WaitlistService(IWaitlistRepository repository,
@@ -27,6 +29,7 @@ namespace MRC.Agendia.Application.Waitlist
                                IEventPublisher eventPublisher,
                                IBookingConcurrencyGuard bookingGuard,
                                IUnitOfWork unitOfWork,
+                               ILogger<WaitlistService> logger,
                                IMapper mapper)
         {
             _repository = repository;
@@ -35,6 +38,7 @@ namespace MRC.Agendia.Application.Waitlist
             _eventPublisher = eventPublisher;
             _bookingGuard = bookingGuard;
             _unitOfWork = unitOfWork;
+            _logger = logger;
             _mapper = mapper;
         }
 
@@ -150,10 +154,15 @@ namespace MRC.Agendia.Application.Waitlist
                     await _unitOfWork.Save(cancellationToken);
                 }, cancellationToken);
             }
-            catch
+            catch (Exception ex)
             {
-                // Swallowed on purpose: notifying the waitlist is a non-critical
-                // side effect of cancelling/deleting an appointment.
+                // Best-effort: notifying the waitlist is a non-critical side effect of
+                // cancelling/deleting an appointment, so a failure here must never bubble up
+                // and fail that (already committed) operation. It is logged instead of
+                // swallowed silently, so a persistent problem is diagnosable, not invisible.
+                _logger.LogWarning(ex,
+                    "Failed to notify the waitlist for appointment {AppointmentId} (best-effort, ignored).",
+                    appointmentId);
             }
         }
     }
