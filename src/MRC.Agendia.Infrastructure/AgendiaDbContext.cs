@@ -182,6 +182,16 @@ public class AgendiaDbContext : DbContext
         modelBuilder.Entity<Service>().HasIndex(s => s.IsDeleted);
         modelBuilder.Entity<Appointment>().HasIndex(a => a.IsDeleted);
 
+        // StartDate/EndDate are WALL-CLOCK times (DateTime with Kind=Unspecified, as
+        // they arrive from JSON and as BusinessClock.BusinessNow returns them), not UTC
+        // instants. They must map to `timestamp without time zone`: Npgsql refuses to
+        // write a non-UTC DateTime to `timestamp with time zone` (throws), which would
+        // 500 every appointment create/move on real PostgreSQL. The genuinely-UTC
+        // columns (CreatedAt/UpdatedAt/DeletedAt, ReminderSentAt, AuditLog.Timestamp,
+        // OutboxMessage.*OnUtc) are UTC instants and correctly stay timestamptz.
+        modelBuilder.Entity<Appointment>().Property(a => a.StartDate).HasColumnType("timestamp without time zone");
+        modelBuilder.Entity<Appointment>().Property(a => a.EndDate).HasColumnType("timestamp without time zone");
+
         // The reminder job and the date-range reads filter appointments by StartDate.
         modelBuilder.Entity<Appointment>()
             .HasIndex(a => a.StartDate)
