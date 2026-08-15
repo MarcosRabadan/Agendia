@@ -33,8 +33,11 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
                 await _container.StartAsync();
                 ConnectionString = _container.GetConnectionString();
 
+                // Apply the real MIGRATIONS (not EnsureCreated): this exercises the
+                // actual migration SQL - including the timestamp column types - and
+                // catches any drift between the model and the migrations.
                 await using var db = CreateContext();
-                await db.Database.EnsureCreatedAsync();
+                await db.Database.MigrateAsync();
                 Available = true;
             }
             catch
