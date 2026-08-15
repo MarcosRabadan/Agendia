@@ -43,11 +43,11 @@ por `clientUserId` (el `sub` de Harmony).
 
 ```json
 {
-  "appointmentId": 123,
-  "businessId": 10,
-  "employeeId": 2,
+  "appointmentId": "0198f3a1-7c4e-7b2a-9f01-2c3d4e5f6a7b",
+  "businessId": "0198f3a1-7c4e-7b2a-9f01-111111111111",
+  "employeeId": "0198f3a1-7c4e-7b2a-9f01-222222222222",
   "clientUserId": "harmony-sub-abc",
-  "serviceId": 3,
+  "serviceId": "0198f3a1-7c4e-7b2a-9f01-333333333333",
   "startDate": "2026-09-01T09:00:00",
   "endDate": "2026-09-01T09:30:00",
   "language": "es",
@@ -55,17 +55,21 @@ por `clientUserId` (el `sub` de Harmony).
 }
 ```
 
+Los identificadores de entidad (`appointmentId`, `businessId`, `employeeId`,
+`serviceId`, `waitlistEntryId`) son **GUID (UUIDv7)** desde la Fase 6; `clientUserId`
+es el `sub` opaco de Harmony (string, no GUID).
+
 `AppointmentDelayed` añade `"delayMinutes": 15`.
 
 ### Payload de `WaitlistSlotAvailable`
 
 ```json
 {
-  "waitlistEntryId": 77,
-  "businessId": 10,
-  "employeeId": 2,          // null = "cualquier empleado"
+  "waitlistEntryId": "0198f3a1-7c4e-7b2a-9f01-444444444444",
+  "businessId": "0198f3a1-7c4e-7b2a-9f01-111111111111",
+  "employeeId": "0198f3a1-7c4e-7b2a-9f01-222222222222",  // null = "cualquier empleado"
   "clientUserId": "harmony-sub-abc",
-  "serviceId": 3,
+  "serviceId": "0198f3a1-7c4e-7b2a-9f01-333333333333",
   "date": "2026-09-01",
   "startTime": "16:00:00",
   "language": "es",

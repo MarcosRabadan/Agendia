@@ -21,9 +21,10 @@ namespace MRC.Agendia.Api.Controllers
 
         /// <summary>
         /// Business statistics over a date range: bookings per month and week,
-        /// most and least used services (with revenue), no-shows and cancellations,
-        /// and revenue per hour and per weekday. Business staff only (owner, an active
-        /// employee of the business, or an admin).
+        /// most and least used services (by count), no-shows and cancellations, and
+        /// booking counts per hour and per weekday. Revenue is not reported: Agendia
+        /// does not own the service price (it lives in the catalog service). Business
+        /// staff only (owner, an active employee of the business, or an admin).
         /// </summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpGet]
