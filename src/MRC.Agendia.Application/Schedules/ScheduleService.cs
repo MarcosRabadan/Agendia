@@ -35,14 +35,14 @@ namespace MRC.Agendia.Application.Schedules
 
         #region Templates
         /// <inheritdoc />
-        public async Task<IEnumerable<ScheduleTemplateDto>> GetTemplatesByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<ScheduleTemplateDto>> GetTemplatesByBusinessIdAsync(Guid businessId, CancellationToken cancellationToken = default)
         {
             var entities = await _templateRepository.GetByBusinessIdAsync(businessId, cancellationToken);
             return _mapper.Map<IEnumerable<ScheduleTemplateDto>>(entities);
         }
 
         /// <inheritdoc />
-        public async Task<ScheduleTemplateDto?> GetTemplateByIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<ScheduleTemplateDto?> GetTemplateByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var entity = await _templateRepository.GetByIdWithSlotsAsync(id, cancellationToken);
             return entity is null ? null : _mapper.Map<ScheduleTemplateDto>(entity);
@@ -92,7 +92,7 @@ namespace MRC.Agendia.Application.Schedules
         }
 
         /// <inheritdoc />
-        public async Task<bool> DeleteTemplateAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<bool> DeleteTemplateAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var entity = await _templateRepository.GetByIdAsync(id, cancellationToken)
                 ?? throw new ScheduleTemplateNotFoundException(id);
@@ -107,7 +107,7 @@ namespace MRC.Agendia.Application.Schedules
 
         #region Overrides
         /// <inheritdoc />
-        public async Task<IEnumerable<ScheduleOverrideDto>> GetOverridesByBusinessIdAsync(int businessId,
+        public async Task<IEnumerable<ScheduleOverrideDto>> GetOverridesByBusinessIdAsync(Guid businessId,
                                                                                           DateOnly? from,
                                                                                           DateOnly? to,
                                                                                           CancellationToken cancellationToken = default)
@@ -123,7 +123,7 @@ namespace MRC.Agendia.Application.Schedules
         }
 
         /// <inheritdoc />
-        public async Task<ScheduleOverrideDto?> GetOverrideByIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<ScheduleOverrideDto?> GetOverrideByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var entity = await _overrideRepository.GetByIdWithSlotsAsync(id, cancellationToken);
             return entity is null ? null : _mapper.Map<ScheduleOverrideDto>(entity);
@@ -183,7 +183,7 @@ namespace MRC.Agendia.Application.Schedules
         }
 
         /// <inheritdoc />
-        public async Task<bool> DeleteOverrideAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<bool> DeleteOverrideAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var entity = await _overrideRepository.GetByIdAsync(id, cancellationToken)
                 ?? throw new ScheduleOverrideNotFoundException(id);
@@ -198,7 +198,7 @@ namespace MRC.Agendia.Application.Schedules
 
         #region Effective Schedule
         /// <inheritdoc />
-        public async Task<EffectiveScheduleDto> GetEffectiveScheduleAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default)
+        public async Task<EffectiveScheduleDto> GetEffectiveScheduleAsync(Guid businessId, DateOnly date, CancellationToken cancellationToken = default)
         {
             var effective = await _scheduleResolver.GetEffectiveScheduleAsync(businessId, date, cancellationToken);
             var templateEntities = await _templateRepository.GetByBusinessIdAsync(businessId, cancellationToken);
@@ -224,7 +224,7 @@ namespace MRC.Agendia.Application.Schedules
         }
 
         /// <inheritdoc />
-        public async Task<IEnumerable<CalendarDayDto>> GetCalendarAsync(int businessId,
+        public async Task<IEnumerable<CalendarDayDto>> GetCalendarAsync(Guid businessId,
                                                                         DateOnly from,
                                                                         DateOnly to,
                                                                         CancellationToken cancellationToken = default)

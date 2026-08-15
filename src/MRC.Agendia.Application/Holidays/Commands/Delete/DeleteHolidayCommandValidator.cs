@@ -6,7 +6,7 @@ namespace MRC.Agendia.Application.Holidays.Commands.Delete
     {
         public DeleteHolidayCommandValidator()
         {
-            RuleFor(x => x.Id).GreaterThan(0);
+            RuleFor(x => x.Id).NotEmpty();
         }
     }
 }

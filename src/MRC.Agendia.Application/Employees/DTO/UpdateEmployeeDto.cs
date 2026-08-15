@@ -1,7 +1,7 @@
 namespace MRC.Agendia.Application.Employees.DTO
 {
     public record UpdateEmployeeDto(
-        int Id,
+        Guid Id,
         bool IsActive,
         int MaxConcurrentAppointments);
 }

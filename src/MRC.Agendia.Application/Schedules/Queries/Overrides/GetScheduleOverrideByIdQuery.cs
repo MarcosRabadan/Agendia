@@ -3,5 +3,5 @@ using MRC.Agendia.Application.Schedules.DTO;
 
 namespace MRC.Agendia.Application.Schedules.Queries.Overrides
 {
-    public record GetScheduleOverrideByIdQuery(int Id) : IRequest<ScheduleOverrideDto?>;
+    public record GetScheduleOverrideByIdQuery(Guid Id) : IRequest<ScheduleOverrideDto?>;
 }

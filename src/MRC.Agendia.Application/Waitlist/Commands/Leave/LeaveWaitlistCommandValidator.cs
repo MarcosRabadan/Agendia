@@ -6,7 +6,7 @@ namespace MRC.Agendia.Application.Waitlist.Commands.Leave
     {
         public LeaveWaitlistCommandValidator()
         {
-            RuleFor(x => x.EntryId).GreaterThan(0);
+            RuleFor(x => x.EntryId).NotEmpty();
         }
     }
 }

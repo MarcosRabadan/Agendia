@@ -20,9 +20,9 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
         private readonly IBusinessService _service = Substitute.For<IBusinessService>();
         private readonly IResourceAuthorizationService _auth = Substitute.For<IResourceAuthorizationService>();
 
-        private static UpdateBusinessDto UpdateDto(int id = 5) => new(id, IsActive: true);
+        private static UpdateBusinessDto UpdateDto(Guid? id = null) => new(id ?? TestIds.Of(5), IsActive: true);
 
-        private static BusinessDto Result(int id = 5) => new(id, IsActive: true);
+        private static BusinessDto Result(Guid? id = null) => new(id ?? TestIds.Of(5), IsActive: true);
 
         [Fact]
         public async Task Update_authorizes_the_existing_business_then_delegates()
@@ -31,16 +31,16 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
             _service.UpdateAsync(Arg.Any<UpdateBusinessDto>(), Arg.Any<CancellationToken>()).Returns(expected);
 
             var result = await new UpdateBusinessCommandHandler(_service, _auth)
-                .Handle(new UpdateBusinessCommand(UpdateDto(5)), default);
+                .Handle(new UpdateBusinessCommand(UpdateDto(TestIds.Of(5))), default);
 
             Assert.Same(expected, result);
-            await _auth.Received(1).EnsureCanManageBusinessAsync(5, Arg.Any<CancellationToken>());
+            await _auth.Received(1).EnsureCanManageBusinessAsync(TestIds.Of(5), Arg.Any<CancellationToken>());
         }
 
         [Fact]
         public async Task Update_does_not_touch_the_service_when_authorization_fails()
         {
-            _auth.EnsureCanManageBusinessAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            _auth.EnsureCanManageBusinessAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                 .Returns<Task>(_ => throw new UnauthorizedAccessException());
 
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
@@ -66,11 +66,11 @@ namespace MRC.Agendia.Tests.Unit.Application.CrudHandlers
         [Fact]
         public async Task Delete_and_Restore_delegate_with_the_id()
         {
-            _service.DeleteAsync(9, Arg.Any<CancellationToken>()).Returns(true);
-            _service.RestoreAsync(9, Arg.Any<CancellationToken>()).Returns(true);
+            _service.DeleteAsync(TestIds.Of(9), Arg.Any<CancellationToken>()).Returns(true);
+            _service.RestoreAsync(TestIds.Of(9), Arg.Any<CancellationToken>()).Returns(true);
 
-            Assert.True(await new DeleteBusinessCommandHandler(_service).Handle(new DeleteBusinessCommand(9), default));
-            Assert.True(await new RestoreBusinessCommandHandler(_service).Handle(new RestoreBusinessCommand(9), default));
+            Assert.True(await new DeleteBusinessCommandHandler(_service).Handle(new DeleteBusinessCommand(TestIds.Of(9)), default));
+            Assert.True(await new RestoreBusinessCommandHandler(_service).Handle(new RestoreBusinessCommand(TestIds.Of(9)), default));
         }
     }
 }

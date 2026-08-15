@@ -49,7 +49,7 @@ namespace MRC.Agendia.Api.Controllers
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(HolidayCalendarDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<HolidayCalendarDto>> GetById(int id)
+        public async Task<ActionResult<HolidayCalendarDto>> GetById(Guid id)
         {
             var result = await _mediator.Send(new GetHolidayByIdQuery(id));
             if (result is null) return NotFound();
@@ -73,7 +73,7 @@ namespace MRC.Agendia.Api.Controllers
         [ProducesResponseType(typeof(HolidayCalendarDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<HolidayCalendarDto>> Update(int id, [FromBody] UpdateHolidayCalendarDto dto)
+        public async Task<ActionResult<HolidayCalendarDto>> Update(Guid id, [FromBody] UpdateHolidayCalendarDto dto)
         {
             if (dto.Id != id) return BadRequest("Holiday Id in URL and body must match.");
             var result = await _mediator.Send(new UpdateHolidayCommand(dto));
@@ -85,7 +85,7 @@ namespace MRC.Agendia.Api.Controllers
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(Guid id)
         {
             await _mediator.Send(new DeleteHolidayCommand(id));
             return NoContent();

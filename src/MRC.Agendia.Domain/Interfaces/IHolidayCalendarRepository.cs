@@ -8,7 +8,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="id">Holiday id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The holiday, or null when missing.</returns>
-        Task<HolidayCalendar?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<HolidayCalendar?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Gets all holidays ordered by date. Untracked.</summary>
         /// <param name="cancellationToken">Token to cancel the operation.</param>

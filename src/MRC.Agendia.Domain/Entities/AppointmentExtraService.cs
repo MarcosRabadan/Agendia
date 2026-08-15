@@ -8,9 +8,9 @@ namespace MRC.Agendia.Domain.Entities
     /// </summary>
     public class AppointmentExtraService
     {
-        public int Id { get; set; }
-        public int AppointmentId { get; set; }
-        public int ServiceId { get; set; }
+        public Guid Id { get; set; }
+        public Guid AppointmentId { get; set; }
+        public Guid ServiceId { get; set; }
 
         public Appointment Appointment { get; set; } = null!;
         public Service Service { get; set; } = null!;

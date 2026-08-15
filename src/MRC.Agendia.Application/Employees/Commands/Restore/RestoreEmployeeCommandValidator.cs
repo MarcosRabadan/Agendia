@@ -6,7 +6,7 @@ namespace MRC.Agendia.Application.Employees.Commands.Restore
     {
         public RestoreEmployeeCommandValidator()
         {
-            RuleFor(x => x.Id).GreaterThan(0);
+            RuleFor(x => x.Id).NotEmpty();
         }
     }
 }

@@ -79,7 +79,7 @@ namespace MRC.Agendia.Tests.Integration.Statistics
 
         // ----- Helpers -----
 
-        private async Task<int> SeedAppointmentsAsync(ProvisionedOwner owner)
+        private async Task<Guid> SeedAppointmentsAsync(ProvisionedOwner owner)
         {
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
@@ -97,7 +97,7 @@ namespace MRC.Agendia.Tests.Integration.Statistics
             return service.Id;
         }
 
-        private static Appointment Appointment(string clientUserId, int employeeId, int serviceId, DateTime start, AppointmentStatus status)
+        private static Appointment Appointment(string clientUserId, Guid employeeId, Guid serviceId, DateTime start, AppointmentStatus status)
             => new()
             {
                 ClientUserId = clientUserId,
@@ -108,7 +108,7 @@ namespace MRC.Agendia.Tests.Integration.Statistics
                 Status = status,
             };
 
-        private async Task<BusinessStatsDto> GetStatsAsync(string token, int businessId, string from, string to)
+        private async Task<BusinessStatsDto> GetStatsAsync(string token, Guid businessId, string from, string to)
         {
             var response = await SendStatsAsync(token, businessId, from, to);
             response.EnsureSuccessStatusCode();
@@ -117,7 +117,7 @@ namespace MRC.Agendia.Tests.Integration.Statistics
             return stats!;
         }
 
-        private async Task<HttpResponseMessage> SendStatsAsync(string token, int businessId, string from, string to)
+        private async Task<HttpResponseMessage> SendStatsAsync(string token, Guid businessId, string from, string to)
         {
             using var request = new HttpRequestMessage(
                 HttpMethod.Get, $"/api/businesses/{businessId}/stats?from={from}&to={to}");

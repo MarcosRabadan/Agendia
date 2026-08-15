@@ -34,7 +34,7 @@ namespace MRC.Agendia.Application.Holidays
         }
 
         /// <inheritdoc />
-        public async Task<HolidayCalendarDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<HolidayCalendarDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken);
             return entity is null ? null : _mapper.Map<HolidayCalendarDto>(entity);
@@ -62,7 +62,7 @@ namespace MRC.Agendia.Application.Holidays
         }
 
         /// <inheritdoc />
-        public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken)
                 ?? throw new HolidayNotFoundException(id);

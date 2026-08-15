@@ -4,7 +4,7 @@ namespace MRC.Agendia.Domain.Exceptions
     {
         public override string Code => "SCHEDULE_OVERRIDE_NOT_FOUND";
 
-        public ScheduleOverrideNotFoundException(int id) : base($"Excepcion de horario con Id {id} no encontrada.")
+        public ScheduleOverrideNotFoundException(Guid id) : base($"Excepcion de horario con Id {id} no encontrada.")
         {
         }
     }

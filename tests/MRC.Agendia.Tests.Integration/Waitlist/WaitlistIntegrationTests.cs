@@ -107,7 +107,7 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
             return list!;
         }
 
-        private async Task<AppointmentDto> BookAppointmentAsync(ProvisionedOwner owner, string clientUserId, int employeeId, int serviceId)
+        private async Task<AppointmentDto> BookAppointmentAsync(ProvisionedOwner owner, string clientUserId, Guid employeeId, Guid serviceId)
         {
             var start = SlotDate.ToDateTime(SlotTime);
             var dto = new CreateAppointmentDto(clientUserId, employeeId, serviceId, start, start.AddMinutes(30), Notes: null);

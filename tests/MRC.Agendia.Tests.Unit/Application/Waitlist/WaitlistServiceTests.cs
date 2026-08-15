@@ -35,19 +35,19 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         {
             _mapper.Map<WaitlistEntryDto>(Arg.Any<WaitlistEntry>()).Returns(ci => ToDto(ci.Arg<WaitlistEntry>()));
             // The guard just runs the critical section directly in unit tests.
-            _bookingGuard.ExecuteSerializedAsync(Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
+            _bookingGuard.ExecuteSerializedAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
                 .Returns(ci => ci.Arg<Func<Task>>()());
             _sut = new WaitlistService(
                 _repository, _availability, _appointmentRepository, _eventPublisher, _bookingGuard, _unitOfWork, _mapper);
         }
 
-        private JoinWaitlistDto Dto() => new(BusinessId: 10, ServiceId: 3, Date: new DateOnly(2030, 6, 7), StartTime: new TimeOnly(16, 0), EmployeeId: 2);
+        private JoinWaitlistDto Dto() => new(BusinessId: TestIds.Of(10), ServiceId: TestIds.Of(3), Date: new DateOnly(2030, 6, 7), StartTime: new TimeOnly(16, 0), EmployeeId: TestIds.Of(2));
 
         [Fact]
         public async Task JoinAsync_FranjaCompleta_CreaEntradaWaiting()
         {
             SlotCapacity(0);
-            _repository.ExistsWaitingAsync(UserId, 10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>()).Returns(false);
+            _repository.ExistsWaitingAsync(UserId, TestIds.Of(10), TestIds.Of(3), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), TestIds.Of(2), Arg.Any<CancellationToken>()).Returns(false);
 
             var result = await _sut.JoinAsync(Dto(), UserId);
 
@@ -78,7 +78,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         public async Task JoinAsync_Duplicada_LanzaDuplicate()
         {
             SlotCapacity(0);
-            _repository.ExistsWaitingAsync(UserId, 10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>()).Returns(true);
+            _repository.ExistsWaitingAsync(UserId, TestIds.Of(10), TestIds.Of(3), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), TestIds.Of(2), Arg.Any<CancellationToken>()).Returns(true);
 
             await Assert.ThrowsAsync<DuplicateWaitlistEntryException>(() => _sut.JoinAsync(Dto(), UserId));
         }
@@ -86,10 +86,10 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         [Fact]
         public async Task LeaveAsync_PropiaEntrada_LaCancela()
         {
-            var entry = new WaitlistEntry { Id = 5, ClientUserId = UserId, Status = WaitlistStatus.Waiting };
-            _repository.GetByIdAsync(5, Arg.Any<CancellationToken>()).Returns(entry);
+            var entry = new WaitlistEntry { Id = TestIds.Of(5), ClientUserId = UserId, Status = WaitlistStatus.Waiting };
+            _repository.GetByIdAsync(TestIds.Of(5), Arg.Any<CancellationToken>()).Returns(entry);
 
-            await _sut.LeaveAsync(5, UserId);
+            await _sut.LeaveAsync(TestIds.Of(5), UserId);
 
             Assert.Equal(WaitlistStatus.Cancelled, entry.Status);
             await _unitOfWork.Received(1).Save(Arg.Any<CancellationToken>());
@@ -98,78 +98,78 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         [Fact]
         public async Task LeaveAsync_EntradaAjena_Lanza403()
         {
-            var entry = new WaitlistEntry { Id = 5, ClientUserId = "other-user", Status = WaitlistStatus.Waiting };
-            _repository.GetByIdAsync(5, Arg.Any<CancellationToken>()).Returns(entry);
+            var entry = new WaitlistEntry { Id = TestIds.Of(5), ClientUserId = "other-user", Status = WaitlistStatus.Waiting };
+            _repository.GetByIdAsync(TestIds.Of(5), Arg.Any<CancellationToken>()).Returns(entry);
 
-            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.LeaveAsync(5, UserId));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.LeaveAsync(TestIds.Of(5), UserId));
             Assert.Equal(WaitlistStatus.Waiting, entry.Status);
         }
 
         [Fact]
         public async Task LeaveAsync_NoExiste_Lanza404()
         {
-            _repository.GetByIdAsync(404, Arg.Any<CancellationToken>()).Returns((WaitlistEntry?)null);
+            _repository.GetByIdAsync(TestIds.Of(404), Arg.Any<CancellationToken>()).Returns((WaitlistEntry?)null);
 
-            await Assert.ThrowsAsync<WaitlistEntryNotFoundException>(() => _sut.LeaveAsync(404, UserId));
+            await Assert.ThrowsAsync<WaitlistEntryNotFoundException>(() => _sut.LeaveAsync(TestIds.Of(404), UserId));
         }
 
         [Fact]
         public async Task NotifyForFreedAppointment_AvisaAlPrimeroYLoMarcaNotified()
         {
-            _appointmentRepository.GetByIdWithDetailsAsync(50, Arg.Any<CancellationToken>())
+            _appointmentRepository.GetByIdWithDetailsAsync(TestIds.Of(50), Arg.Any<CancellationToken>())
                 .Returns(new Appointment
                 {
-                    Id = 50,
-                    EmployeeId = 2,
-                    ServiceId = 3,
+                    Id = TestIds.Of(50),
+                    EmployeeId = TestIds.Of(2),
+                    ServiceId = TestIds.Of(3),
                     StartDate = new DateTime(2030, 6, 7, 16, 0, 0),
-                    Employee = new Employee { Id = 2, BusinessId = 10, Business = new Business { Id = 10, DefaultLanguage = "es" } }
+                    Employee = new Employee { Id = TestIds.Of(2), BusinessId = TestIds.Of(10), Business = new Business { Id = TestIds.Of(10), DefaultLanguage = "es" } }
                 });
-            var waiting = new WaitlistEntry { Id = 7, ClientUserId = UserId, Status = WaitlistStatus.Waiting };
-            _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
+            var waiting = new WaitlistEntry { Id = TestIds.Of(7), ClientUserId = UserId, Status = WaitlistStatus.Waiting };
+            _repository.GetNextWaitingForSlotAsync(TestIds.Of(10), TestIds.Of(3), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), TestIds.Of(2), Arg.Any<CancellationToken>())
                 .Returns(waiting);
             SlotCapacity(1); // the freed slot now has room
 
-            await _sut.NotifyForFreedAppointmentAsync(50);
+            await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
 
             Assert.Equal(WaitlistStatus.Notified, waiting.Status);
             await _unitOfWork.Received(1).Save(Arg.Any<CancellationToken>());
             // A WaitlistSlotAvailable event is published (via the outbox) instead of an email.
             await _eventPublisher.Received(1).PublishAsync(
-                Arg.Is<IIntegrationEvent>(e => e is WaitlistSlotAvailable && ((WaitlistSlotAvailable)e).WaitlistEntryId == 7),
+                Arg.Is<IIntegrationEvent>(e => e is WaitlistSlotAvailable && ((WaitlistSlotAvailable)e).WaitlistEntryId == TestIds.Of(7)),
                 Arg.Any<CancellationToken>());
         }
 
         [Fact]
         public async Task NotifyForFreedAppointment_SerializaElTriggerPorEmpleadoYDia()
         {
-            _appointmentRepository.GetByIdWithDetailsAsync(50, Arg.Any<CancellationToken>())
+            _appointmentRepository.GetByIdWithDetailsAsync(TestIds.Of(50), Arg.Any<CancellationToken>())
                 .Returns(new Appointment
                 {
-                    Id = 50,
-                    EmployeeId = 2,
-                    ServiceId = 3,
+                    Id = TestIds.Of(50),
+                    EmployeeId = TestIds.Of(2),
+                    ServiceId = TestIds.Of(3),
                     StartDate = new DateTime(2030, 6, 7, 16, 0, 0),
-                    Employee = new Employee { Id = 2, BusinessId = 10, Business = new Business { Id = 10, DefaultLanguage = "es" } }
+                    Employee = new Employee { Id = TestIds.Of(2), BusinessId = TestIds.Of(10), Business = new Business { Id = TestIds.Of(10), DefaultLanguage = "es" } }
                 });
-            _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
-                .Returns(new WaitlistEntry { Id = 7, ClientUserId = UserId, Status = WaitlistStatus.Waiting });
+            _repository.GetNextWaitingForSlotAsync(TestIds.Of(10), TestIds.Of(3), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), TestIds.Of(2), Arg.Any<CancellationToken>())
+                .Returns(new WaitlistEntry { Id = TestIds.Of(7), ClientUserId = UserId, Status = WaitlistStatus.Waiting });
             SlotCapacity(1);
 
-            await _sut.NotifyForFreedAppointmentAsync(50);
+            await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
 
             // The select-recheck-notify-mark section ran inside the per-employee/day lock.
             await _bookingGuard.Received(1).ExecuteSerializedAsync(
-                2, new DateOnly(2030, 6, 7), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>());
+                TestIds.Of(2), new DateOnly(2030, 6, 7), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]
         public async Task NotifyForFreedAppointment_SiFallaLaPublicacion_DejaEnWaiting()
         {
-            _appointmentRepository.GetByIdWithDetailsAsync(50, Arg.Any<CancellationToken>())
-                .Returns(new Appointment { Id = 50, EmployeeId = 2, ServiceId = 3, StartDate = new DateTime(2030, 6, 7, 16, 0, 0), Employee = new Employee { Id = 2, BusinessId = 10, Business = new Business { Id = 10, DefaultLanguage = "es" } } });
-            var waiting = new WaitlistEntry { Id = 7, ClientUserId = UserId, Status = WaitlistStatus.Waiting };
-            _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
+            _appointmentRepository.GetByIdWithDetailsAsync(TestIds.Of(50), Arg.Any<CancellationToken>())
+                .Returns(new Appointment { Id = TestIds.Of(50), EmployeeId = TestIds.Of(2), ServiceId = TestIds.Of(3), StartDate = new DateTime(2030, 6, 7, 16, 0, 0), Employee = new Employee { Id = TestIds.Of(2), BusinessId = TestIds.Of(10), Business = new Business { Id = TestIds.Of(10), DefaultLanguage = "es" } } });
+            var waiting = new WaitlistEntry { Id = TestIds.Of(7), ClientUserId = UserId, Status = WaitlistStatus.Waiting };
+            _repository.GetNextWaitingForSlotAsync(TestIds.Of(10), TestIds.Of(3), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), TestIds.Of(2), Arg.Any<CancellationToken>())
                 .Returns(waiting);
             SlotCapacity(1); // the slot has room, so publication is attempted
             // Enlisting the event fails: the entry must stay Waiting (not marked
@@ -178,7 +178,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
             _eventPublisher.PublishAsync(Arg.Any<IIntegrationEvent>(), Arg.Any<CancellationToken>())
                 .Returns(_ => throw new InvalidOperationException("outbox down"));
 
-            await _sut.NotifyForFreedAppointmentAsync(50);
+            await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
 
             Assert.Equal(WaitlistStatus.Waiting, waiting.Status);
             await _unitOfWork.DidNotReceive().Save(Arg.Any<CancellationToken>());
@@ -187,14 +187,14 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         [Fact]
         public async Task NotifyForFreedAppointment_FranjaSigueLlena_NoAvisa()
         {
-            _appointmentRepository.GetByIdWithDetailsAsync(50, Arg.Any<CancellationToken>())
-                .Returns(new Appointment { Id = 50, EmployeeId = 2, ServiceId = 3, StartDate = new DateTime(2030, 6, 7, 16, 0, 0), Employee = new Employee { Id = 2, BusinessId = 10, Business = new Business { Id = 10, DefaultLanguage = "es" } } });
-            var waiting = new WaitlistEntry { Id = 7, ClientUserId = UserId, Status = WaitlistStatus.Waiting };
-            _repository.GetNextWaitingForSlotAsync(10, 3, Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), 2, Arg.Any<CancellationToken>())
+            _appointmentRepository.GetByIdWithDetailsAsync(TestIds.Of(50), Arg.Any<CancellationToken>())
+                .Returns(new Appointment { Id = TestIds.Of(50), EmployeeId = TestIds.Of(2), ServiceId = TestIds.Of(3), StartDate = new DateTime(2030, 6, 7, 16, 0, 0), Employee = new Employee { Id = TestIds.Of(2), BusinessId = TestIds.Of(10), Business = new Business { Id = TestIds.Of(10), DefaultLanguage = "es" } } });
+            var waiting = new WaitlistEntry { Id = TestIds.Of(7), ClientUserId = UserId, Status = WaitlistStatus.Waiting };
+            _repository.GetNextWaitingForSlotAsync(TestIds.Of(10), TestIds.Of(3), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), TestIds.Of(2), Arg.Any<CancellationToken>())
                 .Returns(waiting);
             SlotCapacity(0); // the freed appointment did not actually open a seat (still full)
 
-            await _sut.NotifyForFreedAppointmentAsync(50);
+            await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
 
             // No false "hay hueco" notification, and the entry stays Waiting for a real opening.
             await _eventPublisher.DidNotReceiveWithAnyArgs().PublishAsync(default!, default);
@@ -204,12 +204,12 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         [Fact]
         public async Task NotifyForFreedAppointment_SinEsperando_NoNotifica()
         {
-            _appointmentRepository.GetByIdWithDetailsAsync(50, Arg.Any<CancellationToken>())
-                .Returns(new Appointment { Id = 50, EmployeeId = 2, ServiceId = 3, StartDate = new DateTime(2030, 6, 7, 16, 0, 0), Employee = new Employee { Id = 2, BusinessId = 10, Business = new Business { Id = 10, DefaultLanguage = "es" } } });
-            _repository.GetNextWaitingForSlotAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            _appointmentRepository.GetByIdWithDetailsAsync(TestIds.Of(50), Arg.Any<CancellationToken>())
+                .Returns(new Appointment { Id = TestIds.Of(50), EmployeeId = TestIds.Of(2), ServiceId = TestIds.Of(3), StartDate = new DateTime(2030, 6, 7, 16, 0, 0), Employee = new Employee { Id = TestIds.Of(2), BusinessId = TestIds.Of(10), Business = new Business { Id = TestIds.Of(10), DefaultLanguage = "es" } } });
+            _repository.GetNextWaitingForSlotAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                 .Returns((WaitlistEntry?)null);
 
-            await _sut.NotifyForFreedAppointmentAsync(50);
+            await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
 
             await _eventPublisher.DidNotReceiveWithAnyArgs().PublishAsync(default!, default);
         }
@@ -217,15 +217,15 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         [Fact]
         public async Task NotifyForFreedAppointment_EsBestEffort_NoPropaga()
         {
-            _appointmentRepository.GetByIdWithDetailsAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
+            _appointmentRepository.GetByIdWithDetailsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                 .Returns<Appointment?>(_ => throw new InvalidOperationException("db down"));
 
             // Must not throw: the cancellation/deletion that triggered it has already happened.
-            await _sut.NotifyForFreedAppointmentAsync(50);
+            await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
         }
 
         private void SlotCapacity(int? capacity)
-            => _availability.GetSlotCapacityAsync(Arg.Any<int>(), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), Arg.Any<int>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            => _availability.GetSlotCapacityAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
                 .Returns(capacity);
 
         private static WaitlistEntryDto ToDto(WaitlistEntry w)

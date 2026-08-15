@@ -24,7 +24,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validation
 
             // From == To == MaxValue passes the size-only cap (range = 1 day) but must
             // now fail the absolute bound instead of overflowing To.AddDays(1).
-            var result = validator.Validate(new GetBusinessStatsQuery(1, DateOnly.MaxValue, DateOnly.MaxValue));
+            var result = validator.Validate(new GetBusinessStatsQuery(TestIds.Of(1), DateOnly.MaxValue, DateOnly.MaxValue));
 
             AssertOutOfRange(result);
         }
@@ -34,7 +34,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validation
         {
             var validator = new GetBusinessStatsQueryValidator();
 
-            var result = validator.Validate(new GetBusinessStatsQuery(1, Valid, Valid.AddDays(30)));
+            var result = validator.Validate(new GetBusinessStatsQuery(TestIds.Of(1), Valid, Valid.AddDays(30)));
 
             Assert.True(result.IsValid);
         }
@@ -45,8 +45,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Validation
             var validator = new CreateAppointmentSeriesCommandValidator();
             var dto = new CreateAppointmentSeriesDto(
                 ClientUserId: "client-1",
-                EmployeeId: 1,
-                ServiceId: 1,
+                EmployeeId: TestIds.Of(1),
+                ServiceId: TestIds.Of(1),
                 StartTime: new TimeOnly(10, 0),
                 Frequency: RecurrenceFrequency.Weekly,
                 Interval: 1,

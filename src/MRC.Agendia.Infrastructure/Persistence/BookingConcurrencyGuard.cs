@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Application.Appointments;
 
@@ -25,7 +26,7 @@ namespace MRC.Agendia.Infrastructure.Persistence
         }
 
         /// <inheritdoc />
-        public async Task ExecuteSerializedAsync(int employeeId,
+        public async Task ExecuteSerializedAsync(Guid employeeId,
                                                  DateOnly date,
                                                  Func<Task> action,
                                                  CancellationToken cancellationToken = default)
@@ -36,7 +37,7 @@ namespace MRC.Agendia.Infrastructure.Persistence
             }, cancellationToken);
 
         /// <inheritdoc />
-        public async Task<T> ExecuteSerializedAsync<T>(int employeeId,
+        public async Task<T> ExecuteSerializedAsync<T>(Guid employeeId,
                                                        DateOnly date,
                                                        Func<Task<T>> action,
                                                        CancellationToken cancellationToken = default)
@@ -48,19 +49,43 @@ namespace MRC.Agendia.Infrastructure.Persistence
             // retry would otherwise re-run the non-idempotent insert).
             await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 
-            // Two-int advisory lock keyed by (employeeId, yyyymmdd): serializes callers
-            // for the same employee/day only, and releases automatically at the end of
-            // the transaction. It blocks until acquired (waits its turn) rather than
-            // timing out, which is the desired behaviour for booking serialization.
-            var dateKey = date.Year * 10000 + date.Month * 100 + date.Day;
+            // Advisory lock keyed by a stable hash of (employeeId, day): serializes
+            // callers for the same employee/day only, and releases automatically at the
+            // end of the transaction. pg_advisory_xact_lock takes a bigint, so the Guid
+            // employee id + day are folded into a 64-bit key. It blocks until acquired
+            // (waits its turn) rather than timing out, the desired booking behaviour.
+            // A hash collision would only serialize two unrelated employee/days (safe,
+            // never a correctness issue).
+            var lockKey = ComputeLockKey(employeeId, date);
             await _context.Database.ExecuteSqlInterpolatedAsync(
-                $"SELECT pg_advisory_xact_lock({employeeId}, {dateKey})",
+                $"SELECT pg_advisory_xact_lock({lockKey})",
                 cancellationToken);
 
             var output = await action();
 
             await transaction.CommitAsync(cancellationToken);
             return output;
+        }
+
+        // Deterministic 64-bit key from the employee id and day (FNV-1a). Stable across
+        // processes/runs (unlike string.GetHashCode), so the same employee+day always
+        // maps to the same advisory-lock key.
+        private static long ComputeLockKey(Guid employeeId, DateOnly date)
+        {
+            Span<byte> buffer = stackalloc byte[20];
+            employeeId.TryWriteBytes(buffer);
+            var dateKey = date.Year * 10000 + date.Month * 100 + date.Day;
+            BinaryPrimitives.WriteInt32LittleEndian(buffer[16..], dateKey);
+
+            const ulong offsetBasis = 14695981039346656037;
+            const ulong prime = 1099511628211;
+            var hash = offsetBasis;
+            foreach (var b in buffer)
+            {
+                hash ^= b;
+                hash *= prime;
+            }
+            return unchecked((long)hash);
         }
     }
 }

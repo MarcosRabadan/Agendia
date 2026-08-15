@@ -11,13 +11,13 @@ namespace MRC.Agendia.Infrastructure.Repositories
         }
 
         /// <inheritdoc />
-        public async Task<ScheduleOverride?> GetByIdWithSlotsAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<ScheduleOverride?> GetByIdWithSlotsAsync(Guid id, CancellationToken cancellationToken = default)
             => await Set
                 .Include(so => so.CustomSlots)
                 .FirstOrDefaultAsync(so => so.Id == id, cancellationToken);
 
         /// <inheritdoc />
-        public async Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAsync(Guid businessId, CancellationToken cancellationToken = default)
             => await Set
                 .AsNoTracking()
                 .Include(so => so.CustomSlots)
@@ -26,7 +26,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
         /// <inheritdoc />
-        public async Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAndDateRangeAsync(int businessId,
+        public async Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAndDateRangeAsync(Guid businessId,
                                                                                           DateOnly from,
                                                                                           DateOnly to,
                                                                                           CancellationToken cancellationToken = default)
@@ -40,7 +40,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
         /// <inheritdoc />
-        public async Task<ScheduleOverride?> GetByBusinessIdAndDateAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default)
+        public async Task<ScheduleOverride?> GetByBusinessIdAndDateAsync(Guid businessId, DateOnly date, CancellationToken cancellationToken = default)
             => await Set
                 .AsNoTracking()
                 .Include(so => so.CustomSlots)

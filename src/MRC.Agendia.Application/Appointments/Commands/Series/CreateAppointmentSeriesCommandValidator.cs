@@ -13,8 +13,8 @@ namespace MRC.Agendia.Application.Appointments.Commands.Series
         {
             RuleFor(x => x.Dto).NotNull();
             RuleFor(x => x.Dto.ClientUserId).NotEmpty();
-            RuleFor(x => x.Dto.EmployeeId).GreaterThan(0);
-            RuleFor(x => x.Dto.ServiceId).GreaterThan(0);
+            RuleFor(x => x.Dto.EmployeeId).NotEmpty();
+            RuleFor(x => x.Dto.ServiceId).NotEmpty();
             RuleFor(x => x.Dto.Frequency).IsInEnum();
             RuleFor(x => x.Dto.Interval)
                 .InclusiveBetween(1, MaxInterval)

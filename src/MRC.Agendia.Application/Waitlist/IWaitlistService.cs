@@ -20,7 +20,7 @@ namespace MRC.Agendia.Application.Waitlist
         /// <param name="entryId">Id of the waitlist entry to cancel.</param>
         /// <param name="userId">Identity user id of the calling client; must own the entry.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
-        Task LeaveAsync(int entryId, string userId, CancellationToken cancellationToken = default);
+        Task LeaveAsync(Guid entryId, string userId, CancellationToken cancellationToken = default);
 
         /// <summary>Lists the calling client's active (waiting/notified) waitlist entries.</summary>
         /// <param name="userId">Identity user id of the calling client.</param>
@@ -34,6 +34,6 @@ namespace MRC.Agendia.Application.Waitlist
         /// </summary>
         /// <param name="appointmentId">Id of the appointment that was cancelled/deleted, freeing the slot.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
-        Task NotifyForFreedAppointmentAsync(int appointmentId, CancellationToken cancellationToken = default);
+        Task NotifyForFreedAppointmentAsync(Guid appointmentId, CancellationToken cancellationToken = default);
     }
 }

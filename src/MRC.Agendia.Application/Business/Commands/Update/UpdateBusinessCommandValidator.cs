@@ -9,7 +9,7 @@ namespace MRC.Agendia.Application.Business.Commands.Update
         public UpdateBusinessCommandValidator()
         {
             RuleFor(x => x.Dto).NotNull();
-            RuleFor(x => x.Dto.Id).GreaterThan(0);
+            RuleFor(x => x.Dto.Id).NotEmpty();
             RuleFor(x => x.Dto.CancellationWindowHours)
                 .InclusiveBetween(1, 8760)
                 .When(x => x.Dto.CancellationWindowHours.HasValue)

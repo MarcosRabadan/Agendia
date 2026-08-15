@@ -9,6 +9,6 @@ namespace MRC.Agendia.Tests.Unit.TestDoubles
     public sealed class UnrestrictedBusinessScope : ICurrentBusinessScope
     {
         public bool IsRestricted => false;
-        public IReadOnlyCollection<int> BusinessIds => Array.Empty<int>();
+        public IReadOnlyCollection<Guid> BusinessIds => Array.Empty<Guid>();
     }
 }

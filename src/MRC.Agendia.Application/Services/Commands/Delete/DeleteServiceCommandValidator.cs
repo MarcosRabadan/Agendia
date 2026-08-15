@@ -6,7 +6,7 @@ namespace MRC.Agendia.Application.Services.Commands.Delete
     {
         public DeleteServiceCommandValidator()
         {
-            RuleFor(x => x.Id).GreaterThan(0);
+            RuleFor(x => x.Id).NotEmpty();
         }
     }
 }

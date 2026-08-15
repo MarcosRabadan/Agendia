@@ -7,8 +7,8 @@ namespace MRC.Agendia.Domain.Entities
     // the catalog (name, description, price) lives in the management/catalog service.
     public class Service : AuditableEntity
     {
-        public int Id { get; set; }
-        public int BusinessId { get; set; }
+        public Guid Id { get; set; }
+        public Guid BusinessId { get; set; }
         public int DurationMinutes { get; set; }
 
         public Business Business { get; set; } = null!;

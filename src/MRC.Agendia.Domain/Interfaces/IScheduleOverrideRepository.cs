@@ -8,19 +8,19 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="id">Override id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The override, or null when missing.</returns>
-        Task<ScheduleOverride?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<ScheduleOverride?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Gets a tracked schedule override by id with its custom slots loaded.</summary>
         /// <param name="id">Override id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The override with its slots, or null when missing.</returns>
-        Task<ScheduleOverride?> GetByIdWithSlotsAsync(int id, CancellationToken cancellationToken = default);
+        Task<ScheduleOverride?> GetByIdWithSlotsAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Gets a business's schedule overrides with their custom slots, ordered by date. Untracked.</summary>
         /// <param name="businessId">Business id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The business's overrides.</returns>
-        Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAsync(Guid businessId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets a business's schedule overrides whose date is within [from, to] (inclusive),
@@ -31,7 +31,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="to">Range end (inclusive).</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The overrides in the range.</returns>
-        Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAndDateRangeAsync(int businessId,
+        Task<IEnumerable<ScheduleOverride>> GetByBusinessIdAndDateRangeAsync(Guid businessId,
                                                                              DateOnly from,
                                                                              DateOnly to,
                                                                              CancellationToken cancellationToken = default);
@@ -41,7 +41,7 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="date">The override date.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The override for that date, or null when none exists.</returns>
-        Task<ScheduleOverride?> GetByBusinessIdAndDateAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default);
+        Task<ScheduleOverride?> GetByBusinessIdAndDateAsync(Guid businessId, DateOnly date, CancellationToken cancellationToken = default);
 
         /// <summary>Adds a new schedule override to the context.</summary>
         /// <param name="scheduleOverride">The override to add.</param>

@@ -34,7 +34,7 @@ namespace MRC.Agendia.Application.Appointments
         }
 
         /// <inheritdoc />
-        public async Task<DelayNotificationResultDto> NotifyDelayAsync(int businessId, NotifyDelayDto dto, CancellationToken cancellationToken = default)
+        public async Task<DelayNotificationResultDto> NotifyDelayAsync(Guid businessId, NotifyDelayDto dto, CancellationToken cancellationToken = default)
         {
             var now = _clock.BusinessNow;
             var today = DateOnly.FromDateTime(now);

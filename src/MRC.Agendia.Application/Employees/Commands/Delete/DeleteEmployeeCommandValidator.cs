@@ -6,7 +6,7 @@ namespace MRC.Agendia.Application.Employees.Commands.Delete
     {
         public DeleteEmployeeCommandValidator()
         {
-            RuleFor(x => x.Id).GreaterThan(0);
+            RuleFor(x => x.Id).NotEmpty();
         }
     }
 }

@@ -14,7 +14,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
         }
 
         /// <inheritdoc />
-        public async Task<IReadOnlyList<AppointmentStatsRow>> GetAppointmentsAsync(int businessId,
+        public async Task<IReadOnlyList<AppointmentStatsRow>> GetAppointmentsAsync(Guid businessId,
                                                                                    DateTime fromInclusive,
                                                                                    DateTime toExclusive,
                                                                                    CancellationToken cancellationToken = default)

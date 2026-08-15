@@ -7,8 +7,8 @@ namespace MRC.Agendia.Domain.Entities
     // management/identity service, keyed by UserId when the resource has an account.
     public class Employee : AuditableEntity
     {
-        public int Id { get; set; }
-        public int BusinessId { get; set; }
+        public Guid Id { get; set; }
+        public Guid BusinessId { get; set; }
         public bool IsActive { get; set; }
         public string? UserId { get; set; }
 

@@ -12,7 +12,7 @@ namespace MRC.Agendia.Api.Controllers
     /// having to log in.
     /// </summary>
     [ApiController]
-    [Route("api/businesses/{businessId:int}/availability")]
+    [Route("api/businesses/{businessId:guid}/availability")]
     [Produces("application/json")]
     public class AvailabilityController : ControllerBase
     {
@@ -44,12 +44,12 @@ namespace MRC.Agendia.Api.Controllers
         [ProducesResponseType(typeof(AvailabilityDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<AvailabilityDto>> Get(int businessId,
+        public async Task<ActionResult<AvailabilityDto>> Get(Guid businessId,
                                                              [FromQuery] DateOnly date,
-                                                             [FromQuery] int serviceId,
-                                                             [FromQuery] int? employeeId = null,
+                                                             [FromQuery] Guid serviceId,
+                                                             [FromQuery] Guid? employeeId = null,
                                                              [FromQuery] int stepMinutes = 15,
-                                                             [FromQuery] List<int>? extraServiceIds = null)
+                                                             [FromQuery] List<Guid>? extraServiceIds = null)
         {
             var result = await _mediator.Send(
                 new GetAvailabilityQuery(businessId, date, serviceId, employeeId, stepMinutes, extraServiceIds));

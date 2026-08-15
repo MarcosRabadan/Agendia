@@ -1,7 +1,7 @@
 namespace MRC.Agendia.Application.Schedules.DTO
 {
     public record UpdateScheduleTemplateDto(
-        int Id,
+        Guid Id,
         string Name,
         DateOnly EffectiveFrom,
         DateOnly EffectiveTo,

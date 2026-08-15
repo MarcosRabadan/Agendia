@@ -10,13 +10,13 @@ namespace MRC.Agendia.Application.Schedules
         /// <param name="businessId">Business id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The business's schedule templates.</returns>
-        Task<IEnumerable<ScheduleTemplateDto>> GetTemplatesByBusinessIdAsync(int businessId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<ScheduleTemplateDto>> GetTemplatesByBusinessIdAsync(Guid businessId, CancellationToken cancellationToken = default);
 
         /// <summary>Gets a schedule template (with its weekly slots) by id.</summary>
         /// <param name="id">Template id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The template, or null if it does not exist.</returns>
-        Task<ScheduleTemplateDto?> GetTemplateByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<ScheduleTemplateDto?> GetTemplateByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Creates a schedule template, rejecting it if its date range overlaps an existing one.</summary>
         /// <param name="dto">Data of the template to create.</param>
@@ -34,7 +34,7 @@ namespace MRC.Agendia.Application.Schedules
         /// <param name="id">Template id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>True when the template was deleted.</returns>
-        Task<bool> DeleteTemplateAsync(int id, CancellationToken cancellationToken = default);
+        Task<bool> DeleteTemplateAsync(Guid id, CancellationToken cancellationToken = default);
 
         // Overrides
 
@@ -44,7 +44,7 @@ namespace MRC.Agendia.Application.Schedules
         /// <param name="to">Inclusive end of the range, or null for no upper bound.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The matching schedule overrides.</returns>
-        Task<IEnumerable<ScheduleOverrideDto>> GetOverridesByBusinessIdAsync(int businessId,
+        Task<IEnumerable<ScheduleOverrideDto>> GetOverridesByBusinessIdAsync(Guid businessId,
                                                                              DateOnly? from,
                                                                              DateOnly? to,
                                                                              CancellationToken cancellationToken = default);
@@ -53,7 +53,7 @@ namespace MRC.Agendia.Application.Schedules
         /// <param name="id">Override id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The override, or null if it does not exist.</returns>
-        Task<ScheduleOverrideDto?> GetOverrideByIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<ScheduleOverrideDto?> GetOverrideByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         /// <summary>Creates a schedule override, rejecting it if one already exists for that (business, date).</summary>
         /// <param name="dto">Data of the override to create.</param>
@@ -71,7 +71,7 @@ namespace MRC.Agendia.Application.Schedules
         /// <param name="id">Override id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>True when the override was deleted.</returns>
-        Task<bool> DeleteOverrideAsync(int id, CancellationToken cancellationToken = default);
+        Task<bool> DeleteOverrideAsync(Guid id, CancellationToken cancellationToken = default);
 
         // Effective Schedule
 
@@ -80,7 +80,7 @@ namespace MRC.Agendia.Application.Schedules
         /// <param name="date">Day to resolve.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The effective schedule for that day.</returns>
-        Task<EffectiveScheduleDto> GetEffectiveScheduleAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default);
+        Task<EffectiveScheduleDto> GetEffectiveScheduleAsync(Guid businessId, DateOnly date, CancellationToken cancellationToken = default);
 
         /// <summary>Resolves the effective schedule of a business for each day in a date range.</summary>
         /// <param name="businessId">Business id.</param>
@@ -88,7 +88,7 @@ namespace MRC.Agendia.Application.Schedules
         /// <param name="to">Inclusive end of the range.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>One calendar day per date in the range.</returns>
-        Task<IEnumerable<CalendarDayDto>> GetCalendarAsync(int businessId,
+        Task<IEnumerable<CalendarDayDto>> GetCalendarAsync(Guid businessId,
                                                            DateOnly from,
                                                            DateOnly to,
                                                            CancellationToken cancellationToken = default);

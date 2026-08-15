@@ -44,7 +44,7 @@ namespace MRC.Agendia.Api.Controllers
         [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<ServiceDto>> Update(int id, [FromBody] UpdateServiceDto dto)
+        public async Task<ActionResult<ServiceDto>> Update(Guid id, [FromBody] UpdateServiceDto dto)
         {
             if (id != dto.Id) return BadRequest("Id mismatch.");
             var result = await _mediator.Send(new UpdateServiceCommand(dto));
@@ -56,7 +56,7 @@ namespace MRC.Agendia.Api.Controllers
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(Guid id)
         {
             await _mediator.Send(new DeleteServiceCommand(id));
             return NoContent();
@@ -67,7 +67,7 @@ namespace MRC.Agendia.Api.Controllers
         [HttpPost("{id}/restore")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Restore(int id)
+        public async Task<IActionResult> Restore(Guid id)
         {
             await _mediator.Send(new RestoreServiceCommand(id));
             return NoContent();

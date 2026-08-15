@@ -18,7 +18,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Services
     /// </summary>
     public class ScheduleResolverTests
     {
-        private const int BusinessId = 1;
+        private static readonly Guid BusinessId = TestIds.Of(1);
         private static readonly DateOnly MondayDate = new(2026, 5, 18);
 
         private readonly IScheduleTemplateRepository _templateRepository = Substitute.For<IScheduleTemplateRepository>();
@@ -270,7 +270,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Services
             {
                 CreateWeeklySlot(DayOfWeek.Monday, new TimeOnly(16, 0), new TimeOnly(20, 0)),
             });
-            otherTemplate.Id = 101;
+            otherTemplate.Id = TestIds.Of(101);
             otherTemplate.IsDefault = false;
 
             // Non-default passed first: ordering, not input order, must decide.
@@ -286,7 +286,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Services
 
         private static ScheduleTemplate CreateTemplate(IEnumerable<WeeklyTimeSlot> weeklySlots) => new()
         {
-            Id = 100,
+            Id = TestIds.Of(100),
             BusinessId = BusinessId,
             Name = "Test template",
             EffectiveFrom = new DateOnly(2026, 1, 1),
@@ -308,7 +308,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Services
             string? reason,
             IEnumerable<CustomTimeSlot>? customSlots = null) => new()
             {
-                Id = 200,
+                Id = TestIds.Of(200),
                 BusinessId = BusinessId,
                 Date = MondayDate,
                 OverrideType = overrideType,

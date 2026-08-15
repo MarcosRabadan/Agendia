@@ -10,7 +10,7 @@ namespace MRC.Agendia.Application.Appointments.Queries.ByDateRange
 
         public GetAppointmentsByDateRangeQueryValidator()
         {
-            RuleFor(x => x.BusinessId).GreaterThan(0);
+            RuleFor(x => x.BusinessId).NotEmpty();
 
             RuleFor(x => x.EndDate)
                 .GreaterThanOrEqualTo(x => x.StartDate)

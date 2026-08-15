@@ -19,7 +19,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         private static readonly DateTime Start = new(2026, 6, 1, 10, 0, 0);
         private static readonly DateTime End = new(2026, 6, 1, 10, 30, 0);
 
-        private static CreateAppointmentDto ValidCreate() => new("client-1", 1, 1, Start, End, null);
+        private static CreateAppointmentDto ValidCreate() => new("client-1", TestIds.Of(1), TestIds.Of(1), Start, End, null);
 
         // ---------- Create ----------
 
@@ -37,7 +37,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         [InlineData(1, 0, "Dto.ServiceId")]
         public void Create_ids_must_be_positive(int emp, int svc, string prop)
             => new CreateAppointmentCommandValidator()
-                .Check(new CreateAppointmentCommand(ValidCreate() with { EmployeeId = emp, ServiceId = svc }))
+                .Check(new CreateAppointmentCommand(ValidCreate() with { EmployeeId = TestIds.Of(emp), ServiceId = TestIds.Of(svc) }))
                 .ShouldFailOn(prop);
 
         [Fact]
@@ -73,27 +73,27 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         [Fact]
         public void Create_valid_extra_services_pass()
             => new CreateAppointmentCommandValidator()
-                .Check(new CreateAppointmentCommand(ValidCreate() with { ExtraServiceIds = new[] { 2, 3 } })).ShouldBeValid();
+                .Check(new CreateAppointmentCommand(ValidCreate() with { ExtraServiceIds = new[] { TestIds.Of(2), TestIds.Of(3) } })).ShouldBeValid();
 
         [Fact]
         public void Create_extra_service_duplicate_fails()
             => new CreateAppointmentCommandValidator()
-                .Check(new CreateAppointmentCommand(ValidCreate() with { ExtraServiceIds = new[] { 2, 2 } })).ShouldFailOn("Dto");
+                .Check(new CreateAppointmentCommand(ValidCreate() with { ExtraServiceIds = new[] { TestIds.Of(2), TestIds.Of(2) } })).ShouldFailOn("Dto");
 
         [Fact]
         public void Create_extra_service_equal_to_principal_fails()
             => new CreateAppointmentCommandValidator()
-                .Check(new CreateAppointmentCommand(ValidCreate() with { ServiceId = 1, ExtraServiceIds = new[] { 1 } })).ShouldFailOn("Dto");
+                .Check(new CreateAppointmentCommand(ValidCreate() with { ServiceId = TestIds.Of(1), ExtraServiceIds = new[] { TestIds.Of(1) } })).ShouldFailOn("Dto");
 
         [Fact]
         public void Create_too_many_extra_services_fails()
             => new CreateAppointmentCommandValidator()
-                .Check(new CreateAppointmentCommand(ValidCreate() with { ExtraServiceIds = Enumerable.Range(2, 11).ToArray() }))
+                .Check(new CreateAppointmentCommand(ValidCreate() with { ExtraServiceIds = Enumerable.Range(2, 11).Select(TestIds.Of).ToArray() }))
                 .ShouldFailOn("Dto.ExtraServiceIds.Count");
 
         // ---------- Update ----------
 
-        private static UpdateAppointmentDto ValidUpdate() => new(1, "client-1", 1, 1, Start, End, AppointmentStatus.Confirmed, null);
+        private static UpdateAppointmentDto ValidUpdate() => new(TestIds.Of(1), "client-1", TestIds.Of(1), TestIds.Of(1), Start, End, AppointmentStatus.Confirmed, null);
 
         [Fact]
         public void Update_valid_passes()
@@ -102,7 +102,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         [Fact]
         public void Update_id_must_be_positive()
             => new UpdateAppointmentCommandValidator()
-                .Check(new UpdateAppointmentCommand(ValidUpdate() with { Id = 0 })).ShouldFailOn("Dto.Id");
+                .Check(new UpdateAppointmentCommand(ValidUpdate() with { Id = TestIds.Of(0) })).ShouldFailOn("Dto.Id");
 
         [Fact]
         public void Update_status_out_of_enum_fails()
@@ -116,15 +116,13 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
 
         // ---------- Delete / Restore ----------
 
-        [Theory]
-        [InlineData(0)]
-        [InlineData(-1)]
-        public void Delete_id_must_be_positive(int id)
-            => new DeleteAppointmentCommandValidator().Check(new DeleteAppointmentCommand(id)).ShouldFailOn("Id");
+        [Fact]
+        public void Delete_empty_id_fails()
+            => new DeleteAppointmentCommandValidator().Check(new DeleteAppointmentCommand(Guid.Empty)).ShouldFailOn("Id");
 
         [Fact]
         public void Restore_id_must_be_positive()
-            => new RestoreAppointmentCommandValidator().Check(new RestoreAppointmentCommand(0)).ShouldFailOn("Id");
+            => new RestoreAppointmentCommandValidator().Check(new RestoreAppointmentCommand(TestIds.Of(0))).ShouldFailOn("Id");
 
         // ---------- Notify delay ----------
 
@@ -132,28 +130,28 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
 
         [Fact]
         public void NotifyDelay_valid_passes()
-            => new NotifyDelayCommandValidator().Check(new NotifyDelayCommand(1, ValidDelay())).ShouldBeValid();
+            => new NotifyDelayCommandValidator().Check(new NotifyDelayCommand(TestIds.Of(1), ValidDelay())).ShouldBeValid();
 
         [Theory]
         [InlineData(0)]
         [InlineData(601)]
         public void NotifyDelay_minutes_out_of_range_fails(int minutes)
             => new NotifyDelayCommandValidator()
-                .Check(new NotifyDelayCommand(1, ValidDelay() with { DelayMinutes = minutes })).ShouldFailOn("Dto.DelayMinutes");
+                .Check(new NotifyDelayCommand(TestIds.Of(1), ValidDelay() with { DelayMinutes = minutes })).ShouldFailOn("Dto.DelayMinutes");
 
         [Fact]
         public void NotifyDelay_business_id_must_be_positive()
-            => new NotifyDelayCommandValidator().Check(new NotifyDelayCommand(0, ValidDelay())).ShouldFailOn("BusinessId");
+            => new NotifyDelayCommandValidator().Check(new NotifyDelayCommand(TestIds.Of(0), ValidDelay())).ShouldFailOn("BusinessId");
 
         [Fact]
         public void NotifyDelay_employee_id_when_present_must_be_positive()
             => new NotifyDelayCommandValidator()
-                .Check(new NotifyDelayCommand(1, ValidDelay() with { EmployeeId = 0 })).ShouldFailOn("Dto.EmployeeId");
+                .Check(new NotifyDelayCommand(TestIds.Of(1), ValidDelay() with { EmployeeId = TestIds.Of(0) })).ShouldFailOn("Dto.EmployeeId");
 
         [Fact]
         public void NotifyDelay_max_appointments_when_present_must_be_positive()
             => new NotifyDelayCommandValidator()
-                .Check(new NotifyDelayCommand(1, ValidDelay() with { MaxAppointments = 0 })).ShouldFailOn("Dto.MaxAppointments");
+                .Check(new NotifyDelayCommand(TestIds.Of(1), ValidDelay() with { MaxAppointments = 0 })).ShouldFailOn("Dto.MaxAppointments");
 
         // ---------- Series (cancel / delete / move) ----------
 
@@ -192,17 +190,17 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         [Fact]
         public void ByDateRange_valid_passes()
             => new GetAppointmentsByDateRangeQueryValidator()
-                .Check(new GetAppointmentsByDateRangeQuery(1, Start, Start.AddDays(30))).ShouldBeValid();
+                .Check(new GetAppointmentsByDateRangeQuery(TestIds.Of(1), Start, Start.AddDays(30))).ShouldBeValid();
 
         [Fact]
         public void ByDateRange_end_before_start_fails()
             => new GetAppointmentsByDateRangeQueryValidator()
-                .Check(new GetAppointmentsByDateRangeQuery(1, Start, Start.AddDays(-1))).ShouldFailOn("EndDate");
+                .Check(new GetAppointmentsByDateRangeQuery(TestIds.Of(1), Start, Start.AddDays(-1))).ShouldFailOn("EndDate");
 
         [Fact]
         public void ByDateRange_over_366_days_fails()
             => new GetAppointmentsByDateRangeQueryValidator()
-                .Check(new GetAppointmentsByDateRangeQuery(1, Start, Start.AddDays(400))).ShouldFailOn("");
+                .Check(new GetAppointmentsByDateRangeQuery(TestIds.Of(1), Start, Start.AddDays(400))).ShouldFailOn("");
 
         [Theory]
         [InlineData(0, 50, "Page")]

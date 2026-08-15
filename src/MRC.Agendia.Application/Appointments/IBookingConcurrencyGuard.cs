@@ -15,7 +15,7 @@ namespace MRC.Agendia.Application.Appointments
         /// <param name="date">Day the booking falls on.</param>
         /// <param name="action">The validate-then-insert work to run inside the lock.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
-        Task ExecuteSerializedAsync(int employeeId,
+        Task ExecuteSerializedAsync(Guid employeeId,
                                     DateOnly date,
                                     Func<Task> action,
                                     CancellationToken cancellationToken = default);
@@ -27,7 +27,7 @@ namespace MRC.Agendia.Application.Appointments
         /// <param name="action">The validate-then-insert work to run inside the lock.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The value produced by the action.</returns>
-        Task<T> ExecuteSerializedAsync<T>(int employeeId,
+        Task<T> ExecuteSerializedAsync<T>(Guid employeeId,
                                           DateOnly date,
                                           Func<Task<T>> action,
                                           CancellationToken cancellationToken = default);

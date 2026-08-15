@@ -31,15 +31,15 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
     public class ResourceAuthorizationServiceTests
     {
         // ----- Seeded ids -----
-        private const int Business1Id = 1;
-        private const int Business2Id = 2;
-        private const int EmployeeActiveId = 10;
-        private const int EmployeeInactiveId = 11;
-        private const int EmployeeOtherBusinessId = 20;
-        private const int Service1Id = 1000;
-        private const int Appointment1Id = 10000;
-        private const int ScheduleTemplate1Id = 200;
-        private const int ScheduleOverride1Id = 300;
+        private static readonly Guid Business1Id = TestIds.Of(1);
+        private static readonly Guid Business2Id = TestIds.Of(2);
+        private static readonly Guid EmployeeActiveId = TestIds.Of(10);
+        private static readonly Guid EmployeeInactiveId = TestIds.Of(11);
+        private static readonly Guid EmployeeOtherBusinessId = TestIds.Of(20);
+        private static readonly Guid Service1Id = TestIds.Of(1000);
+        private static readonly Guid Appointment1Id = TestIds.Of(10000);
+        private static readonly Guid ScheduleTemplate1Id = TestIds.Of(200);
+        private static readonly Guid ScheduleOverride1Id = TestIds.Of(300);
 
         // ----- Seeded user ids -----
         private const string OwnerUserId = "owner-1";
@@ -190,7 +190,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             // KeyNotFoundException meaningful, so we use a non-admin to hit the lookup path.
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
             await Assert.ThrowsAnyAsync<NotFoundException>(
-                () => sut.EnsureCanViewEmployeeAsync(999_999));
+                () => sut.EnsureCanViewEmployeeAsync(TestIds.Of(999_999)));
         }
 
         [Fact]
@@ -265,7 +265,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
             await Assert.ThrowsAnyAsync<NotFoundException>(
-                () => sut.EnsureCanDeleteEmployeeAsync(999_999));
+                () => sut.EnsureCanDeleteEmployeeAsync(TestIds.Of(999_999)));
         }
 
         [Fact]
@@ -312,7 +312,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
             await Assert.ThrowsAnyAsync<NotFoundException>(
-                () => sut.EnsureCanManageAppointmentAsync(999_999));
+                () => sut.EnsureCanManageAppointmentAsync(TestIds.Of(999_999)));
         }
 
         [Fact]
@@ -382,7 +382,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
             await Assert.ThrowsAnyAsync<NotFoundException>(
-                () => sut.EnsureCanCreateAppointmentAsync(ClientUserId, 999_999));
+                () => sut.EnsureCanCreateAppointmentAsync(ClientUserId, TestIds.Of(999_999)));
         }
 
         [Fact]
@@ -436,7 +436,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
             await Assert.ThrowsAnyAsync<NotFoundException>(
-                () => sut.EnsureCanManageServiceAsync(999_999));
+                () => sut.EnsureCanManageServiceAsync(TestIds.Of(999_999)));
         }
 
         [Fact]
@@ -462,7 +462,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
             await Assert.ThrowsAnyAsync<NotFoundException>(
-                () => sut.EnsureCanManageScheduleTemplateAsync(999_999));
+                () => sut.EnsureCanManageScheduleTemplateAsync(TestIds.Of(999_999)));
         }
 
         [Fact]
@@ -488,7 +488,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         {
             var (sut, _) = await BuildAsync(AsUser(OwnerUserId));
             await Assert.ThrowsAnyAsync<NotFoundException>(
-                () => sut.EnsureCanManageScheduleOverrideAsync(999_999));
+                () => sut.EnsureCanManageScheduleOverrideAsync(TestIds.Of(999_999)));
         }
 
         [Fact]

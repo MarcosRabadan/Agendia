@@ -6,7 +6,7 @@ namespace MRC.Agendia.Application.Schedules.Commands.Overrides
     {
         public DeleteScheduleOverrideCommandValidator()
         {
-            RuleFor(x => x.Id).GreaterThan(0);
+            RuleFor(x => x.Id).NotEmpty();
         }
     }
 }

@@ -17,18 +17,16 @@ namespace MRC.Agendia.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.4")
+                .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.Appointment", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ClientUserId")
                         .IsRequired()
@@ -45,8 +43,8 @@ namespace MRC.Agendia.Infrastructure.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("EmployeeId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp with time zone");
@@ -63,8 +61,8 @@ namespace MRC.Agendia.Infrastructure.Migrations
                     b.Property<Guid?>("SeriesId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("ServiceId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
@@ -101,17 +99,15 @@ namespace MRC.Agendia.Infrastructure.Migrations
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.AppointmentExtraService", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("AppointmentId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("AppointmentId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("ServiceId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -170,11 +166,9 @@ namespace MRC.Agendia.Infrastructure.Migrations
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.Business", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<int?>("CancellationWindowHours")
                         .HasColumnType("integer");
@@ -227,17 +221,15 @@ namespace MRC.Agendia.Infrastructure.Migrations
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.CustomTimeSlot", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<TimeOnly>("EndTime")
                         .HasColumnType("time without time zone");
 
-                    b.Property<int>("ScheduleOverrideId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ScheduleOverrideId")
+                        .HasColumnType("uuid");
 
                     b.Property<TimeOnly>("StartTime")
                         .HasColumnType("time without time zone");
@@ -251,14 +243,12 @@ namespace MRC.Agendia.Infrastructure.Migrations
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.Employee", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("BusinessId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -303,11 +293,9 @@ namespace MRC.Agendia.Infrastructure.Migrations
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.HolidayCalendar", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
@@ -332,14 +320,12 @@ namespace MRC.Agendia.Infrastructure.Migrations
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.ScheduleOverride", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("BusinessId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -364,14 +350,12 @@ namespace MRC.Agendia.Infrastructure.Migrations
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.ScheduleTemplate", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("BusinessId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -398,14 +382,12 @@ namespace MRC.Agendia.Infrastructure.Migrations
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.Service", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("BusinessId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -441,14 +423,12 @@ namespace MRC.Agendia.Infrastructure.Migrations
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.WaitlistEntry", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("BusinessId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ClientUserId")
                         .IsRequired()
@@ -460,11 +440,11 @@ namespace MRC.Agendia.Infrastructure.Migrations
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
-                    b.Property<int?>("EmployeeId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("EmployeeId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("ServiceId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uuid");
 
                     b.Property<TimeOnly>("StartTime")
                         .HasColumnType("time without time zone");
@@ -494,11 +474,9 @@ namespace MRC.Agendia.Infrastructure.Migrations
 
             modelBuilder.Entity("MRC.Agendia.Domain.Entities.WeeklyTimeSlot", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<int>("DayOfWeek")
                         .HasColumnType("integer");
@@ -506,8 +484,8 @@ namespace MRC.Agendia.Infrastructure.Migrations
                     b.Property<TimeOnly>("EndTime")
                         .HasColumnType("time without time zone");
 
-                    b.Property<int>("ScheduleTemplateId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ScheduleTemplateId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("SlotType")
                         .HasColumnType("integer");

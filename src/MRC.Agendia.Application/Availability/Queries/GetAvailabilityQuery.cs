@@ -4,10 +4,10 @@ using MRC.Agendia.Application.Availability.DTO;
 namespace MRC.Agendia.Application.Availability.Queries
 {
     public record GetAvailabilityQuery(
-        int BusinessId,
+        Guid BusinessId,
         DateOnly Date,
-        int ServiceId,
-        int? EmployeeId,
+        Guid ServiceId,
+        Guid? EmployeeId,
         int StepMinutes,
-        IReadOnlyList<int>? ExtraServiceIds = null) : IRequest<AvailabilityDto>;
+        IReadOnlyList<Guid>? ExtraServiceIds = null) : IRequest<AvailabilityDto>;
 }

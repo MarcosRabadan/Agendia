@@ -26,7 +26,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             _client = factory.CreateClient();
         }
 
-        private async Task<AvailabilityDto> GetAvailabilityAsync(int businessId, int serviceId, DateOnly date, int step = 30)
+        private async Task<AvailabilityDto> GetAvailabilityAsync(Guid businessId, Guid serviceId, DateOnly date, int step = 30)
         {
             var response = await _client.GetAsync(
                 $"/api/businesses/{businessId}/availability?date={date:yyyy-MM-dd}&serviceId={serviceId}&stepMinutes={step}");

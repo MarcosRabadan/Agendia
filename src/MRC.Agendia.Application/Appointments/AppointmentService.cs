@@ -73,7 +73,7 @@ namespace MRC.Agendia.Application.Appointments
         }
 
         /// <inheritdoc />
-        public async Task<AppointmentDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<AppointmentDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             // WithExtras so the DTO echoes the booked extra services (#170). Read-only.
             var entity = await _repository.GetByIdWithExtrasAsync(id, cancellationToken);
@@ -256,7 +256,7 @@ namespace MRC.Agendia.Application.Appointments
         }
 
         /// <inheritdoc />
-        public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdAsync(id, cancellationToken)
                 ?? throw new AppointmentNotFoundException(id);
@@ -282,7 +282,7 @@ namespace MRC.Agendia.Application.Appointments
         }
 
         /// <inheritdoc />
-        public async Task<bool> RestoreAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<bool> RestoreAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var entity = await _repository.GetByIdIncludingDeletedAsync(id, cancellationToken)
                 ?? throw new AppointmentNotFoundException(id);
@@ -298,7 +298,7 @@ namespace MRC.Agendia.Application.Appointments
         #endregion CRUD
 
         /// <inheritdoc />
-        public async Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(int businessId,
+        public async Task<IEnumerable<AppointmentDto>> GetByBusinessIdAndDateRangeAsync(Guid businessId,
                                                                                         DateTime startDate,
                                                                                         DateTime endDate,
                                                                                         CancellationToken cancellationToken = default)
@@ -316,7 +316,7 @@ namespace MRC.Agendia.Application.Appointments
         // for the appointment and enlists the built event into the current unit of
         // work (outbox). Does NOT save: the caller's Save persists the event with
         // the operation. A missing appointment is a no-op (nothing to notify about).
-        private async Task PublishAppointmentEventAsync(int appointmentId,
+        private async Task PublishAppointmentEventAsync(Guid appointmentId,
                                                         Func<AppointmentNotificationContext, IIntegrationEvent> build,
                                                         CancellationToken cancellationToken)
         {

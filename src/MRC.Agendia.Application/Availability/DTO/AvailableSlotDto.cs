@@ -16,5 +16,5 @@ namespace MRC.Agendia.Application.Availability.DTO
         TimeOnly StartTime,
         TimeOnly EndTime,
         int Capacity,
-        IReadOnlyList<int> AvailableEmployeeIds);
+        IReadOnlyList<Guid> AvailableEmployeeIds);
 }

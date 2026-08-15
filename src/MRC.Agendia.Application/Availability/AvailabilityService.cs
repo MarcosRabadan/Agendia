@@ -36,12 +36,12 @@ namespace MRC.Agendia.Application.Availability
         }
 
         /// <inheritdoc />
-        public async Task<AvailabilityDto> GetAvailabilityAsync(int businessId,
+        public async Task<AvailabilityDto> GetAvailabilityAsync(Guid businessId,
                                                                 DateOnly date,
-                                                                int serviceId,
-                                                                int? employeeId,
+                                                                Guid serviceId,
+                                                                Guid? employeeId,
                                                                 int stepMinutes = 15,
-                                                                IReadOnlyCollection<int>? extraServiceIds = null,
+                                                                IReadOnlyCollection<Guid>? extraServiceIds = null,
                                                                 CancellationToken cancellationToken = default)
         {
             // ---------- Validate inputs ----------
@@ -86,7 +86,7 @@ namespace MRC.Agendia.Application.Availability
 
             // ---------- Pick the candidate employees ----------
             List<Employee> employees;
-            if (employeeId is int empId)
+            if (employeeId is Guid empId)
             {
                 var employee = await _employeeRepository.GetByIdPublicAsync(empId, cancellationToken)
                     ?? throw new EmployeeNotFoundException(empId);
@@ -165,7 +165,7 @@ namespace MRC.Agendia.Application.Availability
                         continue;
                     }
 
-                    var availableEmployeeIds = new List<int>();
+                    var availableEmployeeIds = new List<Guid>();
                     var totalCapacity = 0;
 
                     foreach (var employee in employees)
@@ -205,11 +205,11 @@ namespace MRC.Agendia.Application.Availability
         }
 
         /// <inheritdoc />
-        public async Task<int?> GetSlotCapacityAsync(int businessId,
+        public async Task<int?> GetSlotCapacityAsync(Guid businessId,
                                                      DateOnly date,
                                                      TimeOnly startTime,
-                                                     int serviceId,
-                                                     int? employeeId,
+                                                     Guid serviceId,
+                                                     Guid? employeeId,
                                                      CancellationToken cancellationToken = default)
         {
             _ = await _businessRepository.GetActiveByIdAsync(businessId, cancellationToken)
@@ -223,7 +223,7 @@ namespace MRC.Agendia.Application.Availability
                 throw new InvalidOperationException("El servicio no tiene una duracion valida.");
 
             List<Employee> employees;
-            if (employeeId is int empId)
+            if (employeeId is Guid empId)
             {
                 var employee = await _employeeRepository.GetByIdPublicAsync(empId, cancellationToken)
                     ?? throw new EmployeeNotFoundException(empId);
@@ -268,8 +268,8 @@ namespace MRC.Agendia.Application.Availability
         /// Counts how many of the employee's existing appointments overlap with
         /// the candidate window [slotStart, slotEnd] on the given date.
         /// </summary>
-        private static int CountOverlapping(Dictionary<int, List<Appointment>> appointmentsByEmployee,
-                                            int employeeId,
+        private static int CountOverlapping(Dictionary<Guid, List<Appointment>> appointmentsByEmployee,
+                                            Guid employeeId,
                                             DateOnly date,
                                             TimeOnly slotStart,
                                             TimeOnly slotEnd)
@@ -286,7 +286,7 @@ namespace MRC.Agendia.Application.Availability
         }
 
         private static AvailabilityDto EmptyAvailability(
-            DateOnly date, int businessId, int serviceId, int? employeeId,
+            DateOnly date, Guid businessId, Guid serviceId, Guid? employeeId,
             int durationMinutes, int stepMinutes, string closedReason)
         {
             return new AvailabilityDto(

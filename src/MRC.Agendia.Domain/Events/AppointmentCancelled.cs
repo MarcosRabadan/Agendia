@@ -5,11 +5,11 @@ namespace MRC.Agendia.Domain.Events
     /// contact details from <see cref="ClientUserId"/> and delivers the
     /// cancellation notice in <see cref="Language"/>.
     /// </summary>
-    public sealed record AppointmentCancelled(int AppointmentId,
-                                              int BusinessId,
-                                              int EmployeeId,
+    public sealed record AppointmentCancelled(Guid AppointmentId,
+                                              Guid BusinessId,
+                                              Guid EmployeeId,
                                               string ClientUserId,
-                                              int ServiceId,
+                                              Guid ServiceId,
                                               DateTime StartDate,
                                               DateTime EndDate,
                                               string Language,

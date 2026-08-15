@@ -6,10 +6,10 @@ namespace MRC.Agendia.Application.Availability.Queries
     {
         public GetAvailabilityQueryValidator()
         {
-            RuleFor(x => x.BusinessId).GreaterThan(0);
-            RuleFor(x => x.ServiceId).GreaterThan(0);
+            RuleFor(x => x.BusinessId).NotEmpty();
+            RuleFor(x => x.ServiceId).NotEmpty();
             RuleFor(x => x.EmployeeId)
-                .GreaterThan(0).When(x => x.EmployeeId.HasValue);
+                .NotEqual(Guid.Empty).When(x => x.EmployeeId.HasValue);
             RuleFor(x => x.Date)
                 .NotEqual(default(DateOnly))
                 .WithMessage("Date es obligatorio.");
@@ -18,7 +18,7 @@ namespace MRC.Agendia.Application.Availability.Queries
                 .WithMessage("StepMinutes debe estar entre 5 y 120.");
             When(x => x.ExtraServiceIds is { Count: > 0 }, () =>
             {
-                RuleForEach(x => x.ExtraServiceIds).GreaterThan(0);
+                RuleForEach(x => x.ExtraServiceIds).NotEmpty();
                 RuleFor(x => x.ExtraServiceIds!.Count)
                     .LessThanOrEqualTo(10)
                     .WithMessage("No se pueden combinar mas de 10 servicios adicionales.");

@@ -7,9 +7,9 @@ namespace MRC.Agendia.Application.Availability.DTO
     /// </summary>
     public record AvailabilityDto(
         DateOnly Date,
-        int BusinessId,
-        int ServiceId,
-        int? EmployeeId,
+        Guid BusinessId,
+        Guid ServiceId,
+        Guid? EmployeeId,
         int DurationMinutes,
         int StepMinutes,
         bool IsOpen,

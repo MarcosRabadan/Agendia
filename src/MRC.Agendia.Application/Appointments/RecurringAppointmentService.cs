@@ -138,7 +138,7 @@ namespace MRC.Agendia.Application.Appointments
             var appointments = await GetSeriesOrThrowAsync(seriesId, cancellationToken);
 
             var now = _clock.BusinessNow;
-            var freedAppointmentIds = new List<int>();
+            var freedAppointmentIds = new List<Guid>();
             foreach (var appointment in appointments)
             {
                 if (appointment.StartDate >= now && appointment.Status.OccupiesCapacity())

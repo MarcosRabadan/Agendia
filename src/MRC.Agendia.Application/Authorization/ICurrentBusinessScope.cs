@@ -14,6 +14,6 @@ namespace MRC.Agendia.Application.Authorization
         bool IsRestricted { get; }
 
         /// <summary>The business ids the caller may see (empty when not restricted).</summary>
-        IReadOnlyCollection<int> BusinessIds { get; }
+        IReadOnlyCollection<Guid> BusinessIds { get; }
     }
 }

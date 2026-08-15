@@ -2,8 +2,8 @@ namespace MRC.Agendia.Domain.Entities
 {
     public class ScheduleTemplate
     {
-        public int Id { get; set; }
-        public int BusinessId { get; set; }
+        public Guid Id { get; set; }
+        public Guid BusinessId { get; set; }
         public string Name { get; set; } = null!;
         public DateOnly EffectiveFrom { get; set; }
         public DateOnly EffectiveTo { get; set; }

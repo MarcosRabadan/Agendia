@@ -7,7 +7,7 @@ namespace MRC.Agendia.Application.Appointments.DTO
     /// appointments are notified.
     /// </summary>
     public record NotifyDelayDto(
-        int? EmployeeId,
+        Guid? EmployeeId,
         int DelayMinutes,
         int? MaxAppointments);
 }

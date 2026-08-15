@@ -30,12 +30,12 @@ namespace MRC.Agendia.Application.Appointments
         /// all of these; each must belong to the same business.
         /// </param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
-        Task EnsureValidAsync(int? appointmentId,
-                              int employeeId,
-                              int serviceId,
+        Task EnsureValidAsync(Guid? appointmentId,
+                              Guid employeeId,
+                              Guid serviceId,
                               DateTime startDate,
                               DateTime endDate,
-                              IReadOnlyCollection<int>? extraServiceIds = null,
+                              IReadOnlyCollection<Guid>? extraServiceIds = null,
                               CancellationToken cancellationToken = default);
     }
 }

@@ -13,8 +13,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Availability
     /// </summary>
     public class AvailabilityServiceTests
     {
-        private const int BusinessId = 1;
-        private const int ServiceId = 2;
+        private static readonly Guid BusinessId = TestIds.Of(1);
+        private static readonly Guid ServiceId = TestIds.Of(2);
 
         private readonly IBusinessRepository _businessRepository = Substitute.For<IBusinessRepository>();
         private readonly IServiceRepository _serviceRepository = Substitute.For<IServiceRepository>();
@@ -40,7 +40,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Availability
             _serviceRepository.GetByIdPublicAsync(ServiceId)
                 .Returns(new Service { Id = ServiceId, BusinessId = BusinessId, DurationMinutes = 30 });
             _employeeRepository.GetActiveByBusinessIdAsync(BusinessId)
-                .Returns(new List<Employee> { new() { Id = 10, BusinessId = BusinessId, IsActive = true, MaxConcurrentAppointments = 1 } });
+                .Returns(new List<Employee> { new() { Id = TestIds.Of(10), BusinessId = BusinessId, IsActive = true, MaxConcurrentAppointments = 1 } });
             _scheduleResolver.GetEffectiveScheduleAsync(BusinessId, date)
                 .Returns(new EffectiveSchedule
                 {
@@ -70,7 +70,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Availability
         public async Task GetAvailabilityAsync_Multiservicio_DimensionaLosHuecosPorLaDuracionTotal()
         {
             var date = new DateOnly(2030, 6, 3);
-            const int ExtraServiceId = 3;
+            var ExtraServiceId = TestIds.Of(3);
 
             _businessRepository.GetActiveByIdAsync(BusinessId).Returns(new Business());
             _serviceRepository.GetByIdPublicAsync(ServiceId)
@@ -78,7 +78,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Availability
             _serviceRepository.GetByIdPublicAsync(ExtraServiceId)
                 .Returns(new Service { Id = ExtraServiceId, BusinessId = BusinessId, DurationMinutes = 30 });
             _employeeRepository.GetActiveByBusinessIdAsync(BusinessId)
-                .Returns(new List<Employee> { new() { Id = 10, BusinessId = BusinessId, IsActive = true, MaxConcurrentAppointments = 1 } });
+                .Returns(new List<Employee> { new() { Id = TestIds.Of(10), BusinessId = BusinessId, IsActive = true, MaxConcurrentAppointments = 1 } });
             _scheduleResolver.GetEffectiveScheduleAsync(BusinessId, date)
                 .Returns(new EffectiveSchedule
                 {

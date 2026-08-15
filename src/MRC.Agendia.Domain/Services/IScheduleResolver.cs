@@ -9,7 +9,7 @@ namespace MRC.Agendia.Domain.Services
         /// <param name="date">Day to resolve.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The effective schedule for that day.</returns>
-        Task<EffectiveSchedule> GetEffectiveScheduleAsync(int businessId, DateOnly date, CancellationToken cancellationToken = default);
+        Task<EffectiveSchedule> GetEffectiveScheduleAsync(Guid businessId, DateOnly date, CancellationToken cancellationToken = default);
 
         /// <summary>Resolves the effective schedule of a business for each day in a date range, loading the data once and resolving in memory.</summary>
         /// <param name="businessId">Business id.</param>
@@ -17,7 +17,7 @@ namespace MRC.Agendia.Domain.Services
         /// <param name="to">Inclusive end of the range.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>One effective schedule per date in the range.</returns>
-        Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(int businessId,
+        Task<IEnumerable<EffectiveSchedule>> GetEffectiveSchedulesAsync(Guid businessId,
                                                                         DateOnly from,
                                                                         DateOnly to,
                                                                         CancellationToken cancellationToken = default);

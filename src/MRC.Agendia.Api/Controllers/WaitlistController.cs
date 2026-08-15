@@ -49,7 +49,7 @@ namespace MRC.Agendia.Api.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Leave(int id)
+        public async Task<IActionResult> Leave(Guid id)
         {
             await _mediator.Send(new LeaveWaitlistCommand(id));
             return NoContent();

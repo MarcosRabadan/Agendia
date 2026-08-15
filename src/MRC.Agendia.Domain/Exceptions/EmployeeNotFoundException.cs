@@ -4,7 +4,7 @@ namespace MRC.Agendia.Domain.Exceptions
     {
         public override string Code => "EMPLOYEE_NOT_FOUND";
 
-        public EmployeeNotFoundException(int id) : base($"Empleado con Id {id} no encontrado.")
+        public EmployeeNotFoundException(Guid id) : base($"Empleado con Id {id} no encontrado.")
         {
         }
     }

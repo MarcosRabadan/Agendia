@@ -4,7 +4,7 @@ namespace MRC.Agendia.Domain.Exceptions
     {
         public override string Code => "APPOINTMENT_NOT_FOUND";
 
-        public AppointmentNotFoundException(int id) : base($"Cita con Id {id} no encontrada.")
+        public AppointmentNotFoundException(Guid id) : base($"Cita con Id {id} no encontrada.")
         {
         }
     }

@@ -4,7 +4,7 @@ using MRC.Agendia.Domain.Enums;
 namespace MRC.Agendia.Application.Business.DTO
 {
     public record UpdateBusinessDto(
-        int Id,
+        Guid Id,
         bool IsActive,
         int? CancellationWindowHours = null,
         string DefaultLanguage = SupportedLanguages.Spanish,

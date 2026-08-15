@@ -8,7 +8,7 @@ using MRC.Agendia.Application.Appointments.Commands.Delay;
 namespace MRC.Agendia.Api.Controllers
 {
     [ApiController]
-    [Route("api/businesses/{businessId:int}/notify-delay")]
+    [Route("api/businesses/{businessId:guid}/notify-delay")]
     [Produces("application/json")]
     public class DelayNotificationController : ControllerBase
     {
@@ -29,7 +29,7 @@ namespace MRC.Agendia.Api.Controllers
         [ProducesResponseType(typeof(DelayNotificationResultDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<ActionResult<DelayNotificationResultDto>> NotifyDelay(int businessId, [FromBody] NotifyDelayDto dto)
+        public async Task<ActionResult<DelayNotificationResultDto>> NotifyDelay(Guid businessId, [FromBody] NotifyDelayDto dto)
         {
             var result = await _mediator.Send(new NotifyDelayCommand(businessId, dto));
             return Ok(result);

@@ -5,9 +5,9 @@ namespace MRC.Agendia.Application.Waitlist.DTO
     /// means "any employee that offers the service".
     /// </summary>
     public record JoinWaitlistDto(
-        int BusinessId,
-        int ServiceId,
+        Guid BusinessId,
+        Guid ServiceId,
         DateOnly Date,
         TimeOnly StartTime,
-        int? EmployeeId);
+        Guid? EmployeeId);
 }
