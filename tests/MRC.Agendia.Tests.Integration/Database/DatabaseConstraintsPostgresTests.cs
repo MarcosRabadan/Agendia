@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Infrastructure;
 using MRC.Agendia.Tests.Integration.Infrastructure;
 // The sibling "...Integration.Business" namespace (a test folder) shadows the entity.
@@ -88,6 +89,41 @@ namespace MRC.Agendia.Tests.Integration.Database
 
             db.WaitlistEntries.Add(Entry(WaitlistStatus.Waiting));
             await db.SaveChangesAsync(); // must NOT throw
+        }
+
+        [SkippableFact]
+        public async Task WaitlistEntry_DuplicateActiveSlot_ViaUnitOfWork_ThrowsTypedDomainException()
+        {
+            Skip.IfNot(_postgres.Available, "Docker/Postgres no disponible; test de constraints omitido.");
+
+            await using var db = _postgres.CreateContext();
+            var business = await SeedBusinessAsync(db);
+            var service = await SeedServiceAsync(db, business.Id);
+            var unitOfWork = new UnitOfWork(db);
+            var clientUserId = $"harmony-{Guid.NewGuid():N}";
+            var date = new DateOnly(2026, 6, 7);
+            var start = new TimeOnly(16, 0);
+
+            WaitlistEntry Entry() => new()
+            {
+                BusinessId = business.Id,
+                ServiceId = service.Id,
+                ClientUserId = clientUserId,
+                EmployeeId = null,
+                Date = date,
+                StartTime = start,
+                Status = WaitlistStatus.Waiting,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            db.WaitlistEntries.Add(Entry());
+            await unitOfWork.Save();
+
+            // A check-then-insert race that slips past the pre-check and hits the unique
+            // index must surface through UnitOfWork.Save as the TYPED domain exception
+            // (DuplicateWaitlistEntryException -> clean 4xx), not a raw DbUpdateException (500).
+            db.WaitlistEntries.Add(Entry());
+            await Assert.ThrowsAsync<DuplicateWaitlistEntryException>(() => unitOfWork.Save());
         }
 
         // ----- helpers -----

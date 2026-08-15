@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.Extensions.Logging.Abstractions;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Availability;
 using MRC.Agendia.Application.Events;
@@ -38,7 +39,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
             _bookingGuard.ExecuteSerializedAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
                 .Returns(ci => ci.Arg<Func<Task>>()());
             _sut = new WaitlistService(
-                _repository, _availability, _appointmentRepository, _eventPublisher, _bookingGuard, _unitOfWork, _mapper);
+                _repository, _availability, _appointmentRepository, _eventPublisher, _bookingGuard, _unitOfWork,
+                NullLogger<WaitlistService>.Instance, _mapper);
         }
 
         private JoinWaitlistDto Dto() => new(BusinessId: TestIds.Of(10), ServiceId: TestIds.Of(3), Date: new DateOnly(2030, 6, 7), StartTime: new TimeOnly(16, 0), EmployeeId: TestIds.Of(2));
