@@ -97,6 +97,11 @@ namespace MRC.Agendia.Infrastructure
             services.Configure<OutboxOptions>(configuration.GetSection(OutboxOptions.SectionName));
             services.AddScoped<OutboxProcessor>();
 
+            // Reminder job (24h): publishes AppointmentReminder events. The processor takes a
+            // session-level advisory lock so only one instance runs the batch (N-instance safe).
+            services.Configure<ReminderOptions>(configuration.GetSection(ReminderOptions.SectionName));
+            services.AddScoped<ReminderProcessor>();
+
             // Audit log
             services.AddScoped<IAuditLogger, AuditLogger>();
 
