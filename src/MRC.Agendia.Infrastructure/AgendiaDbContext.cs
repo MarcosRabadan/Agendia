@@ -98,6 +98,9 @@ public class AgendiaDbContext : DbContext
     /// <summary>Tiers of the per-business cancellation policy (#270).</summary>
     public DbSet<CancellationPolicyTier> CancellationPolicyTiers => Set<CancellationPolicyTier>();
 
+    /// <summary>Ad-hoc blocks on an employee's agenda (#271).</summary>
+    public DbSet<EmployeeTimeOff> EmployeeTimeOffs => Set<EmployeeTimeOff>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -342,6 +345,33 @@ public class AgendiaDbContext : DbContext
             .HasIndex(m => m.OccurredOnUtc)
             .HasFilter("\"ProcessedOnUtc\" IS NULL")
             .HasDatabaseName("IX_OutboxMessage_Pending");
+
+        // Employee time off (#271). Start/End are WALL-CLOCK, like the appointment dates
+        // (see the note further down): they must NOT be timestamptz or Npgsql refuses to
+        // write them. Looked up by employee + range on every availability read and on
+        // every booking, hence the index.
+        modelBuilder.Entity<EmployeeTimeOff>()
+            .Property(t => t.Start)
+            .HasColumnType("timestamp without time zone");
+
+        modelBuilder.Entity<EmployeeTimeOff>()
+            .Property(t => t.End)
+            .HasColumnType("timestamp without time zone");
+
+        modelBuilder.Entity<EmployeeTimeOff>()
+            .Property(t => t.Reason)
+            .HasMaxLength(200);
+
+        modelBuilder.Entity<EmployeeTimeOff>()
+            .HasIndex(t => new { t.EmployeeId, t.Start })
+            .HasDatabaseName("IX_EmployeeTimeOff_Employee_Start");
+
+        // FK without a navigation, no cascade: consistent with the rest of the model.
+        modelBuilder.Entity<EmployeeTimeOff>()
+            .HasOne<Employee>()
+            .WithMany()
+            .HasForeignKey(t => t.EmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // Cancellation policy tiers (#270). A business's tiers are read and replaced as a
         // whole, and no two of them may share a threshold.

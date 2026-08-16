@@ -14,6 +14,7 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IServiceRepository _serviceRepository;
         private readonly IAppointmentRepository _appointmentRepository;
+        private readonly IEmployeeTimeOffRepository _timeOffRepository;
         private readonly IScheduleResolver _scheduleResolver;
         private readonly IClock _clock;
 
@@ -21,9 +22,11 @@ namespace MRC.Agendia.Application.Appointments
                                               IEmployeeRepository employeeRepository,
                                               IServiceRepository serviceRepository,
                                               IAppointmentRepository appointmentRepository,
+                                              IEmployeeTimeOffRepository timeOffRepository,
                                               IScheduleResolver scheduleResolver,
                                               IClock clock)
         {
+            _timeOffRepository = timeOffRepository;
             _businessRepository = businessRepository;
             _employeeRepository = employeeRepository;
             _serviceRepository = serviceRepository;
@@ -117,6 +120,13 @@ namespace MRC.Agendia.Application.Appointments
                 throw new AppointmentOutsideScheduleException(
                     "The appointment is outside working hours or crosses a break between shifts.");
             }
+
+            // ---------- Employee must not be blocked (#271) ----------
+            // A time-off block takes the employee out entirely for its range, whatever
+            // their capacity: a person who is away is away. Checked after the schedule so
+            // "the business is closed" still wins as the more informative answer.
+            if (await _timeOffRepository.HasOverlapAsync(employeeId, startDate, endDate, cancellationToken))
+                throw new EmployeeUnavailableException();
 
             // ---------- Employee capacity check ----------
             // The employee can hold up to MaxConcurrentAppointments overlapping

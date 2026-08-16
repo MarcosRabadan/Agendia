@@ -143,7 +143,8 @@ src/
 │   │                            PipelineExtensions
 │   ├── Controllers/           ← Auth (solo M2M service-token), Business, Employee, Service,
 │   │                            Appointment, Schedule, Holiday, Availability, BusinessStats,
-│   │                            CancellationPolicy, ClientReliability, Waitlist,
+│   │                            CancellationPolicy, ClientReliability, EmployeeTimeOff,
+│   │                            Waitlist,
 │   │                            DelayNotification, AuditLog
 │   ├── Filters/               ← IdempotencyFilter (cabecera Idempotency-Key)
 │   ├── Middleware/            ← ExceptionHandlingMiddleware + CorrelationIdMiddleware
@@ -335,6 +336,13 @@ Repository (EF Core / Npgsql) → PostgreSQL
   El tramo `NotAllowed` lanza el mismo `CANCELLATION_WINDOW_ELAPSED` de siempre; los demás
   **permiten** cancelar y devuelven el tramo aplicado en `AppointmentDto.AppliedCancellationTier`.
   **Agendia NO cobra la penalización**: solo expone la regla (el dinero es de gestión/pagos, #172).
+- **Time-off de empleado (#271):** `EmployeeTimeOff` (rango **hora de pared**, semiabierto
+  `[Start, End)`) bloquea a **un** empleado sin tocar la plantilla anual:
+  `GET|POST /api/employees/{employeeId:guid}/time-off` + `DELETE .../{timeOffId:guid}` (Staff).
+  `AvailabilityService` lo descuenta (también en `GetSlotCapacityAsync`, que usa la waitlist) y
+  `AppointmentSchedulingValidator` lo rechaza → 400 `EMPLOYEE_UNAVAILABLE`. El bloqueo saca al
+  empleado **entero** del rango aunque tenga `MaxConcurrentAppointments > 1`. Las citas ya
+  reservadas dentro **no se tocan**: se devuelven en `collidingAppointmentIds` al crear el bloqueo.
 - **Lista de espera:** apuntarse a una franja completa; al liberarse un hueco, aviso FIFO
   (evento `WaitlistSlotAvailable`) tras re-chequear capacidad, serializado por el guard. Índice
   único filtrado `IX_WaitlistEntry_UniqueWaiting` con `NULLS NOT DISTINCT`.
