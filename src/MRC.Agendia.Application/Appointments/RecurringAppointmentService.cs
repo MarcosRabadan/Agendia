@@ -76,7 +76,7 @@ namespace MRC.Agendia.Application.Appointments
             {
                 skipped.Add(new SkippedOccurrenceDto(
                     shortMonth, MonthWithoutDayCode,
-                    $"El mes {shortMonth:yyyy-MM} no tiene el dia {dto.DayOfMonth}."));
+                    $"Month {shortMonth:yyyy-MM} does not have day {dto.DayOfMonth}."));
             }
 
             foreach (var date in expansion.Dates)
@@ -260,7 +260,7 @@ namespace MRC.Agendia.Application.Appointments
                         originalDate,
                         collidesWithSibling ? SeriesMoveTargetCollisionCode : ex.Code,
                         collidesWithSibling
-                            ? $"La ocurrencia del {originalDate:yyyy-MM-dd} choca con otra cita de la misma serie en la fecha destino."
+                            ? $"The occurrence of {originalDate:yyyy-MM-dd} collides with another appointment of the same series on the target date."
                             : ex.Message));
                 }
                 catch (DomainException ex) when (IsDateSpecific(ex))

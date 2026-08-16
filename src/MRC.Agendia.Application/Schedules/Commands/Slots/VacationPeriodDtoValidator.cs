@@ -17,7 +17,7 @@ namespace MRC.Agendia.Application.Schedules.Commands.Slots
                 .InclusiveBetween(SchedulingLimits.MinDate, SchedulingLimits.MaxDate)
                 .WithMessage(SchedulingLimits.OutOfRangeMessage)
                 .GreaterThanOrEqualTo(x => x.From)
-                .WithMessage("To debe ser igual o posterior a From.");
+                .WithMessage("To must be the same as or after From.");
             RuleFor(x => x.Reason).MaximumLength(500);
         }
     }

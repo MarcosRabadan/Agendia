@@ -7,7 +7,7 @@ namespace MRC.Agendia.Domain.Exceptions
     {
         public override string Code => "EMPLOYEE_INACTIVE";
 
-        public EmployeeInactiveException() : base("El empleado indicado esta inactivo.")
+        public EmployeeInactiveException() : base("The selected employee is inactive.")
         {
         }
     }

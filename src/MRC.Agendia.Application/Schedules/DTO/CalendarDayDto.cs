@@ -16,7 +16,7 @@ namespace MRC.Agendia.Application.Schedules.DTO
             => new(
                 effective.Date,
                 effective.IsOpen,
-                effective.IsOpen ? "Abierto" : effective.ClosedReason ?? "Cerrado",
+                effective.IsOpen ? "Open" : effective.ClosedReason ?? "Closed",
                 effective.IsOpen
                     ? effective.TimeSlots.Select(ts => new EffectiveTimeSlotDto(ts.StartTime, ts.EndTime)).ToList()
                     : null);

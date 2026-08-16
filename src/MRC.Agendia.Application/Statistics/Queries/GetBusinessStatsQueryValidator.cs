@@ -20,10 +20,10 @@ namespace MRC.Agendia.Application.Statistics.Queries
                 .InclusiveBetween(SchedulingLimits.MinDate, SchedulingLimits.MaxDate)
                 .WithMessage(SchedulingLimits.OutOfRangeMessage)
                 .GreaterThanOrEqualTo(x => x.From)
-                .WithMessage("To debe ser igual o posterior a From.");
+                .WithMessage("To must be the same as or after From.");
             RuleFor(x => x)
                 .Must(q => (q.To.DayNumber - q.From.DayNumber) + 1 <= MaxRangeDays)
-                .WithMessage($"El rango de estadisticas no puede superar {MaxRangeDays} dias.");
+                .WithMessage($"The statistics range cannot exceed {MaxRangeDays} days.");
         }
     }
 }

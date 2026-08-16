@@ -42,27 +42,27 @@ if (app.Environment.IsDevelopment())
 {
     try
     {
-        Log.Information("Agendia: comprobando migraciones EF Core pendientes...");
+        Log.Information("Agendia: checking for pending EF Core migrations...");
         using var migrationScope = app.Services.CreateScope();
         var db = migrationScope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
         var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
         if (pending.Count == 0)
         {
-            Log.Information("Agendia: base de datos al dia, sin migraciones pendientes.");
+            Log.Information("Agendia: database up to date, no pending migrations.");
         }
         else
         {
-            Log.Information("Agendia: aplicando {Count} migracion(es) pendiente(s): {Migrations}",
+            Log.Information("Agendia: applying {Count} pending migration(s): {Migrations}",
                 pending.Count, string.Join(", ", pending));
             await db.Database.MigrateAsync();
-            Log.Information("Agendia: migraciones aplicadas correctamente.");
+            Log.Information("Agendia: migrations applied successfully.");
         }
     }
     catch (Exception ex)
     {
         // Re-throw: if the schema cannot be brought up to date the seed and
         // the API will fail anyway. Better to fail fast with a clear log.
-        Log.Fatal(ex, "Error aplicando migraciones EF Core. La aplicacion no arrancara.");
+        Log.Fatal(ex, "Error applying EF Core migrations. The application will not start.");
         throw;
     }
 }

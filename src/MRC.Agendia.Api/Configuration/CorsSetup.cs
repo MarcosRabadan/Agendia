@@ -51,9 +51,9 @@ namespace MRC.Agendia.Api.Configuration
                         // what a backend-only service wants. Logged so an operator who
                         // DID expect browser traffic sees why it is being blocked.
                         Log.Information(
-                            "CORS: sin origenes configurados en {Environment}. No se permite acceso cross-origin " +
-                            "(Agendia se llama backend-to-backend desde Harmony). Si necesitas exponerla a un " +
-                            "navegador, define Cors__AllowedOrigins__0, Cors__AllowedOrigins__1, ...",
+                            "CORS: no origins configured in {Environment}. Cross-origin access is not allowed " +
+                            "(Agendia is called backend-to-backend from Harmony). If you need to expose it to a " +
+                            "browser, set Cors__AllowedOrigins__0, Cors__AllowedOrigins__1, ...",
                             environment.EnvironmentName);
                         return;
                     }
@@ -61,8 +61,8 @@ namespace MRC.Agendia.Api.Configuration
                     // Development / Testing fallback: permissive policy with a clear warning so
                     // the dev notices the missing config but the app keeps running.
                     Log.Warning(
-                        "CORS: Cors:AllowedOrigins esta vacio en {Environment}. " +
-                        "Aplicando AllowAnyOrigin como fallback.",
+                        "CORS: Cors:AllowedOrigins is empty in {Environment}. " +
+                        "Applying AllowAnyOrigin as a fallback.",
                         environment.EnvironmentName);
 
                     policy.AllowAnyOrigin()

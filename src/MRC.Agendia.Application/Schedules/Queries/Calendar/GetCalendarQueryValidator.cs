@@ -23,11 +23,11 @@ namespace MRC.Agendia.Application.Schedules.Queries.Calendar
                 .InclusiveBetween(SchedulingLimits.MinDate, SchedulingLimits.MaxDate)
                 .WithMessage(SchedulingLimits.OutOfRangeMessage)
                 .GreaterThanOrEqualTo(x => x.From)
-                .WithMessage("La fecha final debe ser posterior o igual a la inicial.");
+                .WithMessage("The end date must be after or equal to the start date.");
 
             RuleFor(x => x)
                 .Must(x => (x.To.DayNumber - x.From.DayNumber) + 1 <= MaxRangeDays)
-                .WithMessage($"El rango del calendario no puede superar {MaxRangeDays} dias.");
+                .WithMessage($"The calendar range cannot exceed {MaxRangeDays} days.");
         }
     }
 }

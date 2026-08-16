@@ -10,8 +10,8 @@ namespace MRC.Agendia.Domain.Exceptions
         public override string Code => "SCHEDULE_YEAR_ALREADY_EXISTS";
 
         public ScheduleAlreadyExistsForYearException(int year)
-            : base($"El negocio ya tiene un horario configurado para el ano {year}. " +
-                   "Vuelve a generar confirmando el reemplazo para rehacerlo.")
+            : base($"The business already has a schedule configured for year {year}. " +
+                   "Generate again confirming the replacement to redo it.")
         {
         }
     }

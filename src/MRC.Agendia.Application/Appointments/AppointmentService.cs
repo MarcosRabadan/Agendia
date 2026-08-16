@@ -150,7 +150,7 @@ namespace MRC.Agendia.Application.Appointments
             // status history. Notes/reschedule (status unchanged) stay allowed.
             if (dto.Status != previousStatus && dto.Status != AppointmentStatus.Cancelled && !IsStaff())
                 throw new UnauthorizedAccessException(
-                    "Un cliente solo puede cancelar su cita; el resto de cambios de estado son del personal.");
+                    "A client can only cancel their appointment; the rest of the status changes are staff-only.");
 
             // Only re-validate scheduling when a booking field actually changes.
             // A pure status/notes change (e.g. marking a past appointment Completed

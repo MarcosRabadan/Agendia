@@ -14,11 +14,11 @@ namespace MRC.Agendia.Application.Appointments.Queries.ByDateRange
 
             RuleFor(x => x.EndDate)
                 .GreaterThanOrEqualTo(x => x.StartDate)
-                .WithMessage("La fecha final debe ser posterior o igual a la inicial.");
+                .WithMessage("The end date must be after or equal to the start date.");
 
             RuleFor(x => x)
                 .Must(x => (x.EndDate - x.StartDate).TotalDays <= MaxRangeDays)
-                .WithMessage($"El rango no puede superar {MaxRangeDays} dias.");
+                .WithMessage($"The range cannot exceed {MaxRangeDays} days.");
         }
     }
 }

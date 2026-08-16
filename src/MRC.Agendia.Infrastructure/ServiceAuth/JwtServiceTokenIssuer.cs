@@ -69,7 +69,7 @@ namespace MRC.Agendia.Infrastructure.ServiceAuth
         {
             var value = configuration[key];
             if (string.IsNullOrWhiteSpace(value))
-                throw new InvalidOperationException($"{key} no esta configurado.");
+                throw new InvalidOperationException($"{key} is not configured.");
             return value;
         }
     }

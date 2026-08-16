@@ -4,7 +4,7 @@ namespace MRC.Agendia.Domain.Exceptions
     {
         public override string Code => "SERVICE_NOT_FOUND";
 
-        public ServiceNotFoundException(Guid id) : base($"Servicio con Id {id} no encontrado.")
+        public ServiceNotFoundException(Guid id) : base($"Service with Id {id} not found.")
         {
         }
     }

@@ -13,7 +13,7 @@ namespace MRC.Agendia.Application.Waitlist.Commands.Join
             RuleFor(x => x.Dto.EmployeeId).NotEqual(Guid.Empty).When(x => x.Dto.EmployeeId.HasValue);
             RuleFor(x => x.Dto)
                 .Must(d => d.Date.ToDateTime(d.StartTime) > clock.BusinessNow)
-                .WithMessage("Solo puedes apuntarte a una franja futura.");
+                .WithMessage("You can only join a future slot.");
         }
     }
 }

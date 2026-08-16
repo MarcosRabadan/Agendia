@@ -46,7 +46,7 @@ namespace MRC.Agendia.Application.Waitlist
             var capacity = await _availabilityService.GetSlotCapacityAsync(
                 dto.BusinessId, dto.Date, dto.StartTime, dto.ServiceId, dto.EmployeeId, cancellationToken);
             if (capacity is null)
-                throw new InvalidOperationException("La franja indicada no esta dentro del horario del negocio.");
+                throw new InvalidOperationException("The given slot is not within the business schedule.");
             if (capacity > 0)
                 throw new SlotHasCapacityException();
 
@@ -78,7 +78,7 @@ namespace MRC.Agendia.Application.Waitlist
                 ?? throw new WaitlistEntryNotFoundException(entryId);
 
             if (entry.ClientUserId != userId)
-                throw new UnauthorizedAccessException("Solo puedes gestionar tus propias entradas de lista de espera.");
+                throw new UnauthorizedAccessException("You can only manage your own waitlist entries.");
 
             if (entry.Status == WaitlistStatus.Cancelled)
                 return; // idempotent

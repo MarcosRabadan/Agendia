@@ -70,7 +70,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             var (sut, _) = await BuildAsync(NotAuthenticated());
             var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
                 () => sut.EnsureCanManageBusinessAsync(Business1Id));
-            Assert.Equal("Usuario no autenticado.", ex.Message);
+            Assert.Equal("User not authenticated.", ex.Message);
         }
 
         [Fact]
@@ -86,7 +86,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             var (sut, _) = await BuildAsync(AsUser(OtherOwnerUserId));
             var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
                 () => sut.EnsureCanManageBusinessAsync(Business1Id));
-            Assert.Equal("No tienes permiso para gestionar este negocio.", ex.Message);
+            Assert.Equal("You do not have permission to manage this business.", ex.Message);
         }
 
         [Fact]
@@ -150,7 +150,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             var (sut, _) = await BuildAsync(AsUser(InactiveEmployeeUserId));
             var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
                 () => sut.EnsureCanManageBusinessResourcesAsync(Business1Id));
-            Assert.Equal("No tienes permiso para gestionar recursos de este negocio.", ex.Message);
+            Assert.Equal("You do not have permission to manage this business's resources.", ex.Message);
         }
 
         [Fact]
@@ -213,7 +213,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             var (sut, _) = await BuildAsync(AsUser(OtherOwnerUserId));
             var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
                 () => sut.EnsureCanViewEmployeeAsync(EmployeeActiveId));
-            Assert.Equal("No tienes permiso para ver este empleado.", ex.Message);
+            Assert.Equal("You do not have permission to view this employee.", ex.Message);
         }
 
         [Fact]
@@ -282,7 +282,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             var (sut, _) = await BuildAsync(AsUser(EmployeeUserId));
             var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
                 () => sut.EnsureCanDeleteEmployeeAsync(EmployeeActiveId));
-            Assert.Equal("Solo el dueno del negocio (o un admin) puede eliminar empleados.", ex.Message);
+            Assert.Equal("Only the business owner (or an admin) can delete employees.", ex.Message);
         }
 
         [Fact]
@@ -352,7 +352,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             var (sut, _) = await BuildAsync(AsUser(OtherClientUserId).WithRole(Roles.Client));
             var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
                 () => sut.EnsureCanManageAppointmentAsync(Appointment1Id));
-            Assert.Equal("No tienes permiso para gestionar esta cita.", ex.Message);
+            Assert.Equal("You do not have permission to manage this appointment.", ex.Message);
         }
 
         [Fact]
@@ -412,7 +412,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             var (sut, _) = await BuildAsync(AsUser(ClientUserId).WithRole(Roles.Client));
             var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
                 () => sut.EnsureCanCreateAppointmentAsync(OtherClientUserId, EmployeeActiveId));
-            Assert.Equal("Solo puedes crear citas para tu propia cuenta de cliente.", ex.Message);
+            Assert.Equal("You can only create appointments for your own client account.", ex.Message);
         }
 
         [Fact]
@@ -421,7 +421,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             var (sut, _) = await BuildAsync(AsUser(StrangerUserId));
             var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
                 () => sut.EnsureCanCreateAppointmentAsync(ClientUserId, EmployeeActiveId));
-            Assert.Equal("No tienes permiso para crear esta cita.", ex.Message);
+            Assert.Equal("You do not have permission to create this appointment.", ex.Message);
         }
 
         #endregion

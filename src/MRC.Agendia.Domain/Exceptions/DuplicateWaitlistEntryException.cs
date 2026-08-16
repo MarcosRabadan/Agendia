@@ -6,7 +6,7 @@ namespace MRC.Agendia.Domain.Exceptions
         public override string Code => "DUPLICATE_WAITLIST_ENTRY";
 
         public DuplicateWaitlistEntryException()
-            : base("Ya estas en la lista de espera de esta franja.")
+            : base("You are already on the waitlist for this slot.")
         {
         }
     }

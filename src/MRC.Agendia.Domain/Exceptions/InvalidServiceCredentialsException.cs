@@ -11,7 +11,7 @@ namespace MRC.Agendia.Domain.Exceptions
         public override string Code => "INVALID_SERVICE_CREDENTIALS";
 
         public InvalidServiceCredentialsException()
-            : base("Credenciales de servicio invalidas.")
+            : base("Invalid service credentials.")
         {
         }
     }

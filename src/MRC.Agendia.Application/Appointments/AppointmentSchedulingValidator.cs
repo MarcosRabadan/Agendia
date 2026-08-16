@@ -43,13 +43,13 @@ namespace MRC.Agendia.Application.Appointments
         {
             // ---------- Basic input checks ----------
             if (startDate == default || endDate == default)
-                throw new InvalidAppointmentTimeException("StartDate y EndDate son obligatorios.");
+                throw new InvalidAppointmentTimeException("StartDate and EndDate are required.");
 
             if (endDate <= startDate)
-                throw new InvalidAppointmentTimeException("EndDate debe ser posterior a StartDate.");
+                throw new InvalidAppointmentTimeException("EndDate must be after StartDate.");
 
             if (startDate < _clock.BusinessNow)
-                throw new InvalidAppointmentTimeException("No se pueden crear ni mover citas al pasado.");
+                throw new InvalidAppointmentTimeException("Appointments cannot be created or moved to the past.");
 
             // ---------- Existence + activity ----------
             // The client is not validated here: it is a Harmony user id (the JWT sub),
@@ -91,7 +91,7 @@ namespace MRC.Agendia.Application.Appointments
             if (Math.Abs(actualDuration - totalServiceMinutes) > DurationToleranceMinutes)
             {
                 throw new AppointmentDurationMismatchException(
-                    $"La duracion de la cita ({actualDuration:0.#} min) no coincide con la de los servicios ({totalServiceMinutes} min).");
+                    $"The appointment duration ({actualDuration:0.#} min) does not match the services' duration ({totalServiceMinutes} min).");
             }
 
             // ---------- Day must be open in the effective schedule ----------
@@ -101,7 +101,7 @@ namespace MRC.Agendia.Application.Appointments
             if (!effective.IsOpen || effective.TimeSlots.Count == 0)
             {
                 throw new AppointmentOutsideScheduleException(
-                    $"El negocio esta cerrado el {date:yyyy-MM-dd}: {effective.ClosedReason ?? "sin horario"}.");
+                    $"The business is closed on {date:yyyy-MM-dd}: {effective.ClosedReason ?? "no schedule"}.");
             }
 
             // ---------- Appointment must fit inside ONE continuous open slot ----------
@@ -115,7 +115,7 @@ namespace MRC.Agendia.Application.Appointments
             if (!fitsInsideSomeSlot)
             {
                 throw new AppointmentOutsideScheduleException(
-                    "La cita esta fuera del horario laboral o cruza un descanso entre turnos.");
+                    "The appointment is outside working hours or crosses a break between shifts.");
             }
 
             // ---------- Employee capacity check ----------
@@ -130,8 +130,8 @@ namespace MRC.Agendia.Application.Appointments
             {
                 throw new AppointmentConflictException(
                     employee.MaxConcurrentAppointments == 1
-                        ? "El empleado ya tiene otra cita que se solapa con este horario."
-                        : $"El empleado ya tiene {overlappingCount} citas en este horario (capacidad maxima: {employee.MaxConcurrentAppointments}).");
+                        ? "The employee already has another appointment overlapping this time."
+                        : $"The employee already has {overlappingCount} appointments at this time (max capacity: {employee.MaxConcurrentAppointments}).");
             }
         }
     }

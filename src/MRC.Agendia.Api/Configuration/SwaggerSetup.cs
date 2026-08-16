@@ -32,7 +32,7 @@ namespace MRC.Agendia.Api.Configuration
                     Scheme = "Bearer",
                     BearerFormat = "JWT",
                     In = ParameterLocation.Header,
-                    Description = "Introduce el token JWT (sin el prefijo 'Bearer ')."
+                    Description = "Enter the JWT token (without the 'Bearer ' prefix)."
                 });
                 c.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {

@@ -10,7 +10,7 @@ namespace MRC.Agendia.Application.Employees.Commands.Update
             RuleFor(x => x.Dto.Id).NotEmpty();
             RuleFor(x => x.Dto.MaxConcurrentAppointments)
                 .InclusiveBetween(1, 100)
-                .WithMessage("MaxConcurrentAppointments debe estar entre 1 y 100.");
+                .WithMessage("MaxConcurrentAppointments must be between 1 and 100.");
         }
     }
 }

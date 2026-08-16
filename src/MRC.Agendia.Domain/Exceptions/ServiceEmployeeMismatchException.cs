@@ -7,7 +7,7 @@ namespace MRC.Agendia.Domain.Exceptions
     {
         public override string Code => "SERVICE_EMPLOYEE_MISMATCH";
 
-        public ServiceEmployeeMismatchException() : base("El servicio y el empleado pertenecen a negocios distintos.")
+        public ServiceEmployeeMismatchException() : base("The service and the employee belong to different businesses.")
         {
         }
     }

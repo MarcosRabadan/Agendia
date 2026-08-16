@@ -79,7 +79,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                     Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
                 .Returns(
                     Task.CompletedTask,
-                    Task.FromException(new AppointmentConflictException("El empleado ya tiene otra cita.")),
+                    Task.FromException(new AppointmentConflictException("The employee already has another appointment.")),
                     Task.CompletedTask,
                     Task.CompletedTask);
 
@@ -172,7 +172,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                     Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
                 .Returns(
                     Task.CompletedTask,
-                    Task.FromException(new AppointmentOutsideScheduleException("El negocio esta cerrado.")));
+                    Task.FromException(new AppointmentOutsideScheduleException("The business is closed.")));
 
             var result = await _sut.MoveSeriesAsync(seriesId, new MoveAppointmentSeriesDto(NewStartTime: null, DayShift: 7));
 
@@ -212,7 +212,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                     Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
                     Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
                 .Returns(
-                    Task.FromException(new AppointmentConflictException("El empleado ya tiene otra cita.")),
+                    Task.FromException(new AppointmentConflictException("The employee already has another appointment.")),
                     Task.CompletedTask);
 
             var result = await _sut.MoveSeriesAsync(seriesId, new MoveAppointmentSeriesDto(NewStartTime: null, DayShift: 7));
@@ -256,7 +256,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             _validator.EnsureValidAsync(
                     Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
                     Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
-                .Returns(Task.FromException(new AppointmentOutsideScheduleException("Cerrado.")));
+                .Returns(Task.FromException(new AppointmentOutsideScheduleException("Closed.")));
 
             var result = await _sut.MoveSeriesAsync(seriesId, new MoveAppointmentSeriesDto(NewStartTime: null, DayShift: 7));
 

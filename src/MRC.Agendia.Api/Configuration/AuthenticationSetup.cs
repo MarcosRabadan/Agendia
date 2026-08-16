@@ -82,8 +82,8 @@ namespace MRC.Agendia.Api.Configuration
             if (string.IsNullOrWhiteSpace(value))
             {
                 throw new InvalidOperationException(
-                    $"{key} no esta configurado. Debe coincidir exactamente con el valor que emite Harmony " +
-                    "en el token (ver docs/harmony-token-contract.md).");
+                    $"{key} is not configured. It must exactly match the value Harmony issues " +
+                    "in the token (see docs/harmony-token-contract.md).");
             }
             return value;
         }
@@ -95,11 +95,11 @@ namespace MRC.Agendia.Api.Configuration
             if (string.IsNullOrWhiteSpace(jwtKey))
             {
                 throw new InvalidOperationException(
-                    "Jwt:Key no esta configurado. Es la clave simetrica compartida con Harmony, " +
-                    "que firma los tokens que este servicio valida; debe ser identica en ambos lados.\n" +
-                    "En desarrollo configurala con:\n" +
-                    "  dotnet user-secrets --project src/MRC.Agendia.Api set \"Jwt:Key\" \"<clave de Harmony>\"\n" +
-                    "En produccion usa una variable de entorno Jwt__Key.");
+                    "Jwt:Key is not configured. It is the symmetric key shared with Harmony, " +
+                    "which signs the tokens this service validates; it must be identical on both sides.\n" +
+                    "In development set it with:\n" +
+                    "  dotnet user-secrets --project src/MRC.Agendia.Api set \"Jwt:Key\" \"<Harmony key>\"\n" +
+                    "In production use a Jwt__Key environment variable.");
             }
             // Validate the actual key size in bytes (HS256 needs >= 256 bits = 32 bytes),
             // not just the character count, so a short multi-byte key cannot slip through.

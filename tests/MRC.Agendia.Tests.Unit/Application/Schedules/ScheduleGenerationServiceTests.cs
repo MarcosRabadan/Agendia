@@ -166,7 +166,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Schedules
 
             // The response reports the replacement.
             Assert.NotNull(response.Warnings);
-            Assert.Contains(response.Warnings!, w => w.Contains("reemplaz", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(response.Warnings!, w => w.Contains("Replaced", StringComparison.OrdinalIgnoreCase));
         }
     }
 }

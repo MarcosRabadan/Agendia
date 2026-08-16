@@ -9,7 +9,7 @@ namespace MRC.Agendia.Domain.Exceptions
         public override string Code => "SLOT_HAS_CAPACITY";
 
         public SlotHasCapacityException()
-            : base("La franja todavia tiene hueco disponible; reserva directamente.")
+            : base("The slot still has room available; book directly.")
         {
         }
     }

@@ -17,7 +17,7 @@ namespace MRC.Agendia.Application.Schedules.Commands.Slots
             RuleFor(x => x.EndTime)
                 .NotEqual(default(TimeOnly))
                 .GreaterThan(x => x.StartTime)
-                .WithMessage("EndTime debe ser posterior a StartTime.");
+                .WithMessage("EndTime must be after StartTime.");
         }
     }
 }

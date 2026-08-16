@@ -19,13 +19,13 @@ namespace MRC.Agendia.Application.Schedules.Commands.Generation
                 .InclusiveBetween(SchedulingLimits.MinDate, SchedulingLimits.MaxDate)
                 .WithMessage(SchedulingLimits.OutOfRangeMessage)
                 .GreaterThanOrEqualTo(x => x.EffectiveFrom)
-                .WithMessage("EffectiveTo debe ser igual o posterior a EffectiveFrom.");
+                .WithMessage("EffectiveTo must be the same as or after EffectiveFrom.");
             RuleFor(x => x.WeeklySlots)
-                .NotEmpty().WithMessage("Debe indicar al menos un slot semanal.");
+                .NotEmpty().WithMessage("At least one weekly slot is required.");
             RuleForEach(x => x.WeeklySlots).SetValidator(new CreateWeeklyTimeSlotDtoValidator());
             RuleFor(x => x.WeeklySlots)
                 .Must(slots => !WeeklySlotRules.HasIntraDayOverlap(slots))
-                .WithMessage("Hay franjas que se solapan en el mismo dia de la semana.");
+                .WithMessage("There are overlapping slots on the same day of the week.");
         }
     }
 }

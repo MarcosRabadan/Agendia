@@ -14,13 +14,13 @@ namespace MRC.Agendia.Application.Schedules.Commands.Templates
             RuleFor(x => x.Dto.EffectiveTo)
                 .NotEqual(default(DateOnly))
                 .GreaterThanOrEqualTo(x => x.Dto.EffectiveFrom)
-                .WithMessage("EffectiveTo debe ser igual o posterior a EffectiveFrom.");
+                .WithMessage("EffectiveTo must be the same as or after EffectiveFrom.");
             RuleFor(x => x.Dto.WeeklySlots)
-                .NotEmpty().WithMessage("Debe indicar al menos un slot semanal.");
+                .NotEmpty().WithMessage("At least one weekly slot is required.");
             RuleForEach(x => x.Dto.WeeklySlots).SetValidator(new CreateWeeklyTimeSlotDtoValidator());
             RuleFor(x => x.Dto.WeeklySlots)
                 .Must(slots => !WeeklySlotRules.HasIntraDayOverlap(slots))
-                .WithMessage("Hay franjas que se solapan en el mismo dia de la semana.");
+                .WithMessage("There are overlapping slots on the same day of the week.");
         }
     }
 }

@@ -10,7 +10,7 @@ namespace MRC.Agendia.Domain.Exceptions
         public override string Code => "CANCELLATION_WINDOW_ELAPSED";
 
         public CancellationWindowElapsedException(int windowHours)
-            : base($"No puedes cancelar ni reprogramar la cita con menos de {windowHours}h de antelacion. Contacta con el negocio.")
+            : base($"You cannot cancel or reschedule the appointment with less than {windowHours}h notice. Contact the business.")
         {
         }
     }
