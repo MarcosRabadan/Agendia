@@ -1,3 +1,4 @@
+using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Application.Availability.DTO;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Entities;
@@ -18,6 +19,8 @@ namespace MRC.Agendia.Application.Availability
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IAppointmentRepository _appointmentRepository;
         private readonly IEmployeeTimeOffRepository _timeOffRepository;
+        private readonly IWaitlistRepository _waitlistRepository;
+        private readonly ICurrentUserContext _currentUser;
         private readonly IScheduleResolver _scheduleResolver;
         private readonly IClock _clock;
 
@@ -26,10 +29,14 @@ namespace MRC.Agendia.Application.Availability
                                    IEmployeeRepository employeeRepository,
                                    IAppointmentRepository appointmentRepository,
                                    IEmployeeTimeOffRepository timeOffRepository,
+                                   IWaitlistRepository waitlistRepository,
+                                   ICurrentUserContext currentUser,
                                    IScheduleResolver scheduleResolver,
                                    IClock clock)
         {
             _timeOffRepository = timeOffRepository;
+            _waitlistRepository = waitlistRepository;
+            _currentUser = currentUser;
             _businessRepository = businessRepository;
             _serviceRepository = serviceRepository;
             _employeeRepository = employeeRepository;
@@ -141,6 +148,14 @@ namespace MRC.Agendia.Application.Availability
                 .GroupBy(a => a.EmployeeId)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
+            // ---------- Load the day's waitlist holds (#268) ----------
+            // A slot held for another client is not free: its seat is subtracted below.
+            // The holder's own hold is skipped, or they could not see the slot they were
+            // just told to book.
+            var holds = (await _waitlistRepository.GetActiveHoldsAsync(businessId, date, DateTime.UtcNow, cancellationToken))
+                .Where(h => h.ClientUserId != _currentUser.UserId)
+                .ToList();
+
             // ---------- Load the day's time-off blocks (#271) ----------
             // One query for every candidate employee instead of one per employee/slot.
             var timeOff = (await _timeOffRepository.GetByEmployeesAndRangeAsync(
@@ -185,6 +200,11 @@ namespace MRC.Agendia.Application.Availability
                         if (IsBlocked(timeOff, employee.Id, date, current, slotEnd))
                             continue;
 
+                        // Someone else is holding this exact slot with this employee (#268):
+                        // it is theirs until the hold runs out.
+                        if (holds.Any(h => h.StartTime == current && h.EmployeeId == employee.Id))
+                            continue;
+
                         var overlapping = CountOverlapping(appointments, employee.Id, date, current, slotEnd);
                         var remaining = employee.MaxConcurrentAppointments - overlapping;
                         if (remaining > 0)
@@ -193,6 +213,10 @@ namespace MRC.Agendia.Application.Availability
                             totalCapacity += remaining;
                         }
                     }
+
+                    // An "any employee" hold eats one seat of the slot as a whole (the
+                    // employee-specific ones already removed their own seat above).
+                    totalCapacity -= holds.Count(h => h.StartTime == current && h.EmployeeId is null);
 
                     if (totalCapacity > 0)
                     {

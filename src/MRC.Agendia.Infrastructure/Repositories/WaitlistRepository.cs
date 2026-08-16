@@ -45,6 +45,57 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .FirstOrDefaultAsync(cancellationToken);
 
         /// <inheritdoc />
+        public async Task<IReadOnlyList<WaitlistEntry>> GetActiveHoldsAsync(Guid businessId,
+                                                                            DateOnly date,
+                                                                            DateTime nowUtc,
+                                                                            CancellationToken cancellationToken = default)
+            // Read-only: the availability calculation only subtracts these seats.
+            => await Set
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Where(w => w.Status == WaitlistStatus.Notified
+                    && w.BusinessId == businessId
+                    && w.Date == date
+                    && w.HoldUntil != null
+                    && w.HoldUntil > nowUtc)
+                .ToListAsync(cancellationToken);
+
+        /// <inheritdoc />
+        public async Task<IReadOnlyList<WaitlistEntry>> GetExpiredHoldsAsync(DateTime nowUtc,
+                                                                             int batchSize,
+                                                                             CancellationToken cancellationToken = default)
+            // Tracked: the expiry job marks these Expired before moving the queue on.
+            => await Set
+                .IgnoreQueryFilters()
+                .Where(w => w.Status == WaitlistStatus.Notified
+                    && w.HoldUntil != null
+                    && w.HoldUntil <= nowUtc)
+                .OrderBy(w => w.HoldUntil)
+                .Take(batchSize)
+                .ToListAsync(cancellationToken);
+
+        /// <inheritdoc />
+        public Task<WaitlistEntry?> GetActiveHoldForClientAsync(string clientUserId,
+                                                                DateOnly date,
+                                                                TimeOnly startTime,
+                                                                Guid employeeId,
+                                                                DateTime nowUtc,
+                                                                CancellationToken cancellationToken = default)
+            // An "any employee" hold (EmployeeId null) is consumed by booking that slot
+            // with whichever employee, so it matches too.
+            => Set
+                .IgnoreQueryFilters()
+                .Where(w => w.Status == WaitlistStatus.Notified
+                    && w.ClientUserId == clientUserId
+                    && w.Date == date
+                    && w.StartTime == startTime
+                    && (w.EmployeeId == null || w.EmployeeId == employeeId)
+                    && w.HoldUntil != null
+                    && w.HoldUntil > nowUtc)
+                .OrderBy(w => w.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+        /// <inheritdoc />
         public async Task<IReadOnlyList<WaitlistEntry>> GetActiveByClientUserIdAsync(string clientUserId, CancellationToken cancellationToken = default)
             => await Set
                 .AsNoTracking()

@@ -93,6 +93,7 @@ namespace MRC.Agendia.Application.Appointments
                         startDate: dto.StartDate,
                         endDate: dto.EndDate,
                         extraServiceIds: dto.ExtraServiceIds,
+                        clientUserId: dto.ClientUserId,
                         cancellationToken: cancellationToken);
 
                     var created = _mapper.Map<Appointment>(dto);
@@ -124,6 +125,12 @@ namespace MRC.Agendia.Application.Appointments
                     return created;
                 },
                 cancellationToken);
+
+            // If this client was holding the slot from the waitlist (#268), the hold has
+            // served its purpose: close it so it stops reserving a seat on top of the
+            // appointment it just became.
+            await _waitlistService.ConsumeHoldAsync(
+                entity.ClientUserId, entity.EmployeeId, entity.StartDate, cancellationToken);
 
             return _mapper.Map<AppointmentDto>(entity);
         }
@@ -230,6 +237,7 @@ namespace MRC.Agendia.Application.Appointments
                             startDate: dto.StartDate,
                             endDate: dto.EndDate,
                             extraServiceIds: existingExtraServiceIds,
+                            clientUserId: dto.ClientUserId,
                             cancellationToken: cancellationToken);
                         await ApplyAsync();
                     },

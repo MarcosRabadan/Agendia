@@ -35,5 +35,19 @@ namespace MRC.Agendia.Application.Waitlist
         /// <param name="appointmentId">Id of the appointment that was cancelled/deleted, freeing the slot.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         Task NotifyForFreedAppointmentAsync(Guid appointmentId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Closes the client's priority hold (#268) when they book the slot they were
+        /// holding: the entry leaves the queue as Booked and stops reserving a seat.
+        /// Best-effort - it must never fail the booking that already succeeded.
+        /// </summary>
+        /// <param name="clientUserId">Harmony user id the appointment was booked for.</param>
+        /// <param name="employeeId">Employee the appointment was booked with.</param>
+        /// <param name="startDate">Wall-clock start of the appointment.</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        Task ConsumeHoldAsync(string clientUserId,
+                              Guid employeeId,
+                              DateTime startDate,
+                              CancellationToken cancellationToken = default);
     }
 }

@@ -20,6 +20,7 @@ namespace MRC.Agendia.Application.Waitlist
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<WaitlistService> _logger;
         private readonly IMapper _mapper;
+        private readonly WaitlistOptions _options;
 
         public WaitlistService(IWaitlistRepository repository,
                                IAvailabilityService availabilityService,
@@ -27,8 +28,10 @@ namespace MRC.Agendia.Application.Waitlist
                                IBookingConcurrencyGuard bookingGuard,
                                IUnitOfWork unitOfWork,
                                ILogger<WaitlistService> logger,
-                               IMapper mapper)
+                               IMapper mapper,
+                               WaitlistOptions options)
         {
+            _options = options;
             _repository = repository;
             _availabilityService = availabilityService;
             _appointmentRepository = appointmentRepository;
@@ -96,6 +99,37 @@ namespace MRC.Agendia.Application.Waitlist
         }
 
         /// <inheritdoc />
+        public async Task ConsumeHoldAsync(string clientUserId,
+                                           Guid employeeId,
+                                           DateTime startDate,
+                                           CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var hold = await _repository.GetActiveHoldForClientAsync(
+                    clientUserId, DateOnly.FromDateTime(startDate), TimeOnly.FromDateTime(startDate),
+                    employeeId, DateTime.UtcNow, cancellationToken);
+                if (hold is null)
+                    return;
+
+                // The seat is now taken by their own appointment, so the hold must stop
+                // subtracting capacity on top of it.
+                hold.Status = WaitlistStatus.Booked;
+                hold.HoldUntil = null;
+                _repository.Update(hold);
+                await _unitOfWork.Save(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Best-effort, like the notification: the appointment is already committed
+                // and must not be undone because the bookkeeping failed. Logged, not silent.
+                _logger.LogWarning(ex,
+                    "Failed to consume the waitlist hold of client {ClientUserId} (best-effort, ignored).",
+                    clientUserId);
+            }
+        }
+
+        /// <inheritdoc />
         public async Task NotifyForFreedAppointmentAsync(Guid appointmentId, CancellationToken cancellationToken = default)
         {
             // Best-effort: this runs after the cancellation/deletion has been saved,
@@ -139,12 +173,19 @@ namespace MRC.Agendia.Application.Waitlist
                     // SAME save as the Notified mark, so the slot is never both "notified" with
                     // no event nor announced twice. The consumer resolves the client's contact
                     // from ClientUserId and delivers in the business language.
+                    // Priority hold (#268): the slot is theirs until holdUntil, so the
+                    // notification is worth something even if they take a few minutes to
+                    // react. The availability read and the booking validator both honour
+                    // it, and the expiry job moves the queue on if they do not book.
+                    var holdUntil = DateTime.UtcNow.AddMinutes(Math.Max(1, _options.HoldMinutes));
+
                     entry.RaiseEvent(new WaitlistSlotAvailable(
                         entry.Id, entry.BusinessId, entry.EmployeeId, entry.ClientUserId,
-                        entry.ServiceId, entry.Date, entry.StartTime,
+                        entry.ServiceId, entry.Date, entry.StartTime, holdUntil,
                         appointment.Employee.Business.DefaultLanguage, DateTime.UtcNow));
 
                     entry.Status = WaitlistStatus.Notified;
+                    entry.HoldUntil = holdUntil;
                     _repository.Update(entry);
                     await _unitOfWork.Save(cancellationToken);
                 }, cancellationToken);

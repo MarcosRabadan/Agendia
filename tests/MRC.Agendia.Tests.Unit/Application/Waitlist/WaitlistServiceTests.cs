@@ -38,7 +38,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
                 .Returns(ci => ci.Arg<Func<Task>>()());
             _sut = new WaitlistService(
                 _repository, _availability, _appointmentRepository, _bookingGuard, _unitOfWork,
-                NullLogger<WaitlistService>.Instance, _mapper);
+                NullLogger<WaitlistService>.Instance, _mapper, new WaitlistOptions());
         }
 
         private JoinWaitlistDto Dto() => new(BusinessId: TestIds.Of(10), ServiceId: TestIds.Of(3), Date: new DateOnly(2030, 6, 7), StartTime: new TimeOnly(16, 0), EmployeeId: TestIds.Of(2));
