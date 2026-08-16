@@ -64,6 +64,7 @@ El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan 
 | `CANCELLATION_WINDOW_ELAPSED` | `CancellationWindowElapsedException` | Un cliente intenta cancelar/reprogramar su cita pasada la ventana de antelación del negocio (solo self-service; el personal no la sufre). Con política por tramos (#270) es el tramo `NotAllowed`: el mensaje cita la antelación que habría hecho falta. |
 | `SLOT_HAS_CAPACITY` | `SlotHasCapacityException` | Al apuntarse a la lista de espera, la franja todavía tiene hueco (reserva directa). |
 | `DUPLICATE_WAITLIST_ENTRY` | `DuplicateWaitlistEntryException` | El cliente ya está en la lista de espera de esa franja. |
+| `SLOT_ON_HOLD` | `SlotOnHoldException` | La franja está reservada temporalmente para un cliente de la lista de espera (#268); nadie más puede cogerla hasta que expire el hold. |
 | `EMPLOYEE_UNAVAILABLE` | `EmployeeUnavailableException` | Se intenta reservar o mover una cita sobre un empleado dentro de un bloqueo suyo (time-off, #271). |
 | `EMPLOYEE_TIME_OFF_NOT_FOUND` | `EmployeeTimeOffNotFoundException` | El bloqueo de agenda no existe o no pertenece a ese empleado (404). |
 

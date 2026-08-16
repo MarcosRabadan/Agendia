@@ -343,6 +343,12 @@ Repository (EF Core / Npgsql) → PostgreSQL
   `AppointmentSchedulingValidator` lo rechaza → 400 `EMPLOYEE_UNAVAILABLE`. El bloqueo saca al
   empleado **entero** del rango aunque tenga `MaxConcurrentAppointments > 1`. Las citas ya
   reservadas dentro **no se tocan**: se devuelven en `collidingAppointmentIds` al crear el bloqueo.
+- **Reserva prioritaria de la waitlist (#268):** al avisar al primero de la cola se le da un
+  **hold** (`WaitlistEntry.HoldUntil`, UTC, `Waitlist:HoldMinutes` default 15). Mientras dura,
+  `AvailabilityService` no ofrece la franja a nadie más (sí al titular) y el validador rechaza a
+  terceros con 400 `SLOT_ON_HOLD`. Si el titular reserva, `ConsumeHoldAsync` cierra la entrada
+  (`Booked`); si no, `WaitlistHoldExpiryService`/`WaitlistHoldProcessor` la marca `Expired` y
+  pasa el turno al siguiente (FIFO), todo dentro del `IBookingConcurrencyGuard`.
 - **Lista de espera:** apuntarse a una franja completa; al liberarse un hueco, aviso FIFO
   (evento `WaitlistSlotAvailable`) tras re-chequear capacidad, serializado por el guard. Índice
   único filtrado `IX_WaitlistEntry_UniqueWaiting` con `NULLS NOT DISTINCT`.

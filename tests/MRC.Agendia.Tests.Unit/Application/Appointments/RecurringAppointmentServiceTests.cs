@@ -76,7 +76,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // The 2nd occurrence is full; the rest fit.
             _validator.EnsureValidAsync(
                     Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
-                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
                 .Returns(
                     Task.CompletedTask,
                     Task.FromException(new AppointmentConflictException("The employee already has another appointment.")),
@@ -169,7 +169,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // First moves fine, second hits a closed day.
             _validator.EnsureValidAsync(
                     Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
-                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
                 .Returns(
                     Task.CompletedTask,
                     Task.FromException(new AppointmentOutsideScheduleException("The business is closed.")));
@@ -210,7 +210,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // not the generic conflict, so the silent collapse is visible.
             _validator.EnsureValidAsync(
                     Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
-                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
                 .Returns(
                     Task.FromException(new AppointmentConflictException("The employee already has another appointment.")),
                     Task.CompletedTask);
@@ -233,7 +233,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // still be audited (skip-only is not "nothing happened").
             _validator.EnsureValidAsync(
                     Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
-                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
                 .Returns(Task.FromException(new AppointmentConflictException("Lleno.")));
 
             var result = await _sut.CreateSeriesAsync(dto);
@@ -255,7 +255,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             _validator.EnsureValidAsync(
                     Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
-                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
                 .Returns(Task.FromException(new AppointmentOutsideScheduleException("Closed.")));
 
             var result = await _sut.MoveSeriesAsync(seriesId, new MoveAppointmentSeriesDto(NewStartTime: null, DayShift: 7));

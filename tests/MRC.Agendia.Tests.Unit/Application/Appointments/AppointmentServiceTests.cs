@@ -84,7 +84,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                 dto.EmployeeId, DateOnly.FromDateTime(dto.StartDate),
                 Arg.Any<Func<Task<Appointment>>>(), Arg.Any<CancellationToken>());
             await _validator.Received(1).EnsureValidAsync(
-                Arg.Any<Guid?>(), dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
+                Arg.Any<Guid?>(), dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
             await _repository.Received(1).AddAsync(Arg.Any<Appointment>(), Arg.Any<CancellationToken>());
             // A confirmation event is raised on the appointment (enlisted into the outbox on save).
             Assert.Contains(created.DomainEvents, e => e is AppointmentConfirmed);
@@ -113,7 +113,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             await _validator.Received(1).EnsureValidAsync(
                 Arg.Any<Guid?>(), dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate,
                 Arg.Is<IReadOnlyCollection<Guid>>(x => x != null && x.SequenceEqual(new[] { TestIds.Of(5), TestIds.Of(7) })),
-                Arg.Any<CancellationToken>());
+                Arg.Any<string?>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]
@@ -216,7 +216,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             await _validator.Received(1).EnsureValidAsync(
                 entity.Id, dto.EmployeeId, dto.ServiceId,
-                dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
+                dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]

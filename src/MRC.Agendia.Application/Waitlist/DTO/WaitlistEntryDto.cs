@@ -11,5 +11,8 @@ namespace MRC.Agendia.Application.Waitlist.DTO
         DateOnly Date,
         TimeOnly StartTime,
         WaitlistStatus Status,
-        DateTime CreatedAt);
+        DateTime CreatedAt,
+        // While Notified, the UTC instant the client's priority hold on the slot runs out
+        // (#268). Null once it is consumed, expired or never granted.
+        DateTime? HoldUntil = null);
 }

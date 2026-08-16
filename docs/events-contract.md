@@ -36,7 +36,7 @@ por `clientUserId` (el `sub` de Harmony).
 | `AppointmentRescheduled` | Al mover una cita a otro horario (no en una cancelacion). |
 | `AppointmentReminder`  | Job de recordatorio 24h (idempotente por `ReminderSentAt`). |
 | `AppointmentDelayed`   | El personal avisa de un retraso, por cita afectada.   |
-| `WaitlistSlotAvailable`| Se libera una franja que un cliente esperaba (FIFO).  |
+| `WaitlistSlotAvailable`| Se libera una franja que un cliente esperaba (FIFO). Lleva `holdUntil`: la franja queda **reservada para él** hasta ese instante (#268). |
 
 > **Series:** las operaciones de serie emiten los mismos eventos **por ocurrencia**: crear una
 > serie emite un `AppointmentConfirmed` por cita creada; cancelar una serie, un
@@ -82,10 +82,17 @@ es el `sub` opaco de Harmony (string, no GUID).
   "serviceId": "0198f3a1-7c4e-7b2a-9f01-333333333333",
   "date": "2026-09-01",
   "startTime": "16:00:00",
+  "holdUntil": "2026-08-13T16:35:00Z",
   "language": "es",
   "occurredOnUtc": "2026-08-13T16:20:00Z"
 }
 ```
+
+**`holdUntil` (#268)** es la **reserva prioritaria**: hasta ese instante (UTC) la franja queda
+bloqueada para ese cliente y la API rechaza a cualquier otro que intente reservarla
+(400 `SLOT_ON_HOLD`). El mensaje al cliente debería decir de cuánto tiempo dispone. Si no
+reserva a tiempo, el hold expira y Agendia emite un `WaitlistSlotAvailable` nuevo para el
+siguiente de la cola.
 
 ## Notas de implementación (Agendia)
 

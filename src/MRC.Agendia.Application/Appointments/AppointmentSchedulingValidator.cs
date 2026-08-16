@@ -15,6 +15,7 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IServiceRepository _serviceRepository;
         private readonly IAppointmentRepository _appointmentRepository;
         private readonly IEmployeeTimeOffRepository _timeOffRepository;
+        private readonly IWaitlistRepository _waitlistRepository;
         private readonly IScheduleResolver _scheduleResolver;
         private readonly IClock _clock;
 
@@ -23,10 +24,12 @@ namespace MRC.Agendia.Application.Appointments
                                               IServiceRepository serviceRepository,
                                               IAppointmentRepository appointmentRepository,
                                               IEmployeeTimeOffRepository timeOffRepository,
+                                              IWaitlistRepository waitlistRepository,
                                               IScheduleResolver scheduleResolver,
                                               IClock clock)
         {
             _timeOffRepository = timeOffRepository;
+            _waitlistRepository = waitlistRepository;
             _businessRepository = businessRepository;
             _employeeRepository = employeeRepository;
             _serviceRepository = serviceRepository;
@@ -42,6 +45,7 @@ namespace MRC.Agendia.Application.Appointments
                                            DateTime startDate,
                                            DateTime endDate,
                                            IReadOnlyCollection<Guid>? extraServiceIds = null,
+                                           string? clientUserId = null,
                                            CancellationToken cancellationToken = default)
         {
             // ---------- Basic input checks ----------
@@ -135,6 +139,23 @@ namespace MRC.Agendia.Application.Appointments
             // whole day's appointments just to count one employee's.
             var overlappingCount = await _appointmentRepository.CountOverlappingForEmployeeAsync(
                 employeeId, startDate, endDate, appointmentId, cancellationToken);
+
+            // A waitlist priority hold (#268) reserves a seat for someone else, so it
+            // counts as occupied here - and only for THEM is the slot still free. Reported
+            // apart from a plain conflict: "wait a few minutes" is actionable, unlike
+            // "it is full".
+            var holds = await _waitlistRepository.GetActiveHoldsAsync(
+                employee.BusinessId, DateOnly.FromDateTime(startDate), DateTime.UtcNow, cancellationToken);
+
+            var othersHolds = holds.Count(h => h.StartTime == startTime
+                && (h.EmployeeId is null || h.EmployeeId == employeeId)
+                && h.ClientUserId != clientUserId);
+
+            if (overlappingCount < employee.MaxConcurrentAppointments
+                && overlappingCount + othersHolds >= employee.MaxConcurrentAppointments)
+            {
+                throw new SlotOnHoldException();
+            }
 
             if (overlappingCount >= employee.MaxConcurrentAppointments)
             {

@@ -3,10 +3,12 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Idempotency;
+using MRC.Agendia.Application.Waitlist;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Infrastructure.Messaging;
@@ -104,6 +106,12 @@ namespace MRC.Agendia.Infrastructure
             services.Configure<ReminderOptions>(configuration.GetSection(ReminderOptions.SectionName));
             services.AddScoped<ReminderProcessor>();
 
+            // Waitlist priority hold (#268): options bound here and exposed as a plain
+            // instance so the Application layer needs no configuration package.
+            services.Configure<WaitlistOptions>(configuration.GetSection(WaitlistOptions.SectionName));
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<WaitlistOptions>>().Value);
+            services.AddScoped<WaitlistHoldProcessor>();
+
             // Idempotent booking (#266): durable record of the requests already served
             // under an Idempotency-Key, plus the purge of the expired ones.
             services.Configure<IdempotencyOptions>(configuration.GetSection(IdempotencyOptions.SectionName));
@@ -124,6 +132,7 @@ namespace MRC.Agendia.Infrastructure
             services.AddHostedService<AppointmentReminderService>();
             services.AddHostedService<OutboxDispatcherService>();
             services.AddHostedService<IdempotencyPurgeService>();
+            services.AddHostedService<WaitlistHoldExpiryService>();
 
             return services;
         }

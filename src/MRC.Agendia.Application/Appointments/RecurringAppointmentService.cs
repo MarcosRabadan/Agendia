@@ -96,6 +96,7 @@ namespace MRC.Agendia.Application.Appointments
                             serviceId: dto.ServiceId,
                             startDate: start,
                             endDate: end,
+                            clientUserId: dto.ClientUserId,
                             cancellationToken: cancellationToken);
 
                         var appointment = new Appointment
@@ -232,6 +233,7 @@ namespace MRC.Agendia.Application.Appointments
                             serviceId: appointment.ServiceId,
                             startDate: newStart,
                             endDate: newEnd,
+                            clientUserId: appointment.ClientUserId,
                             cancellationToken: cancellationToken);
 
                         var previousStart = appointment.StartDate;

@@ -29,6 +29,11 @@ namespace MRC.Agendia.Application.Appointments
         /// appointment's duration must equal the sum of the primary service plus
         /// all of these; each must belong to the same business.
         /// </param>
+        /// <param name="clientUserId">
+        /// Harmony user id the appointment is for. Used to honour a waitlist priority hold
+        /// (#268): the slot is frozen for whoever holds it, and free for them to take.
+        /// Null skips that check (nothing to compare the holder against).
+        /// </param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         Task EnsureValidAsync(Guid? appointmentId,
                               Guid employeeId,
@@ -36,6 +41,7 @@ namespace MRC.Agendia.Application.Appointments
                               DateTime startDate,
                               DateTime endDate,
                               IReadOnlyCollection<Guid>? extraServiceIds = null,
+                              string? clientUserId = null,
                               CancellationToken cancellationToken = default);
     }
 }
