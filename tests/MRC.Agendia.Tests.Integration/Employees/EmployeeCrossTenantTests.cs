@@ -41,7 +41,7 @@ namespace MRC.Agendia.Tests.Integration.Employees
 
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
             var body = await response.Content.ReadAsStringAsync();
-            Assert.Contains("No tienes permiso", body);
+            Assert.Contains("You do not have permission", body);
         }
 
         [Fact]

@@ -47,7 +47,7 @@ namespace MRC.Agendia.Application.Availability
             // ---------- Validate inputs ----------
             if (stepMinutes < MinStepMinutes || stepMinutes > MaxStepMinutes)
                 throw new ArgumentException(
-                    $"stepMinutes debe estar entre {MinStepMinutes} y {MaxStepMinutes}.");
+                    $"stepMinutes must be between {MinStepMinutes} and {MaxStepMinutes}.");
 
             // Public booking read: resolve the business unscoped (GetActiveByIdAsync
             // uses IgnoreQueryFilters) so an authenticated owner/employee browsing
@@ -61,11 +61,11 @@ namespace MRC.Agendia.Application.Availability
 
             if (service.BusinessId != businessId)
                 throw new InvalidOperationException(
-                    "El servicio no pertenece al negocio indicado.");
+                    "The service does not belong to the given business.");
 
             if (service.DurationMinutes <= 0)
                 throw new InvalidOperationException(
-                    "El servicio no tiene una duracion valida.");
+                    "The service has no valid duration.");
 
             // Multiservice (#170): the slot must fit the SUM of the primary service
             // plus any extra services; each extra must belong to the same business.
@@ -77,9 +77,9 @@ namespace MRC.Agendia.Application.Availability
                     var extra = await _serviceRepository.GetByIdPublicAsync(extraId, cancellationToken)
                         ?? throw new ServiceNotFoundException(extraId);
                     if (extra.BusinessId != businessId)
-                        throw new InvalidOperationException("Un servicio adicional no pertenece al negocio indicado.");
+                        throw new InvalidOperationException("An extra service does not belong to the given business.");
                     if (extra.DurationMinutes <= 0)
-                        throw new InvalidOperationException("Un servicio adicional no tiene una duracion valida.");
+                        throw new InvalidOperationException("An extra service has no valid duration.");
                     totalDurationMinutes += extra.DurationMinutes;
                 }
             }
@@ -93,13 +93,13 @@ namespace MRC.Agendia.Application.Availability
 
                 if (employee.BusinessId != businessId)
                     throw new InvalidOperationException(
-                        "El empleado no pertenece al negocio indicado.");
+                        "The employee does not belong to the given business.");
 
                 if (!employee.IsActive)
                     return EmptyAvailability(
                         date, businessId, serviceId, employeeId,
                         totalDurationMinutes, stepMinutes,
-                        "El empleado indicado esta inactivo.");
+                        "The selected employee is inactive.");
 
                 employees = new List<Employee> { employee };
             }
@@ -115,7 +115,7 @@ namespace MRC.Agendia.Application.Availability
                 return EmptyAvailability(
                     date, businessId, serviceId, employeeId,
                     totalDurationMinutes, stepMinutes,
-                    "No hay empleados activos en este negocio.");
+                    "No active employees in this business.");
             }
 
             // ---------- Resolve the day's effective schedule ----------
@@ -125,7 +125,7 @@ namespace MRC.Agendia.Application.Availability
                 return EmptyAvailability(
                     date, businessId, serviceId, employeeId,
                     totalDurationMinutes, stepMinutes,
-                    effective.ClosedReason ?? "Cerrado.");
+                    effective.ClosedReason ?? "Closed.");
             }
 
             // ---------- Load existing appointments for that day ----------
@@ -218,9 +218,9 @@ namespace MRC.Agendia.Application.Availability
             var service = await _serviceRepository.GetByIdPublicAsync(serviceId, cancellationToken)
                 ?? throw new ServiceNotFoundException(serviceId);
             if (service.BusinessId != businessId)
-                throw new InvalidOperationException("El servicio no pertenece al negocio indicado.");
+                throw new InvalidOperationException("The service does not belong to the given business.");
             if (service.DurationMinutes <= 0)
-                throw new InvalidOperationException("El servicio no tiene una duracion valida.");
+                throw new InvalidOperationException("The service has no valid duration.");
 
             List<Employee> employees;
             if (employeeId is Guid empId)
@@ -228,7 +228,7 @@ namespace MRC.Agendia.Application.Availability
                 var employee = await _employeeRepository.GetByIdPublicAsync(empId, cancellationToken)
                     ?? throw new EmployeeNotFoundException(empId);
                 if (employee.BusinessId != businessId)
-                    throw new InvalidOperationException("El empleado no pertenece al negocio indicado.");
+                    throw new InvalidOperationException("The employee does not belong to the given business.");
                 if (!employee.IsActive)
                     return null;
                 employees = new List<Employee> { employee };

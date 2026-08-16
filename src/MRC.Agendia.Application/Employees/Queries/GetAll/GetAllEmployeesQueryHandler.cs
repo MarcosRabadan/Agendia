@@ -34,11 +34,11 @@ namespace MRC.Agendia.Application.Employees.Queries.GetAll
             if (_currentUser.IsInRole(Roles.BusinessOwner))
             {
                 var userId = _currentUser.UserId
-                    ?? throw new UnauthorizedAccessException("Usuario no autenticado.");
+                    ?? throw new UnauthorizedAccessException("User not authenticated.");
                 return _service.GetPagedByOwnerUserIdAsync(userId, request.Page, request.PageSize, cancellationToken);
             }
 
-            throw new UnauthorizedAccessException("No tienes permiso para listar empleados.");
+            throw new UnauthorizedAccessException("You do not have permission to list employees.");
         }
     }
 }

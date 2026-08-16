@@ -11,7 +11,7 @@ namespace MRC.Agendia.Domain.Exceptions
         public override string Code => "INVALID_APPOINTMENT_STATUS_TRANSITION";
 
         public InvalidAppointmentStatusTransitionException(AppointmentStatus from, AppointmentStatus to)
-            : base($"No se puede cambiar el estado de una cita de '{from}' a '{to}': '{from}' es un estado final.")
+            : base($"Cannot change an appointment status from '{from}' to '{to}': '{from}' is a final state.")
         {
         }
     }

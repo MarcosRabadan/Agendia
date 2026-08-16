@@ -26,7 +26,7 @@ namespace MRC.Agendia.Application.Appointments.Queries.MyAppointments
             var userId = _currentUser.UserId;
             if (string.IsNullOrWhiteSpace(userId))
             {
-                throw new UnauthorizedAccessException("No hay usuario autenticado.");
+                throw new UnauthorizedAccessException("No authenticated user.");
             }
 
             return _service.GetPagedByClientUserIdAsync(userId, request.Page, request.PageSize, cancellationToken);

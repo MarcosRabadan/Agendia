@@ -13,7 +13,7 @@ namespace MRC.Agendia.Application.Appointments.Commands.Series
             RuleFor(x => x.Dto.DayShift).InclusiveBetween(-MaxDayShift, MaxDayShift);
             RuleFor(x => x.Dto)
                 .Must(d => d.NewStartTime.HasValue || d.DayShift != 0)
-                .WithMessage("Indique una nueva hora o un desplazamiento de dias distinto de cero.");
+                .WithMessage("Provide a new time or a non-zero day shift.");
         }
     }
 }

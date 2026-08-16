@@ -9,8 +9,8 @@ namespace MRC.Agendia.Application.Services.Commands.Update
             RuleFor(x => x.Dto).NotNull();
             RuleFor(x => x.Dto.Id).NotEmpty();
             RuleFor(x => x.Dto.DurationMinutes)
-                .GreaterThan(0).WithMessage("DurationMinutes debe ser mayor que 0.")
-                .LessThanOrEqualTo(24 * 60).WithMessage("DurationMinutes no puede superar las 24 horas.");
+                .GreaterThan(0).WithMessage("DurationMinutes must be greater than 0.")
+                .LessThanOrEqualTo(24 * 60).WithMessage("DurationMinutes cannot exceed 24 hours.");
         }
     }
 }

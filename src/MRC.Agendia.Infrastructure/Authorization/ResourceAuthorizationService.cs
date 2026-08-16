@@ -24,7 +24,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
         private string RequireUserId()
         {
             if (!_currentUser.IsAuthenticated || string.IsNullOrEmpty(_currentUser.UserId))
-                throw new UnauthorizedAccessException("Usuario no autenticado.");
+                throw new UnauthorizedAccessException("User not authenticated.");
             return _currentUser.UserId!;
         }
 
@@ -41,7 +41,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .AnyAsync(b => b.Id == businessId && b.OwnerUserId == userId, cancellationToken);
 
             if (!isOwner)
-                throw new UnauthorizedAccessException("No tienes permiso para gestionar este negocio.");
+                throw new UnauthorizedAccessException("You do not have permission to manage this business.");
         }
 
         /// <inheritdoc />
@@ -62,7 +62,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .AnyAsync(e => e.BusinessId == businessId && e.UserId == userId && e.IsActive, cancellationToken);
             if (isEmployee) return;
 
-            throw new UnauthorizedAccessException("No tienes permiso para gestionar recursos de este negocio.");
+            throw new UnauthorizedAccessException("You do not have permission to manage this business's resources.");
         }
 
         // ---------- EMPLOYEE ----------
@@ -89,7 +89,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .AnyAsync(b => b.Id == employee.BusinessId && b.OwnerUserId == userId, cancellationToken);
             if (isOwner) return;
 
-            throw new UnauthorizedAccessException("No tienes permiso para ver este empleado.");
+            throw new UnauthorizedAccessException("You do not have permission to view this employee.");
         }
 
         /// <inheritdoc />
@@ -119,7 +119,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .AnyAsync(b => b.Id == businessId.Value && b.OwnerUserId == userId, cancellationToken);
 
             if (!isOwner)
-                throw new UnauthorizedAccessException("Solo el dueno del negocio (o un admin) puede eliminar empleados.");
+                throw new UnauthorizedAccessException("Only the business owner (or an admin) can delete employees.");
         }
 
         // ---------- APPOINTMENT ----------
@@ -156,7 +156,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
             // The appointment's client
             if (appointment.ClientUserId == userId) return;
 
-            throw new UnauthorizedAccessException("No tienes permiso para gestionar esta cita.");
+            throw new UnauthorizedAccessException("You do not have permission to manage this appointment.");
         }
 
         /// <inheritdoc />
@@ -192,10 +192,10 @@ namespace MRC.Agendia.Infrastructure.Authorization
             {
                 if (clientUserId == userId) return;
 
-                throw new UnauthorizedAccessException("Solo puedes crear citas para tu propia cuenta de cliente.");
+                throw new UnauthorizedAccessException("You can only create appointments for your own client account.");
             }
 
-            throw new UnauthorizedAccessException("No tienes permiso para crear esta cita.");
+            throw new UnauthorizedAccessException("You do not have permission to create this appointment.");
         }
 
         /// <inheritdoc />

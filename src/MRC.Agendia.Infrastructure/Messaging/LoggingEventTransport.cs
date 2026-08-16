@@ -20,7 +20,7 @@ namespace MRC.Agendia.Infrastructure.Messaging
         /// <inheritdoc />
         public Task PublishAsync(string type, string payload, CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Evento de integracion {Type} publicado (transporte log-only): {Payload}", type, payload);
+            _logger.LogInformation("Integration event {Type} published (log-only transport): {Payload}", type, payload);
             return Task.CompletedTask;
         }
     }

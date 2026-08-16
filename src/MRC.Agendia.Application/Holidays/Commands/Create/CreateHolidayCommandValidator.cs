@@ -15,7 +15,7 @@ namespace MRC.Agendia.Application.Holidays.Commands.Create
                 .LessThanOrEqualTo(2100);
             RuleFor(x => x.Dto)
                 .Must(d => d.Date.Year == d.Year)
-                .WithMessage("La fecha del festivo debe pertenecer al Year indicado.");
+                .WithMessage("The holiday date must belong to the given Year.");
         }
     }
 }

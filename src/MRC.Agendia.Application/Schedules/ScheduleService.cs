@@ -52,7 +52,7 @@ namespace MRC.Agendia.Application.Schedules
         public async Task<ScheduleTemplateDto> CreateTemplateAsync(CreateScheduleTemplateDto dto, CancellationToken cancellationToken = default)
         {
             if (await _templateRepository.HasOverlappingTemplateAsync(dto.BusinessId, dto.EffectiveFrom, dto.EffectiveTo, cancellationToken: cancellationToken))
-                throw new TemplatesOverlapException("Ya existe una plantilla de horario que se solapa con las fechas indicadas.");
+                throw new TemplatesOverlapException("A schedule template overlapping the given dates already exists.");
 
             var entity = _mapper.Map<ScheduleTemplate>(dto);
             entity.CreatedAt = DateTime.UtcNow;
@@ -71,7 +71,7 @@ namespace MRC.Agendia.Application.Schedules
                 ?? throw new ScheduleTemplateNotFoundException(dto.Id);
 
             if (await _templateRepository.HasOverlappingTemplateAsync(entity.BusinessId, dto.EffectiveFrom, dto.EffectiveTo, dto.Id, cancellationToken))
-                throw new TemplatesOverlapException("Ya existe una plantilla de horario que se solapa con las fechas indicadas.");
+                throw new TemplatesOverlapException("A schedule template overlapping the given dates already exists.");
 
             entity.Name = dto.Name;
             entity.EffectiveFrom = dto.EffectiveFrom;
@@ -138,7 +138,7 @@ namespace MRC.Agendia.Application.Schedules
             // One override per (business, date): pre-check for a clean 400 instead
             // of the raw 500 the unique index would otherwise surface.
             if (await _overrideRepository.GetByBusinessIdAndDateAsync(entity.BusinessId, entity.Date, cancellationToken) is not null)
-                throw new ScheduleOverrideConflictException("Ya existe una excepcion de horario para esa fecha en este negocio.");
+                throw new ScheduleOverrideConflictException("A schedule override already exists for that date in this business.");
 
             await _overrideRepository.AddAsync(entity, cancellationToken);
             await _unitOfWork.Save(cancellationToken);
@@ -159,7 +159,7 @@ namespace MRC.Agendia.Application.Schedules
             {
                 var conflicting = await _overrideRepository.GetByBusinessIdAndDateAsync(entity.BusinessId, dto.Date, cancellationToken);
                 if (conflicting is not null && conflicting.Id != entity.Id)
-                    throw new ScheduleOverrideConflictException("Ya existe una excepcion de horario para esa fecha en este negocio.");
+                    throw new ScheduleOverrideConflictException("A schedule override already exists for that date in this business.");
             }
 
             entity.Date = dto.Date;

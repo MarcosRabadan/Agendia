@@ -74,8 +74,8 @@ namespace MRC.Agendia.Application.Schedules
                 }, cancellationToken);
 
                 build.Warnings.Insert(0,
-                    $"Se reemplazo el horario existente del ano {dto.Year}: se eliminaron " +
-                    $"{existingTemplates.Count} plantilla(s) y {existingOverrides.Count} dia(s) especial(es).");
+                    $"Replaced the existing schedule for year {dto.Year}: removed " +
+                    $"{existingTemplates.Count} template(s) and {existingOverrides.Count} special day(s).");
             }
             else
             {
@@ -137,7 +137,7 @@ namespace MRC.Agendia.Application.Schedules
         private async Task<ScheduleBuild> BuildAsync(GenerateScheduleRequestDto dto, bool ignoreExisting, CancellationToken cancellationToken = default)
         {
             if (dto.Templates is null || dto.Templates.Count == 0)
-                throw new InvalidOperationException("Debe proporcionar al menos una plantilla de horario.");
+                throw new InvalidOperationException("At least one schedule template must be provided.");
 
             // 1. Validate the requested templates do not overlap each other.
             ValidateTemplatesDoNotOverlap(dto.Templates);
@@ -149,7 +149,7 @@ namespace MRC.Agendia.Application.Schedules
                 foreach (var templateInput in dto.Templates)
                 {
                     if (await _templateRepository.HasOverlappingTemplateAsync(dto.BusinessId, templateInput.EffectiveFrom, templateInput.EffectiveTo, cancellationToken: cancellationToken))
-                        throw new TemplatesOverlapException($"La plantilla '{templateInput.Name}' se solapa con una plantilla existente del negocio.");
+                        throw new TemplatesOverlapException($"The '{templateInput.Name}' template overlaps with an existing template of the business.");
                 }
             }
 
@@ -219,7 +219,7 @@ namespace MRC.Agendia.Application.Schedules
                     {
                         if (!claimedDates.Add(date))
                         {
-                            warnings.Add($"El dia {date:yyyy-MM-dd} ya tiene un cierre/festivo; se omite de las vacaciones ({vacation.Reason ?? "sin motivo"}).");
+                            warnings.Add($"Day {date:yyyy-MM-dd} already has a closure/holiday; skipped from the vacation ({vacation.Reason ?? "no reason"}).");
                             continue;
                         }
 
@@ -229,7 +229,7 @@ namespace MRC.Agendia.Application.Schedules
                             BusinessId = dto.BusinessId,
                             Date = date,
                             OverrideType = ScheduleOverrideType.Closed,
-                            Reason = vacation.Reason ?? "Vacaciones",
+                            Reason = vacation.Reason ?? "Vacation",
                             CreatedAt = DateTime.UtcNow
                         });
                     }
@@ -244,7 +244,7 @@ namespace MRC.Agendia.Application.Schedules
                 {
                     if (!claimedDates.Add(closed.Date))
                     {
-                        warnings.Add($"El dia {closed.Date:yyyy-MM-dd} ya tiene un cierre/festivo; se omite.");
+                        warnings.Add($"Day {closed.Date:yyyy-MM-dd} already has a closure/holiday; skipped.");
                         continue;
                     }
 
@@ -286,7 +286,7 @@ namespace MRC.Agendia.Application.Schedules
             for (int i = 0; i < templates.Count; i++)
             {
                 if (templates[i].EffectiveFrom > templates[i].EffectiveTo)
-                    throw new InvalidOperationException($"La plantilla '{templates[i].Name}' tiene una fecha de inicio posterior a la de fin.");
+                    throw new InvalidOperationException($"The '{templates[i].Name}' template has a start date later than its end date.");
 
                 for (int j = i + 1; j < templates.Count; j++)
                 {
@@ -294,7 +294,7 @@ namespace MRC.Agendia.Application.Schedules
                         && templates[i].EffectiveTo >= templates[j].EffectiveFrom)
                     {
                         throw new TemplatesOverlapException(
-                            $"Las plantillas '{templates[i].Name}' y '{templates[j].Name}' tienen fechas que se solapan.");
+                            $"Templates '{templates[i].Name}' and '{templates[j].Name}' have overlapping dates.");
                     }
                 }
             }

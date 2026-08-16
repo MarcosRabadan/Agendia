@@ -19,11 +19,11 @@ namespace MRC.Agendia.Application.Schedules.Commands.Overrides
             {
                 RuleFor(x => x.Dto.CustomSlots)
                     .NotEmpty()
-                    .WithMessage("CustomHours requiere al menos un CustomSlot.");
+                    .WithMessage("CustomHours requires at least one CustomSlot.");
                 RuleForEach(x => x.Dto.CustomSlots!).SetValidator(new CreateCustomTimeSlotDtoValidator());
                 RuleFor(x => x.Dto.CustomSlots)
                     .Must(slots => !WeeklySlotRules.HasIntraDayOverlap(slots))
-                    .WithMessage("Hay franjas que se solapan en el mismo dia.");
+                    .WithMessage("There are overlapping slots on the same day.");
             });
         }
     }

@@ -18,7 +18,7 @@ namespace MRC.Agendia.Application.Appointments.Commands.Series
             RuleFor(x => x.Dto.Frequency).IsInEnum();
             RuleFor(x => x.Dto.Interval)
                 .InclusiveBetween(1, MaxInterval)
-                .WithMessage($"El intervalo debe estar entre 1 y {MaxInterval}.");
+                .WithMessage($"The interval must be between 1 and {MaxInterval}.");
             // Absolute bounds so the day-by-day recurrence expansion cannot overflow
             // DateOnly.MaxValue (would be a 500 instead of a 400).
             RuleFor(x => x.Dto.StartDate)
@@ -28,17 +28,17 @@ namespace MRC.Agendia.Application.Appointments.Commands.Series
                 .InclusiveBetween(SchedulingLimits.MinDate, SchedulingLimits.MaxDate)
                 .WithMessage(SchedulingLimits.OutOfRangeMessage)
                 .GreaterThanOrEqualTo(x => x.Dto.StartDate)
-                .WithMessage("UntilDate debe ser igual o posterior a StartDate.");
+                .WithMessage("UntilDate must be the same as or after StartDate.");
             RuleFor(x => x.Dto)
                 .Must(d => (d.UntilDate.DayNumber - d.StartDate.DayNumber) + 1 <= MaxWindowDays)
-                .WithMessage($"El rango de la serie no puede superar {MaxWindowDays} dias.");
+                .WithMessage($"The series range cannot exceed {MaxWindowDays} days.");
             RuleFor(x => x.Dto.Notes).MaximumLength(2000);
 
             // Weekly: at least one valid weekday.
             When(x => x.Dto.Frequency == RecurrenceFrequency.Weekly, () =>
             {
                 RuleFor(x => x.Dto.DaysOfWeek)
-                    .NotEmpty().WithMessage("Indique al menos un dia de la semana para una serie semanal.");
+                    .NotEmpty().WithMessage("Provide at least one day of the week for a weekly series.");
                 RuleForEach(x => x.Dto.DaysOfWeek).IsInEnum();
             });
 
@@ -47,7 +47,7 @@ namespace MRC.Agendia.Application.Appointments.Commands.Series
             {
                 RuleFor(x => x.Dto.DayOfMonth)
                     .Must(d => d is >= 1 and <= 31)
-                    .WithMessage("Indique un dia del mes entre 1 y 31 para una serie mensual.");
+                    .WithMessage("Provide a day of the month between 1 and 31 for a monthly series.");
             });
         }
     }

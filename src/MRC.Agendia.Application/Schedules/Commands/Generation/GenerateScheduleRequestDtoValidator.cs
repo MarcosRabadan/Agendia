@@ -17,7 +17,7 @@ namespace MRC.Agendia.Application.Schedules.Commands.Generation
                 .GreaterThanOrEqualTo(2000)
                 .LessThanOrEqualTo(2100);
             RuleFor(x => x.Templates)
-                .NotEmpty().WithMessage("Debe indicar al menos una plantilla.");
+                .NotEmpty().WithMessage("At least one template is required.");
             RuleForEach(x => x.Templates).SetValidator(new GenerateScheduleTemplateInputDtoValidator());
 
             When(x => x.VacationPeriods != null, () =>

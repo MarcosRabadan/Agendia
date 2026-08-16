@@ -18,7 +18,7 @@ namespace MRC.Agendia.Application.Waitlist.Commands.Leave
         {
             var userId = _currentUser.UserId;
             if (string.IsNullOrWhiteSpace(userId))
-                throw new UnauthorizedAccessException("No hay usuario autenticado.");
+                throw new UnauthorizedAccessException("No authenticated user.");
 
             await _service.LeaveAsync(request.EntryId, userId, cancellationToken);
             return true;

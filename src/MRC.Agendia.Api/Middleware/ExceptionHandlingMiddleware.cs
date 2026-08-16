@@ -75,7 +75,7 @@ namespace MRC.Agendia.Api.Middleware
                 UnauthorizedAccessException => (HttpStatusCode.Forbidden, "FORBIDDEN", ex.Message),
                 InvalidOperationException => (HttpStatusCode.BadRequest, "BAD_REQUEST", ex.Message),
                 ArgumentException => (HttpStatusCode.BadRequest, "BAD_REQUEST", ex.Message),
-                _ => (HttpStatusCode.InternalServerError, "INTERNAL_ERROR", "Ha ocurrido un error inesperado.")
+                _ => (HttpStatusCode.InternalServerError, "INTERNAL_ERROR", "An unexpected error occurred.")
             };
 
             if (statusCode == HttpStatusCode.InternalServerError)
@@ -114,7 +114,7 @@ namespace MRC.Agendia.Api.Middleware
             var payload = JsonSerializer.Serialize(new
             {
                 code = "VALIDATION_ERROR",
-                message = "Una o varias validaciones han fallado.",
+                message = "One or more validations failed.",
                 traceId = context.TraceIdentifier,
                 errors
             }, JsonOptions);

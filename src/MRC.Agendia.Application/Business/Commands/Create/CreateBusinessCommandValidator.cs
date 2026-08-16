@@ -11,17 +11,17 @@ namespace MRC.Agendia.Application.Business.Commands.Create
             RuleFor(x => x.Dto).NotNull();
             RuleFor(x => x.Dto.OwnerUserId)
                 .NotEmpty().MaximumLength(450)
-                .WithMessage("El identificador de usuario del propietario (OwnerUserId) es obligatorio.");
+                .WithMessage("The owner's user id (OwnerUserId) is required.");
             RuleFor(x => x.Dto.CancellationWindowHours)
                 .InclusiveBetween(1, 8760)
                 .When(x => x.Dto.CancellationWindowHours.HasValue)
-                .WithMessage("La ventana de cancelacion debe estar entre 1 y 8760 horas; omitela (null) para no aplicar restriccion.");
+                .WithMessage("The cancellation window must be between 1 and 8760 hours; omit it (null) to apply no restriction.");
             RuleFor(x => x.Dto.DefaultLanguage)
                 .Must(lang => SupportedLanguages.IsSupported(lang))
-                .WithMessage("El idioma no esta soportado. Valores validos: es, en, fr.");
+                .WithMessage("The language is not supported. Valid values: es, en, fr.");
             RuleFor(x => x.Dto.DefaultAppointmentStatus)
                 .Must(s => s.IsValidInitialStatus())
-                .WithMessage("El estado inicial por defecto solo puede ser Pending o Confirmed.");
+                .WithMessage("The default initial status can only be Pending or Confirmed.");
         }
     }
 }

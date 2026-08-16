@@ -28,8 +28,10 @@ Forma parte de un ecosistema de microservicios:
 
 ## Idiomas (convención del equipo)
 
-- **Producto / mensajes de runtime visibles** (validación de FluentValidation, `exception
-  messages`, logs de Serilog): **Español**. El front ramifica por `code`, no por `message`.
+- **Mensajes de runtime** (validación de FluentValidation, `exception messages`, logs de
+  Serilog, mensajes `Skip.IfNot` y asserts de test): **INGLÉS** (barrido #274). El front
+  ramifica por `code`, no por `message`, así que el idioma del `message` le da igual. Al
+  escribir uno nuevo, en inglés desde el principio (no copiar el patrón español viejo).
 - **Commits:** español neutro **sin tildes** (algunos terminales no las muestran bien).
 - **Comentarios en código:** **Inglés**.
 - **Documentación XML** (`<summary>`/`<param>`/`<returns>` de interfaces/servicios y
@@ -106,9 +108,29 @@ Refactor multi-fase que convirtió Agendia en microservicio de reservas puro:
 | 6 paso 2 (#247) | PK/FK `int` → **GUID (UUIDv7)** | ✅ (PR #257) |
 | 7 (#248) | Reubicar revenue de stats + docs/limpieza (**esta fase**) | 🟢 en curso |
 
-**Pendiente tras la Fase 7:** cutover del front, elegir + cablear el **broker real**
-(RabbitMQ/ASB/Kafka) en `IEventTransport`, y **pruebas a fondo** (el usuario las quiere al
-final). Luego: refactor general + ampliar tests.
+### Trabajo post-epic (auditoría #241 → follow-ups mergeados)
+
+Tras cerrar el epic se hizo una auditoría a fondo y una tanda de fixes/mejoras:
+
+- **Outbox endurecido** (#276): `OutboxProcessor` testeable; el poll excluye venenosos
+  (`Attempts >= MaxAttempts`, dead-letter), purga por retención, y **claim `FOR UPDATE SKIP
+  LOCKED`** → N instancias no se pisan. Config vía `OutboxOptions`.
+- **Reminder N-instancias** (#278): `ReminderProcessor` con **`pg_try_advisory_lock`**
+  (exclusión mutua, forma two-int, no colisiona con el guard de reservas). Config `ReminderOptions`.
+- **Eventos de dominio en el agregado** (#279): ver la decisión de diseño más abajo. Eliminados
+  `IEventPublisher`/`OutboxEventPublisher`. Las series emiten eventos por ocurrencia.
+- **Evento `AppointmentRescheduled`** (#280): al mover una cita (individual o de serie).
+- **Menores** (#281): `SeriesId` UUIDv7; M2M en **tiempo constante** (PBKDF2 dummy anti
+  enumeración); default de `CreatedAt` → `now()`; docs de R4 (guard Npgsql-only) y R7 (404-vs-403).
+- **Runtime a inglés** (#274): logs, `exception messages` y validación FluentValidation en inglés.
+- **Bug cazado y arreglado**: `Appointment.StartDate/EndDate` estaban en `timestamptz`; con hora
+  de pared (`Kind=Unspecified`) Npgsql lanza → ahora `timestamp without time zone` (#273).
+
+**Pendiente:** cutover del front · elegir + cablear el **broker real** (RabbitMQ/ASB/Kafka) en
+`IEventTransport` · **infra de tests** (WebApplicationFactory sobre Postgres real, #272) ·
+**features** de producto (#266 idempotencia, #267 no-show, #268 auto-rebooking, #269 analítica,
+#270 cancelación por tramos, #271 time-off) · **B9** (concurrencia optimista `xmin`, aplazada) ·
+**pruebas a fondo** (el usuario las quiere al final).
 
 ## Estructura de carpetas
 

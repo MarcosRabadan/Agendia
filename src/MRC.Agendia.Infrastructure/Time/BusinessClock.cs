@@ -27,7 +27,7 @@ namespace MRC.Agendia.Infrastructure.Time
             catch (TimeZoneNotFoundException ex)
             {
                 throw new InvalidOperationException(
-                    $"La zona horaria '{id}' (Scheduling:TimeZone) no existe en este sistema.", ex);
+                    $"The time zone '{id}' (Scheduling:TimeZone) does not exist on this system.", ex);
             }
         }
 
