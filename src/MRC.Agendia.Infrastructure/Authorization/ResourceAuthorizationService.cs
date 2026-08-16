@@ -165,6 +165,11 @@ namespace MRC.Agendia.Infrastructure.Authorization
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
 
+            // NOTE (R7): for an Owner/Employee caller the global business-scope filter already
+            // restricts _context.Employees to their own business(es), so targeting an employee
+            // of ANOTHER business surfaces EmployeeNotFoundException (404) here rather than 403.
+            // It still denies correctly - only the status code differs. (Admin is unscoped and
+            // returned above; a Client is handled explicitly at the end.)
             // Target employee and their business
             var employee = await _context.Employees
                 .AsNoTracking()

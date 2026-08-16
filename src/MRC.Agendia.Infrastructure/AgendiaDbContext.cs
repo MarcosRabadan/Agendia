@@ -219,10 +219,10 @@ public class AgendiaDbContext : DbContext
 
         // Backfill CreatedAt for rows that existed before audit fields were added.
         // New rows get their value from AuditableSaveChangesInterceptor before insert.
-        modelBuilder.Entity<Business>().Property(b => b.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'");
-        modelBuilder.Entity<Employee>().Property(e => e.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'");
-        modelBuilder.Entity<Service>().Property(s => s.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'");
-        modelBuilder.Entity<Appointment>().Property(a => a.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'");
+        modelBuilder.Entity<Business>().Property(b => b.CreatedAt).HasDefaultValueSql("now()");
+        modelBuilder.Entity<Employee>().Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+        modelBuilder.Entity<Service>().Property(s => s.CreatedAt).HasDefaultValueSql("now()");
+        modelBuilder.Entity<Appointment>().Property(a => a.CreatedAt).HasDefaultValueSql("now()");
 
         // Index IsDeleted: every query now carries "WHERE IsDeleted = 0" from the
         // global filter above.

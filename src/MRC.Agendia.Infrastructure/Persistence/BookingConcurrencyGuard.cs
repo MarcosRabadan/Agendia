@@ -42,6 +42,10 @@ namespace MRC.Agendia.Infrastructure.Persistence
                                                        Func<Task<T>> action,
                                                        CancellationToken cancellationToken = default)
         {
+            // Npgsql-specific: the lock is a pg_advisory_xact_lock. The in-memory test store
+            // has nothing to serialize. NOTE (R4): any OTHER relational provider would also
+            // fall here and run WITHOUT serialization - this guard is Postgres-only by design;
+            // a different database would need its own locking primitive, not a silent no-op.
             if (!_context.Database.IsNpgsql())
                 return await action();
 
