@@ -3,7 +3,6 @@ using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Application.Events;
 using MRC.Agendia.Application.Waitlist;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
@@ -20,7 +19,6 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IAppointmentSchedulingValidator _schedulingValidator;
         private readonly IBookingConcurrencyGuard _bookingGuard;
         private readonly IClock _clock;
-        private readonly IEventPublisher _eventPublisher;
         private readonly IWaitlistService _waitlistService;
         private readonly IAuditLogger _auditLogger;
         private readonly ICurrentUserContext _currentUser;
@@ -31,7 +29,6 @@ namespace MRC.Agendia.Application.Appointments
                                   IAppointmentSchedulingValidator schedulingValidator,
                                   IBookingConcurrencyGuard bookingGuard,
                                   IClock clock,
-                                  IEventPublisher eventPublisher,
                                   IWaitlistService waitlistService,
                                   IAuditLogger auditLogger,
                                   ICurrentUserContext currentUser,
@@ -42,7 +39,6 @@ namespace MRC.Agendia.Application.Appointments
             _schedulingValidator = schedulingValidator;
             _bookingGuard = bookingGuard;
             _clock = clock;
-            _eventPublisher = eventPublisher;
             _waitlistService = waitlistService;
             _auditLogger = auditLogger;
             _currentUser = currentUser;
@@ -120,7 +116,7 @@ namespace MRC.Agendia.Application.Appointments
                     // appointment (transactional outbox): both commit together at the
                     // end of the guarded critical section. The appointment id is only
                     // known after the first Save, hence the second one here.
-                    await PublishAppointmentEventAsync(created.Id, ctx => new AppointmentConfirmed(
+                    await RaiseAppointmentEventAsync(created, ctx => new AppointmentConfirmed(
                         ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId,
                         ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, DateTime.UtcNow),
                         cancellationToken);
@@ -192,7 +188,7 @@ namespace MRC.Agendia.Application.Appointments
                 // Cancellation event written in the SAME save as the status change
                 // (transactional outbox): a cancelled appointment always yields its event.
                 if (becomesCancelled)
-                    await PublishAppointmentEventAsync(entity.Id, ctx => new AppointmentCancelled(
+                    await RaiseAppointmentEventAsync(entity, ctx => new AppointmentCancelled(
                         ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId,
                         ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, DateTime.UtcNow),
                         cancellationToken);
@@ -312,19 +308,20 @@ namespace MRC.Agendia.Application.Appointments
                || _currentUser.IsInRole(Roles.BusinessOwner)
                || _currentUser.IsInRole(Roles.Employee);
 
-        // Loads the notification context (business id + language + booking fields)
-        // for the appointment and enlists the built event into the current unit of
-        // work (outbox). Does NOT save: the caller's Save persists the event with
-        // the operation. A missing appointment is a no-op (nothing to notify about).
-        private async Task PublishAppointmentEventAsync(Guid appointmentId,
-                                                        Func<AppointmentNotificationContext, IIntegrationEvent> build,
-                                                        CancellationToken cancellationToken)
+        // Loads the notification context (business id + language + booking fields) for the
+        // appointment and raises the built event ON THE TRACKED ENTITY. The DbContext's
+        // SaveChanges override enlists the entity's domain events into the outbox in the same
+        // save as the state change, so nothing is published here. A missing appointment is a
+        // no-op (nothing to notify about).
+        private async Task RaiseAppointmentEventAsync(Appointment appointment,
+                                                      Func<AppointmentNotificationContext, IIntegrationEvent> build,
+                                                      CancellationToken cancellationToken)
         {
-            var context = await _repository.GetNotificationContextAsync(appointmentId, cancellationToken);
+            var context = await _repository.GetNotificationContextAsync(appointment.Id, cancellationToken);
             if (context is null)
                 return;
 
-            await _eventPublisher.PublishAsync(build(context), cancellationToken);
+            appointment.RaiseEvent(build(context));
         }
     }
 }

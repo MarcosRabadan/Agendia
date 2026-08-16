@@ -1,7 +1,6 @@
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Application.Events;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Events;
 using MRC.Agendia.Domain.Services;
@@ -13,21 +12,18 @@ namespace MRC.Agendia.Application.Appointments
     {
         private readonly IAppointmentRepository _repository;
         private readonly IScheduleResolver _scheduleResolver;
-        private readonly IEventPublisher _eventPublisher;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IAuditLogger _auditLogger;
         private readonly IClock _clock;
 
         public AppointmentDelayService(IAppointmentRepository repository,
                                        IScheduleResolver scheduleResolver,
-                                       IEventPublisher eventPublisher,
                                        IUnitOfWork unitOfWork,
                                        IAuditLogger auditLogger,
                                        IClock clock)
         {
             _repository = repository;
             _scheduleResolver = scheduleResolver;
-            _eventPublisher = eventPublisher;
             _unitOfWork = unitOfWork;
             _auditLogger = auditLogger;
             _clock = clock;
@@ -66,20 +62,20 @@ namespace MRC.Agendia.Application.Appointments
             if (dto.MaxAppointments is int max)
                 affected = affected.Take(max).ToList();
 
-            // Publish a delay event per affected appointment. Enlist them all into
-            // the outbox and persist with a single Save (the consumer resolves each
-            // client's contact from ClientUserId and delivers in the business language).
+            // Raise a delay event on each affected (tracked) appointment; the DbContext
+            // SaveChanges override enlists them all into the outbox in the single Save below
+            // (the consumer resolves each client's contact from ClientUserId and delivers in
+            // the business language).
             foreach (var appointment in affected)
             {
                 var context = await _repository.GetNotificationContextAsync(appointment.Id, cancellationToken);
                 if (context is null)
                     continue;
 
-                await _eventPublisher.PublishAsync(new AppointmentDelayed(
+                appointment.RaiseEvent(new AppointmentDelayed(
                     context.AppointmentId, context.BusinessId, context.EmployeeId, context.ClientUserId,
                     context.ServiceId, context.StartDate, context.EndDate,
-                    dto.DelayMinutes, context.Language, DateTime.UtcNow),
-                    cancellationToken);
+                    dto.DelayMinutes, context.Language, DateTime.UtcNow));
             }
 
             if (affected.Count > 0)

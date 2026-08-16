@@ -4,7 +4,6 @@ using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Application.Events;
 using MRC.Agendia.Application.Waitlist;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
@@ -28,7 +27,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         private readonly IAppointmentSchedulingValidator _validator = Substitute.For<IAppointmentSchedulingValidator>();
         private readonly IBookingConcurrencyGuard _bookingGuard = Substitute.For<IBookingConcurrencyGuard>();
         private readonly IClock _clock = Substitute.For<IClock>();
-        private readonly IEventPublisher _eventPublisher = Substitute.For<IEventPublisher>();
         private readonly IWaitlistService _waitlistService = Substitute.For<IWaitlistService>();
         private readonly IAuditLogger _auditLogger = Substitute.For<IAuditLogger>();
         private readonly ICurrentUserContext _currentUser = Substitute.For<ICurrentUserContext>();
@@ -58,13 +56,14 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             _sut = new AppointmentService(
                 _repository, _validator, _bookingGuard, _clock,
-                _eventPublisher, _waitlistService, _auditLogger, _currentUser, _unitOfWork, _mapper);
+                _waitlistService, _auditLogger, _currentUser, _unitOfWork, _mapper);
         }
 
         [Fact]
         public async Task CreateAsync_EjecutaLaSeccionCriticaDentroDelGuard()
         {
-            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(new Appointment { Id = TestIds.Of(11) });
+            var created = new Appointment { Id = TestIds.Of(11) };
+            _mapper.Map<Appointment>(Arg.Any<CreateAppointmentDto>()).Returns(created);
             _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
 
             var dto = new CreateAppointmentDto(
@@ -82,9 +81,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             await _validator.Received(1).EnsureValidAsync(
                 Arg.Any<Guid?>(), dto.EmployeeId, dto.ServiceId, dto.StartDate, dto.EndDate, Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
             await _repository.Received(1).AddAsync(Arg.Any<Appointment>(), Arg.Any<CancellationToken>());
-            // A confirmation event is published (via the outbox) instead of an email.
-            await _eventPublisher.Received(1).PublishAsync(
-                Arg.Is<IIntegrationEvent>(e => e is AppointmentConfirmed), Arg.Any<CancellationToken>());
+            // A confirmation event is raised on the appointment (enlisted into the outbox on save).
+            Assert.Contains(created.DomainEvents, e => e is AppointmentConfirmed);
         }
 
         [Fact]
@@ -358,9 +356,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             Assert.Equal(AppointmentStatus.Cancelled, result.Status);
             await _waitlistService.Received(1).NotifyForFreedAppointmentAsync(entity.Id, Arg.Any<CancellationToken>());
-            // A cancellation event is published (via the outbox) instead of an email.
-            await _eventPublisher.Received(1).PublishAsync(
-                Arg.Is<IIntegrationEvent>(e => e is AppointmentCancelled), Arg.Any<CancellationToken>());
+            // A cancellation event is raised on the appointment (enlisted into the outbox on save).
+            Assert.Contains(entity.DomainEvents, e => e is AppointmentCancelled);
         }
 
         [Fact]

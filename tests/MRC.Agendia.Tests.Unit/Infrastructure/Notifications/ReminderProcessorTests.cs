@@ -3,11 +3,11 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Application.Events;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Events;
 using MRC.Agendia.Infrastructure;
+using MRC.Agendia.Infrastructure.Messaging;
 using MRC.Agendia.Infrastructure.Notifications;
 using MRC.Agendia.Tests.Unit.TestDoubles;
 using NSubstitute;
@@ -16,9 +16,9 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Notifications
 {
     /// <summary>
     /// Unit tests for <see cref="ReminderProcessor"/> (in-memory context): a due appointment
-    /// gets a reminder published and marked, an already-reminded one is skipped, and one
-    /// outside the window is skipped. The advisory lock only runs on a real database, so
-    /// these exercise the batch logic itself.
+    /// gets a reminder raised (enlisted into the outbox by the DbContext SaveChanges override)
+    /// and ReminderSentAt marked; an already-reminded one is skipped, and one outside the
+    /// window is skipped. The advisory lock only runs on a real database.
     /// </summary>
     public class ReminderProcessorTests
     {
@@ -31,8 +31,8 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Notifications
                     CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning))
                 .Options, new UnrestrictedBusinessScope());
 
-        private static ReminderProcessor NewProcessor(AgendiaDbContext ctx, IEventPublisher publisher, IClock clock) =>
-            new(ctx, publisher, clock, Options.Create(new ReminderOptions { ReminderWindowHours = 24 }),
+        private static ReminderProcessor NewProcessor(AgendiaDbContext ctx, IClock clock) =>
+            new(ctx, clock, Options.Create(new ReminderOptions { ReminderWindowHours = 24 }),
                 NullLogger<ReminderProcessor>.Instance);
 
         private static IClock ClockAt(DateTime now)
@@ -63,46 +63,44 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Notifications
         }
 
         [Fact]
-        public async Task ProcessDueAsync_DueAppointment_PublishesReminder_AndMarks()
+        public async Task ProcessDueAsync_DueAppointment_RaisesReminder_AndMarks()
         {
-            await using var ctx = NewContext(nameof(ProcessDueAsync_DueAppointment_PublishesReminder_AndMarks));
+            await using var ctx = NewContext(nameof(ProcessDueAsync_DueAppointment_RaisesReminder_AndMarks));
             var appt = await SeedAppointmentAsync(ctx, Now.AddHours(2)); // within the 24h window
-            var publisher = Substitute.For<IEventPublisher>();
 
-            var published = await NewProcessor(ctx, publisher, ClockAt(Now)).ProcessDueAsync();
+            var published = await NewProcessor(ctx, ClockAt(Now)).ProcessDueAsync();
 
             Assert.Equal(1, published);
-            await publisher.Received(1).PublishAsync(
-                Arg.Is<IIntegrationEvent>(e => e is AppointmentReminder && ((AppointmentReminder)e).AppointmentId == appt.Id),
-                Arg.Any<CancellationToken>());
             var stored = await ctx.Appointments.FindAsync(appt.Id);
             Assert.NotNull(stored!.ReminderSentAt);
+            // The reminder was raised on the appointment and enlisted into the outbox on save.
+            var reminders = await ctx.Set<OutboxMessage>()
+                .CountAsync(m => m.Type == nameof(AppointmentReminder) && m.Payload.Contains(appt.Id.ToString()));
+            Assert.Equal(1, reminders);
         }
 
         [Fact]
-        public async Task ProcessDueAsync_AlreadyReminded_DoesNotPublish()
+        public async Task ProcessDueAsync_AlreadyReminded_DoesNothing()
         {
-            await using var ctx = NewContext(nameof(ProcessDueAsync_AlreadyReminded_DoesNotPublish));
+            await using var ctx = NewContext(nameof(ProcessDueAsync_AlreadyReminded_DoesNothing));
             await SeedAppointmentAsync(ctx, Now.AddHours(2), reminderSentAt: DateTime.UtcNow);
-            var publisher = Substitute.For<IEventPublisher>();
 
-            var published = await NewProcessor(ctx, publisher, ClockAt(Now)).ProcessDueAsync();
+            var published = await NewProcessor(ctx, ClockAt(Now)).ProcessDueAsync();
 
             Assert.Equal(0, published);
-            await publisher.DidNotReceiveWithAnyArgs().PublishAsync(default!, default);
+            Assert.Equal(0, await ctx.Set<OutboxMessage>().CountAsync(m => m.Type == nameof(AppointmentReminder)));
         }
 
         [Fact]
-        public async Task ProcessDueAsync_OutsideWindow_DoesNotPublish()
+        public async Task ProcessDueAsync_OutsideWindow_DoesNothing()
         {
-            await using var ctx = NewContext(nameof(ProcessDueAsync_OutsideWindow_DoesNotPublish));
+            await using var ctx = NewContext(nameof(ProcessDueAsync_OutsideWindow_DoesNothing));
             await SeedAppointmentAsync(ctx, Now.AddHours(48)); // beyond the 24h window
-            var publisher = Substitute.For<IEventPublisher>();
 
-            var published = await NewProcessor(ctx, publisher, ClockAt(Now)).ProcessDueAsync();
+            var published = await NewProcessor(ctx, ClockAt(Now)).ProcessDueAsync();
 
             Assert.Equal(0, published);
-            await publisher.DidNotReceiveWithAnyArgs().PublishAsync(default!, default);
+            Assert.Equal(0, await ctx.Set<OutboxMessage>().CountAsync(m => m.Type == nameof(AppointmentReminder)));
         }
     }
 }

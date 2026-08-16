@@ -2,7 +2,6 @@ using AutoMapper;
 using Microsoft.Extensions.Logging.Abstractions;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Availability;
-using MRC.Agendia.Application.Events;
 using MRC.Agendia.Application.Waitlist;
 using MRC.Agendia.Application.Waitlist.DTO;
 using MRC.Agendia.Domain.Entities;
@@ -26,7 +25,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         private readonly IWaitlistRepository _repository = Substitute.For<IWaitlistRepository>();
         private readonly IAvailabilityService _availability = Substitute.For<IAvailabilityService>();
         private readonly IAppointmentRepository _appointmentRepository = Substitute.For<IAppointmentRepository>();
-        private readonly IEventPublisher _eventPublisher = Substitute.For<IEventPublisher>();
         private readonly IBookingConcurrencyGuard _bookingGuard = Substitute.For<IBookingConcurrencyGuard>();
         private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
         private readonly IMapper _mapper = Substitute.For<IMapper>();
@@ -39,7 +37,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
             _bookingGuard.ExecuteSerializedAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
                 .Returns(ci => ci.Arg<Func<Task>>()());
             _sut = new WaitlistService(
-                _repository, _availability, _appointmentRepository, _eventPublisher, _bookingGuard, _unitOfWork,
+                _repository, _availability, _appointmentRepository, _bookingGuard, _unitOfWork,
                 NullLogger<WaitlistService>.Instance, _mapper);
         }
 
@@ -136,10 +134,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
 
             Assert.Equal(WaitlistStatus.Notified, waiting.Status);
             await _unitOfWork.Received(1).Save(Arg.Any<CancellationToken>());
-            // A WaitlistSlotAvailable event is published (via the outbox) instead of an email.
-            await _eventPublisher.Received(1).PublishAsync(
-                Arg.Is<IIntegrationEvent>(e => e is WaitlistSlotAvailable && ((WaitlistSlotAvailable)e).WaitlistEntryId == TestIds.Of(7)),
-                Arg.Any<CancellationToken>());
+            // A WaitlistSlotAvailable event is raised on the entry (enlisted into the outbox on save).
+            Assert.Contains(waiting.DomainEvents, e => e is WaitlistSlotAvailable && ((WaitlistSlotAvailable)e).WaitlistEntryId == TestIds.Of(7));
         }
 
         [Fact]
@@ -166,27 +162,6 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         }
 
         [Fact]
-        public async Task NotifyForFreedAppointment_SiFallaLaPublicacion_DejaEnWaiting()
-        {
-            _appointmentRepository.GetByIdWithDetailsAsync(TestIds.Of(50), Arg.Any<CancellationToken>())
-                .Returns(new Appointment { Id = TestIds.Of(50), EmployeeId = TestIds.Of(2), ServiceId = TestIds.Of(3), StartDate = new DateTime(2030, 6, 7, 16, 0, 0), Employee = new Employee { Id = TestIds.Of(2), BusinessId = TestIds.Of(10), Business = new Business { Id = TestIds.Of(10), DefaultLanguage = "es" } } });
-            var waiting = new WaitlistEntry { Id = TestIds.Of(7), ClientUserId = UserId, Status = WaitlistStatus.Waiting };
-            _repository.GetNextWaitingForSlotAsync(TestIds.Of(10), TestIds.Of(3), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), TestIds.Of(2), Arg.Any<CancellationToken>())
-                .Returns(waiting);
-            SlotCapacity(1); // the slot has room, so publication is attempted
-            // Enlisting the event fails: the entry must stay Waiting (not marked
-            // Notified) so a later freed slot re-selects it - the trigger is best-effort
-            // and must not leave a "notified with no event" half-state.
-            _eventPublisher.PublishAsync(Arg.Any<IIntegrationEvent>(), Arg.Any<CancellationToken>())
-                .Returns(_ => throw new InvalidOperationException("outbox down"));
-
-            await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
-
-            Assert.Equal(WaitlistStatus.Waiting, waiting.Status);
-            await _unitOfWork.DidNotReceive().Save(Arg.Any<CancellationToken>());
-        }
-
-        [Fact]
         public async Task NotifyForFreedAppointment_FranjaSigueLlena_NoAvisa()
         {
             _appointmentRepository.GetByIdWithDetailsAsync(TestIds.Of(50), Arg.Any<CancellationToken>())
@@ -199,7 +174,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
             await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
 
             // No false "hay hueco" notification, and the entry stays Waiting for a real opening.
-            await _eventPublisher.DidNotReceiveWithAnyArgs().PublishAsync(default!, default);
+            Assert.Empty(waiting.DomainEvents);
             Assert.Equal(WaitlistStatus.Waiting, waiting.Status);
         }
 
@@ -213,7 +188,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
 
             await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
 
-            await _eventPublisher.DidNotReceiveWithAnyArgs().PublishAsync(default!, default);
+            await _unitOfWork.DidNotReceive().Save(Arg.Any<CancellationToken>());
         }
 
         [Fact]

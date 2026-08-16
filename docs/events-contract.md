@@ -37,6 +37,11 @@ por `clientUserId` (el `sub` de Harmony).
 | `AppointmentDelayed`   | El personal avisa de un retraso, por cita afectada.   |
 | `WaitlistSlotAvailable`| Se libera una franja que un cliente esperaba (FIFO).  |
 
+> **Series:** las operaciones de serie emiten los mismos eventos **por ocurrencia**: crear una
+> serie emite un `AppointmentConfirmed` por cita creada; cancelar una serie, un
+> `AppointmentCancelled` por ocurrencia futura cancelada. Borrar o mover una serie no emite
+> evento (igual que la cita individual).
+
 ### Payload de los eventos de cita
 
 `AppointmentConfirmed` / `AppointmentCancelled` / `AppointmentReminder`:
@@ -80,7 +85,10 @@ es el `sub` opaco de Harmony (string, no GUID).
 ## Notas de implementación (Agendia)
 
 - Contratos de evento: `Domain/Events/*` (records inmutables, marcador `IIntegrationEvent`).
-- Puerto de publicación: `Application/Events/IEventPublisher` (enlista en el outbox, no hace Save).
+- Publicación: las entidades **registran eventos de dominio** (`Domain/Common/Entity.RaiseEvent`,
+  vía `IHasDomainEvents`) al cambiar de estado; el **override de `SaveChanges` de
+  `AgendiaDbContext`** los vuelca al outbox en la MISMA transacción que el cambio, y luego los
+  limpia. No hay un publisher aparte.
 - Outbox + dispatcher + transporte: `Infrastructure/Messaging/*`.
 - Config opcional del dispatcher: `Outbox:PollIntervalSeconds` (10), `Outbox:BatchSize` (20).
 - El idioma (`language`) viene de `Business.DefaultLanguage`.

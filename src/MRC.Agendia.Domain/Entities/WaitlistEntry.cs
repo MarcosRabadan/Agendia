@@ -1,3 +1,4 @@
+using MRC.Agendia.Domain.Common;
 using MRC.Agendia.Domain.Enums;
 
 namespace MRC.Agendia.Domain.Entities
@@ -7,7 +8,7 @@ namespace MRC.Agendia.Domain.Entities
     /// notified (FIFO by <see cref="CreatedAt"/>) but books manually; there is no
     /// auto-booking. <see cref="EmployeeId"/> null means "any employee".
     /// </summary>
-    public class WaitlistEntry
+    public class WaitlistEntry : Entity
     {
         public Guid Id { get; set; }
         public Guid BusinessId { get; set; }

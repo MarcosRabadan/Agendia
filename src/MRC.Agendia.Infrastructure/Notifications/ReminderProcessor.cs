@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Application.Events;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Events;
 
@@ -32,19 +31,16 @@ namespace MRC.Agendia.Infrastructure.Notifications
         private const int LockObjectId = 42;
 
         private readonly AgendiaDbContext _context;
-        private readonly IEventPublisher _eventPublisher;
         private readonly IClock _clock;
         private readonly ReminderOptions _options;
         private readonly ILogger<ReminderProcessor> _logger;
 
         public ReminderProcessor(AgendiaDbContext context,
-                                 IEventPublisher eventPublisher,
                                  IClock clock,
                                  IOptions<ReminderOptions> options,
                                  ILogger<ReminderProcessor> logger)
         {
             _context = context;
-            _eventPublisher = eventPublisher;
             _clock = clock;
             _options = options.Value;
             _logger = logger;
@@ -116,13 +112,13 @@ namespace MRC.Agendia.Infrastructure.Notifications
             var published = 0;
             foreach (var appointment in due)
             {
-                // Enlist the reminder event and mark ReminderSentAt in the SAME save
-                // (transactional outbox): the event and the mark commit together.
-                await _eventPublisher.PublishAsync(new AppointmentReminder(
+                // Raise the reminder event on the appointment and mark ReminderSentAt: the
+                // DbContext SaveChanges override enlists it into the outbox in the SAME save,
+                // so the event and the mark commit together.
+                appointment.RaiseEvent(new AppointmentReminder(
                     appointment.Id, appointment.Employee.BusinessId, appointment.EmployeeId,
                     appointment.ClientUserId, appointment.ServiceId, appointment.StartDate,
-                    appointment.EndDate, appointment.Employee.Business.DefaultLanguage, DateTime.UtcNow),
-                    cancellationToken);
+                    appointment.EndDate, appointment.Employee.Business.DefaultLanguage, DateTime.UtcNow));
 
                 appointment.ReminderSentAt = DateTime.UtcNow;
                 // Persist per item, NOT once after the loop: a crash mid-batch would otherwise

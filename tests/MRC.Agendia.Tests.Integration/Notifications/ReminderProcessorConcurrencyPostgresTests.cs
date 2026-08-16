@@ -70,7 +70,7 @@ namespace MRC.Agendia.Tests.Integration.Notifications
             {
                 await using var ctx = _postgres.CreateContext();
                 var processor = new ReminderProcessor(
-                    ctx, new OutboxEventPublisher(ctx), new FixedClock(now), options, NullLogger<ReminderProcessor>.Instance);
+                    ctx, new FixedClock(now), options, NullLogger<ReminderProcessor>.Instance);
                 await processor.ProcessDueAsync();
             }
 
