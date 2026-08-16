@@ -143,7 +143,7 @@ src/
 │   │                            PipelineExtensions
 │   ├── Controllers/           ← Auth (solo M2M service-token), Business, Employee, Service,
 │   │                            Appointment, Schedule, Holiday, Availability, BusinessStats,
-│   │                            Waitlist, DelayNotification, AuditLog
+│   │                            ClientReliability, Waitlist, DelayNotification, AuditLog
 │   ├── Middleware/            ← ExceptionHandlingMiddleware + CorrelationIdMiddleware
 │   ├── Services/              ← CurrentUserContext (lee sub/roles del token)
 │   └── Program.cs             ← Wiring + auto-migrate (Dev). Sin seed de admin/roles.
