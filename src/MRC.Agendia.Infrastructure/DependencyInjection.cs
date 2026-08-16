@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Common;
+using MRC.Agendia.Application.Idempotency;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Infrastructure.Messaging;
@@ -13,6 +14,7 @@ using MRC.Agendia.Domain.Services;
 using MRC.Agendia.Infrastructure.Auditing;
 using MRC.Agendia.Infrastructure.Authorization;
 using MRC.Agendia.Infrastructure.Caching;
+using MRC.Agendia.Infrastructure.Idempotency;
 using MRC.Agendia.Infrastructure.Notifications;
 using MRC.Agendia.Infrastructure.Persistence;
 using MRC.Agendia.Infrastructure.Repositories;
@@ -101,6 +103,11 @@ namespace MRC.Agendia.Infrastructure
             services.Configure<ReminderOptions>(configuration.GetSection(ReminderOptions.SectionName));
             services.AddScoped<ReminderProcessor>();
 
+            // Idempotent booking (#266): durable record of the requests already served
+            // under an Idempotency-Key, plus the purge of the expired ones.
+            services.Configure<IdempotencyOptions>(configuration.GetSection(IdempotencyOptions.SectionName));
+            services.AddScoped<IIdempotencyStore, IdempotencyStore>();
+
             // Audit log
             services.AddScoped<IAuditLogger, AuditLogger>();
 
@@ -115,6 +122,7 @@ namespace MRC.Agendia.Infrastructure
             // Hosted services
             services.AddHostedService<AppointmentReminderService>();
             services.AddHostedService<OutboxDispatcherService>();
+            services.AddHostedService<IdempotencyPurgeService>();
 
             return services;
         }

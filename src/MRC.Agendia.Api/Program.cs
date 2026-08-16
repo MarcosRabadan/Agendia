@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Api.Configuration;
+using MRC.Agendia.Api.Filters;
 using MRC.Agendia.Application;
 using MRC.Agendia.Infrastructure;
 using Serilog;
@@ -11,6 +12,9 @@ builder.ConfigureSerilog();
 
 // MVC + utilities
 builder.Services.AddControllers();
+
+// Opt-in idempotency for the booking endpoints (#266), applied with [ServiceFilter].
+builder.Services.AddScoped<IdempotencyFilter>();
 builder.Services.AddAppHealthChecks(builder.Configuration, builder.Environment);
 
 // Cross-cutting (CORS, Swagger)

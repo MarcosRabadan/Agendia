@@ -144,6 +144,7 @@ src/
 │   ├── Controllers/           ← Auth (solo M2M service-token), Business, Employee, Service,
 │   │                            Appointment, Schedule, Holiday, Availability, BusinessStats,
 │   │                            ClientReliability, Waitlist, DelayNotification, AuditLog
+│   ├── Filters/               ← IdempotencyFilter (cabecera Idempotency-Key)
 │   ├── Middleware/            ← ExceptionHandlingMiddleware + CorrelationIdMiddleware
 │   ├── Services/              ← CurrentUserContext (lee sub/roles del token)
 │   └── Program.cs             ← Wiring + auto-migrate (Dev). Sin seed de admin/roles.
@@ -168,6 +169,7 @@ src/
 ├── MRC.Agendia.Infrastructure/
 │   ├── AgendiaDbContext.cs    ← DbContext (Npgsql) + query filters + índices
 │   ├── Auditing/ Authorization/ Caching/ Notifications/ (AppointmentReminderService)
+│   ├── Idempotency/           ← IdempotencyRecord, IdempotencyStore, IdempotencyPurgeService
 │   ├── Messaging/             ← OutboxMessage, OutboxEventPublisher, OutboxDispatcherService,
 │   │                            IEventTransport, LoggingEventTransport
 │   ├── Persistence/           ← AuditableSaveChangesInterceptor, BookingConcurrencyGuard
@@ -307,6 +309,13 @@ Repository (EF Core / Npgsql) → PostgreSQL
 - **`AvailabilityService`** calcula capacidad por slot y **omite huecos pasados** (`< BusinessNow`).
 - **Anti doble-reserva:** `IBookingConcurrencyGuard` serializa validar+insertar con
   `pg_advisory_xact_lock` por empleado+día. En InMemory (tests) ejecuta directo.
+- **Anti cita duplicada (#266):** cabecera **opcional** `Idempotency-Key` en `POST
+  /api/Appointment` y `POST /api/Appointment/series` (`IdempotencyFilter` + `IIdempotencyStore`).
+  La clave se **reclama antes** de ejecutar la acción (es la PK de `IdempotencyRecords`, así que
+  el gemelo concurrente pierde el INSERT); un reintento idéntico **reproduce** la respuesta
+  guardada, misma clave con otro cuerpo → 409, y un intento rechazado **libera** la clave. TTL
+  por `IdempotencyOptions` + `IdempotencyPurgeService`. Sin cabecera no cambia nada (opt-in).
+  Ojo: el guard evita el **overbooking**; esto evita la **cita duplicada** (doble submit).
 - **Transiciones de estado:** un Client solo puede poner `Cancelled`; el resto es del personal.
   Cambiar el estado de una cita terminal (Completed/NoShow/Cancelled) → 400
   `INVALID_APPOINTMENT_STATUS_TRANSITION`.
