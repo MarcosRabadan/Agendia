@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Application.Authorization;
+using MRC.Agendia.Domain.Common;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Infrastructure.Messaging;
@@ -16,6 +18,53 @@ public class AgendiaDbContext : DbContext
     public AgendiaDbContext(DbContextOptions<AgendiaDbContext> options, ICurrentBusinessScope businessScope) : base(options)
     {
         _businessScope = businessScope;
+    }
+
+    // The JSON shape of an outbox payload (camelCase, Web defaults) - the contract the
+    // downstream consumer reads (see docs/events-contract.md).
+    private static readonly JsonSerializerOptions OutboxSerializerOptions = new(JsonSerializerDefaults.Web);
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        EnlistDomainEvents();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        EnlistDomainEvents();
+        return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    // Converts the integration events raised by the tracked entities into OutboxMessages and
+    // adds them to this same change set BEFORE the base save runs, so they commit in the same
+    // transaction as the state change that raised them (transactional outbox). This is a
+    // SaveChanges override rather than a SavingChanges interceptor on purpose: entities added
+    // from inside that interceptor are not reliably included in the same save.
+    private void EnlistDomainEvents()
+    {
+        var entities = ChangeTracker.Entries<IHasDomainEvents>()
+            .Where(e => e.Entity.DomainEvents.Count > 0)
+            .Select(e => e.Entity)
+            .ToList();
+
+        foreach (var entity in entities)
+        {
+            foreach (var domainEvent in entity.DomainEvents)
+            {
+                Set<OutboxMessage>().Add(new OutboxMessage
+                {
+                    Id = Guid.NewGuid(),
+                    // Serialize against the runtime type so the concrete event's properties
+                    // are written, not just the marker interface.
+                    Type = domainEvent.GetType().Name,
+                    Payload = JsonSerializer.Serialize(domainEvent, domainEvent.GetType(), OutboxSerializerOptions),
+                    OccurredOnUtc = domainEvent.OccurredOnUtc,
+                });
+            }
+
+            entity.ClearDomainEvents();
+        }
     }
 
     public DbSet<Business> Businesses => Set<Business>();

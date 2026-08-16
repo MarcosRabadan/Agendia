@@ -128,9 +128,9 @@ namespace MRC.Agendia.Infrastructure.Repositories
                                                                                CancellationToken cancellationToken = default)
             // IgnoreQueryFilters + explicit liveness checks: only notify clients of
             // live appointments whose employee/business are not soft-deleted and whose
-            // employee is active (BIZ-03). AsNoTracking: read-only.
+            // employee is active (BIZ-03). Tracked (no AsNoTracking) so the delay flow can
+            // raise the delay event on each returned appointment and have it enlisted on save.
             => await Set
-                .AsNoTracking()
                 .IgnoreQueryFilters()
                 .Where(a => !a.IsDeleted
                     && a.Employee.BusinessId == businessId

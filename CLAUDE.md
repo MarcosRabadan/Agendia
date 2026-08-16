@@ -269,8 +269,10 @@ Repository (EF Core / Npgsql) → PostgreSQL
   idempotente por `ReminderSentAt`), `AppointmentDelayed`, `WaitlistSlotAvailable`. Llevan solo
   **ids + idioma**; el consumidor resuelve el contacto por `clientUserId`. Contrato:
   [`docs/events-contract.md`](docs/events-contract.md).
-- `IEventPublisher` (Application) enlista en el outbox, **no hace Save** (lo hace la unidad de
-  trabajo/`SaveChanges` de la operación → atomicidad).
+- **Eventos de dominio en el agregado (#263):** las entidades registran eventos con
+  `Entity.RaiseEvent(...)` (interfaz `IHasDomainEvents`) al cambiar de estado; el **override de
+  `SaveChanges` de `AgendiaDbContext`** los vuelca al outbox en la MISMA transacción que el
+  cambio y los limpia. No hay publisher aparte. Las series emiten los eventos por ocurrencia.
 
 ### Citas y disponibilidad
 - **`Employee.MaxConcurrentAppointments`** (default 1): modela capacidad (clase grupal, sala…).

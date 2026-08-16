@@ -7,7 +7,6 @@ using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Auditing;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Authorization;
-using MRC.Agendia.Application.Events;
 using MRC.Agendia.Domain.Interfaces;
 using MRC.Agendia.Infrastructure.Messaging;
 using MRC.Agendia.Domain.Services;
@@ -88,11 +87,11 @@ namespace MRC.Agendia.Infrastructure
             // Per-request multi-tenant business scope for the global query filter (#58).
             services.AddScoped<ICurrentBusinessScope, CurrentBusinessScope>();
 
-            // Notifications by domain events (#246): Agendia no longer delivers
-            // email/push. It publishes integration events through a transactional
-            // outbox; the dispatcher hands them to a swappable transport (log-only
-            // until the system-wide broker is chosen - RabbitMQ/Azure SB/Kafka).
-            services.AddScoped<IEventPublisher, OutboxEventPublisher>();
+            // Notifications by domain events (#246): Agendia no longer delivers email/push.
+            // Entities raise integration events (see AuditableEntity) that the DbContext's
+            // SaveChanges override enlists into a transactional outbox; the dispatcher hands
+            // them to a swappable transport (log-only until the system-wide broker is chosen -
+            // RabbitMQ/Azure SB/Kafka).
             services.AddScoped<IEventTransport, LoggingEventTransport>();
             services.Configure<OutboxOptions>(configuration.GetSection(OutboxOptions.SectionName));
             services.AddScoped<OutboxProcessor>();

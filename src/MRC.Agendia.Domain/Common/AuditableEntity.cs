@@ -2,9 +2,10 @@ namespace MRC.Agendia.Domain.Common
 {
     /// <summary>
     /// Base class for entities that carry audit fields and support soft delete.
-    /// The values are filled automatically by the persistence interceptor.
+    /// The values are filled automatically by the persistence interceptor. Inherits the
+    /// domain-events plumbing from <see cref="Entity"/>.
     /// </summary>
-    public abstract class AuditableEntity : IAuditable, ISoftDelete
+    public abstract class AuditableEntity : Entity, IAuditable, ISoftDelete
     {
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

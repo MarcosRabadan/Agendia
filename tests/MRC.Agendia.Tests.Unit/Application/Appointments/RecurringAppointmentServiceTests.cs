@@ -6,6 +6,7 @@ using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Waitlist;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Events;
 using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 using NSubstitute;
@@ -264,6 +265,50 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             await _auditLogger.Received(1).LogAsync(
                 Arg.Any<string>(), "AppointmentSeries", Arg.Any<string>(), Arg.Any<object>(), Arg.Any<CancellationToken>());
         }
+
+        // #263 / B5: series occurrences emit integration events per occurrence, reusing the
+        // single-appointment events. (In the other tests GetNotificationContextAsync is left
+        // unconfigured -> null -> the raise is a no-op, which is why they do not assert events.)
+
+        [Fact]
+        public async Task CreateSeriesAsync_RaisesConfirmedEventPerOccurrence()
+        {
+            var start = new DateOnly(2030, 1, 7);
+            var dto = WeeklySeries(start, until: start.AddDays(14)); // 3 occurrences
+            ConfigureNotificationContext();
+            var added = new List<Appointment>();
+            _repository.AddAsync(Arg.Any<Appointment>(), Arg.Any<CancellationToken>())
+                .Returns(Task.CompletedTask).AndDoes(ci => added.Add(ci.Arg<Appointment>()));
+
+            await _sut.CreateSeriesAsync(dto);
+
+            Assert.Equal(3, added.Count);
+            Assert.All(added, a => Assert.Contains(a.DomainEvents, e => e is AppointmentConfirmed));
+        }
+
+        [Fact]
+        public async Task CancelSeriesAsync_RaisesCancelledEventPerCancelledOccurrence()
+        {
+            var seriesId = Guid.NewGuid();
+            var past = Appt(1, new DateTime(2029, 12, 31, 10, 0, 0), AppointmentStatus.Confirmed, seriesId);
+            var futurePending = Appt(2, new DateTime(2030, 2, 1, 10, 0, 0), AppointmentStatus.Pending, seriesId);
+            var futureConfirmed = Appt(3, new DateTime(2030, 2, 2, 10, 0, 0), AppointmentStatus.Confirmed, seriesId);
+            _repository.GetBySeriesIdAsync(seriesId, Arg.Any<CancellationToken>())
+                .Returns(new List<Appointment> { past, futurePending, futureConfirmed });
+            ConfigureNotificationContext();
+
+            await _sut.CancelSeriesAsync(seriesId);
+
+            Assert.Contains(futurePending.DomainEvents, e => e is AppointmentCancelled);
+            Assert.Contains(futureConfirmed.DomainEvents, e => e is AppointmentCancelled);
+            Assert.Empty(past.DomainEvents); // past occurrence untouched, no event
+        }
+
+        private void ConfigureNotificationContext()
+            => _repository.GetNotificationContextAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(ci => new AppointmentNotificationContext(
+                    ci.Arg<Guid>(), TestIds.Of(10), TestIds.Of(2), "client-1", TestIds.Of(3),
+                    new DateTime(2030, 1, 1, 16, 0, 0), new DateTime(2030, 1, 1, 16, 30, 0), "es"));
 
         private static CreateAppointmentSeriesDto WeeklySeries(DateOnly start, DateOnly until) => new(
             ClientUserId: "client-1", EmployeeId: TestIds.Of(2), ServiceId: TestIds.Of(3),

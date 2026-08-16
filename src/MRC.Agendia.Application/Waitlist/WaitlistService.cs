@@ -2,7 +2,6 @@ using AutoMapper;
 using Microsoft.Extensions.Logging;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Availability;
-using MRC.Agendia.Application.Events;
 using MRC.Agendia.Application.Waitlist.DTO;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
@@ -17,7 +16,6 @@ namespace MRC.Agendia.Application.Waitlist
         private readonly IWaitlistRepository _repository;
         private readonly IAvailabilityService _availabilityService;
         private readonly IAppointmentRepository _appointmentRepository;
-        private readonly IEventPublisher _eventPublisher;
         private readonly IBookingConcurrencyGuard _bookingGuard;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<WaitlistService> _logger;
@@ -26,7 +24,6 @@ namespace MRC.Agendia.Application.Waitlist
         public WaitlistService(IWaitlistRepository repository,
                                IAvailabilityService availabilityService,
                                IAppointmentRepository appointmentRepository,
-                               IEventPublisher eventPublisher,
                                IBookingConcurrencyGuard bookingGuard,
                                IUnitOfWork unitOfWork,
                                ILogger<WaitlistService> logger,
@@ -35,7 +32,6 @@ namespace MRC.Agendia.Application.Waitlist
             _repository = repository;
             _availabilityService = availabilityService;
             _appointmentRepository = appointmentRepository;
-            _eventPublisher = eventPublisher;
             _bookingGuard = bookingGuard;
             _unitOfWork = unitOfWork;
             _logger = logger;
@@ -138,16 +134,15 @@ namespace MRC.Agendia.Application.Waitlist
                     if (capacity is null or <= 0)
                         return;
 
-                    // Enlist the availability event and mark the entry Notified in the
-                    // SAME save (transactional outbox): the event and the Notified mark
-                    // commit together, so the slot is never both "notified" with no event
-                    // nor announced twice. The consumer resolves the client's contact from
-                    // ClientUserId and delivers in the business language.
-                    await _eventPublisher.PublishAsync(new WaitlistSlotAvailable(
+                    // Raise the availability event on the entry and mark it Notified: the
+                    // DbContext SaveChanges override enlists the event into the outbox in the
+                    // SAME save as the Notified mark, so the slot is never both "notified" with
+                    // no event nor announced twice. The consumer resolves the client's contact
+                    // from ClientUserId and delivers in the business language.
+                    entry.RaiseEvent(new WaitlistSlotAvailable(
                         entry.Id, entry.BusinessId, entry.EmployeeId, entry.ClientUserId,
                         entry.ServiceId, entry.Date, entry.StartTime,
-                        appointment.Employee.Business.DefaultLanguage, DateTime.UtcNow),
-                        cancellationToken);
+                        appointment.Employee.Business.DefaultLanguage, DateTime.UtcNow));
 
                     entry.Status = WaitlistStatus.Notified;
                     _repository.Update(entry);

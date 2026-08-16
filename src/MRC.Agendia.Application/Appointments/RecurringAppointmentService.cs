@@ -7,6 +7,7 @@ using MRC.Agendia.Application.Waitlist;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
+using MRC.Agendia.Domain.Events;
 using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
 
@@ -108,6 +109,7 @@ namespace MRC.Agendia.Application.Appointments
                         };
                         await _repository.AddAsync(appointment, cancellationToken);
                         await _unitOfWork.Save(cancellationToken);
+                        await RaiseSeriesConfirmedAsync(appointment, cancellationToken);
                         return appointment;
                     }, cancellationToken);
 
@@ -146,6 +148,7 @@ namespace MRC.Agendia.Application.Appointments
                     appointment.Status = AppointmentStatus.Cancelled;
                     _repository.Update(appointment);
                     freedAppointmentIds.Add(appointment.Id);
+                    await RaiseSeriesCancelledAsync(appointment, cancellationToken);
                 }
             }
 
@@ -272,6 +275,35 @@ namespace MRC.Agendia.Application.Appointments
             }
 
             return new MoveAppointmentSeriesResultDto(seriesId, ToDtosByDate(moved), OrderByDate(skipped));
+        }
+
+        // Series occurrences emit integration events per occurrence, reusing the single-
+        // appointment events (#263 / B5). Confirmed is raised on a just-created, already-
+        // persisted occurrence and saved so the outbox enlistment commits inside the same
+        // guarded transaction as the insert.
+        private async Task RaiseSeriesConfirmedAsync(Appointment appointment, CancellationToken cancellationToken)
+        {
+            var context = await _repository.GetNotificationContextAsync(appointment.Id, cancellationToken);
+            if (context is null)
+                return;
+
+            appointment.RaiseEvent(new AppointmentConfirmed(
+                context.AppointmentId, context.BusinessId, context.EmployeeId, context.ClientUserId,
+                context.ServiceId, context.StartDate, context.EndDate, context.Language, DateTime.UtcNow));
+            await _unitOfWork.Save(cancellationToken);
+        }
+
+        // Cancelled is raised on a tracked occurrence being cancelled; no Save here because the
+        // caller persists all cancellations in a single Save, which enlists the events.
+        private async Task RaiseSeriesCancelledAsync(Appointment appointment, CancellationToken cancellationToken)
+        {
+            var context = await _repository.GetNotificationContextAsync(appointment.Id, cancellationToken);
+            if (context is null)
+                return;
+
+            appointment.RaiseEvent(new AppointmentCancelled(
+                context.AppointmentId, context.BusinessId, context.EmployeeId, context.ClientUserId,
+                context.ServiceId, context.StartDate, context.EndDate, context.Language, DateTime.UtcNow));
         }
 
         private async Task<IReadOnlyList<Appointment>> GetSeriesOrThrowAsync(Guid seriesId, CancellationToken cancellationToken)
