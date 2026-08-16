@@ -95,6 +95,9 @@ public class AgendiaDbContext : DbContext
     /// <summary>Requests already served under an Idempotency-Key (#266).</summary>
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
 
+    /// <summary>Tiers of the per-business cancellation policy (#270).</summary>
+    public DbSet<CancellationPolicyTier> CancellationPolicyTiers => Set<CancellationPolicyTier>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -339,6 +342,25 @@ public class AgendiaDbContext : DbContext
             .HasIndex(m => m.OccurredOnUtc)
             .HasFilter("\"ProcessedOnUtc\" IS NULL")
             .HasDatabaseName("IX_OutboxMessage_Pending");
+
+        // Cancellation policy tiers (#270). A business's tiers are read and replaced as a
+        // whole, and no two of them may share a threshold.
+        modelBuilder.Entity<CancellationPolicyTier>()
+            .HasIndex(t => new { t.BusinessId, t.MinHoursBefore })
+            .IsUnique()
+            .HasDatabaseName("IX_CancellationPolicyTier_Business_Threshold");
+
+        modelBuilder.Entity<CancellationPolicyTier>()
+            .Property(t => t.PenaltyValue)
+            .HasPrecision(10, 2);
+
+        // FK without a navigation (the policy is read by business id, never traversed)
+        // and no cascade, in line with the rest of the model.
+        modelBuilder.Entity<CancellationPolicyTier>()
+            .HasOne<Business>()
+            .WithMany()
+            .HasForeignKey(t => t.BusinessId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // Idempotency records (#266): the key IS the primary key, so a concurrent twin
         // request loses the INSERT instead of booking a second appointment.

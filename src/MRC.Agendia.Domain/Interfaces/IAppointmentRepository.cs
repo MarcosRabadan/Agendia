@@ -141,14 +141,15 @@ namespace MRC.Agendia.Domain.Interfaces
         Task<IReadOnlyList<Guid>> GetExtraServiceIdsAsync(Guid appointmentId, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// The owning business's self-service cancellation window in hours for the
-        /// given appointment, or null when the appointment is gone or no window is
-        /// configured. Used to enforce the self-service cancel/reschedule policy.
+        /// The owning business's self-service cancellation rule for the given appointment:
+        /// the single advance-notice window plus the tiers (#270), read together. Used to
+        /// enforce the self-service cancel/reschedule policy. An appointment that is gone
+        /// yields an empty policy (nothing to enforce).
         /// </summary>
         /// <param name="appointmentId">Appointment id.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
-        /// <returns>The cancellation window in hours, or null when missing or not configured.</returns>
-        Task<int?> GetCancellationWindowHoursAsync(Guid appointmentId, CancellationToken cancellationToken = default);
+        /// <returns>The window and the tiers in force for that appointment's business.</returns>
+        Task<CancellationPolicySnapshot> GetCancellationPolicyAsync(Guid appointmentId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Projects the fields an appointment integration event needs (including the

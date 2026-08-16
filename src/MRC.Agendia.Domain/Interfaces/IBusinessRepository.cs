@@ -38,5 +38,23 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <summary>Removes a business (soft-deleted by the save interceptor).</summary>
         /// <param name="business">The business to delete.</param>
         void Delete(Business business);
+
+        /// <summary>
+        /// The cancellation policy tiers of a business (#270), most notice first.
+        /// Untracked: they are only read to be reported or to be replaced wholesale.
+        /// </summary>
+        /// <param name="businessId">Business id.</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>The tiers, or an empty list when the business defines none.</returns>
+        Task<IReadOnlyList<CancellationPolicyTier>> GetCancellationTiersAsync(Guid businessId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Replaces the whole set of cancellation tiers of a business. The policy is edited
+        /// as a unit, so partial CRUD would only invite half-valid states.
+        /// </summary>
+        /// <param name="businessId">Business id.</param>
+        /// <param name="tiers">The new tiers (empty falls back to CancellationWindowHours).</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        Task ReplaceCancellationTiersAsync(Guid businessId, IReadOnlyList<CancellationPolicyTier> tiers, CancellationToken cancellationToken = default);
     }
 }

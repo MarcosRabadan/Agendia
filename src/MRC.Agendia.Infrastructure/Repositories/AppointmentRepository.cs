@@ -157,18 +157,30 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
         /// <inheritdoc />
-        public Task<int?> GetCancellationWindowHoursAsync(Guid appointmentId, CancellationToken cancellationToken = default)
-            // Project the owning business's window through employee -> business.
-            // IgnoreQueryFilters so a soft-deleted participant does not turn the
-            // required navigation into an INNER JOIN that drops the row (consistent
-            // with the reads above); a missing row or a null window both surface as
-            // null => no restriction.
-            => Set
+        public async Task<CancellationPolicySnapshot> GetCancellationPolicyAsync(Guid appointmentId,
+                                                                                 CancellationToken cancellationToken = default)
+        {
+            // Project the owning business through employee -> business. IgnoreQueryFilters
+            // so a soft-deleted participant does not turn the required navigation into an
+            // INNER JOIN that drops the row (consistent with the reads above).
+            var business = await Set
                 .AsNoTracking()
                 .IgnoreQueryFilters()
                 .Where(a => a.Id == appointmentId)
-                .Select(a => a.Employee.Business.CancellationWindowHours)
+                .Select(a => new { a.Employee.BusinessId, a.Employee.Business.CancellationWindowHours })
                 .FirstOrDefaultAsync(cancellationToken);
+
+            // No row: nothing to enforce (same as the old null window).
+            if (business is null)
+                return CancellationPolicySnapshot.None;
+
+            var tiers = await Context.CancellationPolicyTiers
+                .AsNoTracking()
+                .Where(t => t.BusinessId == business.BusinessId)
+                .ToListAsync(cancellationToken);
+
+            return new CancellationPolicySnapshot(business.CancellationWindowHours, tiers);
+        }
 
         /// <inheritdoc />
         public Task<AppointmentNotificationContext?> GetNotificationContextAsync(Guid appointmentId, CancellationToken cancellationToken = default)

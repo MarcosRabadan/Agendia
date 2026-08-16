@@ -54,6 +54,11 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                     StartDate: new DateTime(2030, 1, 1, 9, 0, 0),
                     EndDate: new DateTime(2030, 1, 1, 9, 30, 0), Language: "es"));
 
+            // Default: a business with no cancellation rule at all. The tests that care
+            // about the self-service window override it.
+            _repository.GetCancellationPolicyAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(CancellationPolicySnapshot.None);
+
             _sut = new AppointmentService(
                 _repository, _validator, _bookingGuard, _clock,
                 _waitlistService, _auditLogger, _currentUser, _unitOfWork, _mapper);
@@ -300,7 +305,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
             var entity = FutureAppointment(start);
             _repository.GetByIdAsync(entity.Id).Returns(entity);
-            _repository.GetCancellationWindowHoursAsync(entity.Id).Returns<int?>(24);
+            _repository.GetCancellationPolicyAsync(entity.Id).Returns(new CancellationPolicySnapshot(24, Array.Empty<CancellationPolicyTier>()));
             _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a Client
             _clock.BusinessNow.Returns(start.AddHours(-1)); // within 24h of the start
 
@@ -327,7 +332,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             var result = await _sut.UpdateAsync(dto);
 
             Assert.NotNull(result);
-            await _repository.DidNotReceive().GetCancellationWindowHoursAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+            await _repository.DidNotReceive().GetCancellationPolicyAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]
@@ -336,7 +341,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
             var entity = FutureAppointment(start); // Confirmed -> occupies capacity
             _repository.GetByIdAsync(entity.Id).Returns(entity);
-            _repository.GetCancellationWindowHoursAsync(entity.Id).Returns<int?>(24);
+            _repository.GetCancellationPolicyAsync(entity.Id).Returns(new CancellationPolicySnapshot(24, Array.Empty<CancellationPolicyTier>()));
             _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
             // The mock mapper must apply the new status so the cancel side effects run.
             _mapper.Map(Arg.Any<UpdateAppointmentDto>(), Arg.Any<Appointment>()).Returns(ci =>
@@ -366,7 +371,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
             var entity = FutureAppointment(start);
             _repository.GetByIdAsync(entity.Id).Returns(entity);
-            _repository.GetCancellationWindowHoursAsync(entity.Id).Returns<int?>(24);
+            _repository.GetCancellationPolicyAsync(entity.Id).Returns(new CancellationPolicySnapshot(24, Array.Empty<CancellationPolicyTier>()));
             _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a Client
             _clock.BusinessNow.Returns(start.AddHours(-1)); // within 24h of the start
 
@@ -381,7 +386,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
             var entity = FutureAppointment(start);
             _repository.GetByIdAsync(entity.Id).Returns(entity);
-            _repository.GetCancellationWindowHoursAsync(entity.Id).Returns<int?>(24);
+            _repository.GetCancellationPolicyAsync(entity.Id).Returns(new CancellationPolicySnapshot(24, Array.Empty<CancellationPolicyTier>()));
             _currentUser.IsInRole(Arg.Any<string>()).Returns(false); // a Client
             _clock.BusinessNow.Returns(start.AddHours(-1)); // current start is within the window
 

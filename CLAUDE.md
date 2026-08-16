@@ -143,7 +143,8 @@ src/
 │   │                            PipelineExtensions
 │   ├── Controllers/           ← Auth (solo M2M service-token), Business, Employee, Service,
 │   │                            Appointment, Schedule, Holiday, Availability, BusinessStats,
-│   │                            ClientReliability, Waitlist, DelayNotification, AuditLog
+│   │                            CancellationPolicy, ClientReliability, Waitlist,
+│   │                            DelayNotification, AuditLog
 │   ├── Filters/               ← IdempotencyFilter (cabecera Idempotency-Key)
 │   ├── Middleware/            ← ExceptionHandlingMiddleware + CorrelationIdMiddleware
 │   ├── Services/              ← CurrentUserContext (lee sub/roles del token)
@@ -326,6 +327,14 @@ Repository (EF Core / Npgsql) → PostgreSQL
   borrar futuras). En creación masiva no se publica evento por cita (solo el recordatorio 24h).
 - **Cancelación self-service:** `Business.CancellationWindowHours` (null = sin restricción); un
   Client no cancela/reprograma dentro de la ventana → 400 `CANCELLATION_WINDOW_ELAPSED`.
+- **Política por tramos (#270), aditiva:** un negocio puede definir `CancellationPolicyTier`s
+  (`MinHoursBefore` + `PenaltyKind` None/Percentage/FixedAmount/NotAllowed) vía
+  `GET|PUT /api/businesses/{id}/cancellation-policy` (PUT = reemplazo completo, Owner/Admin).
+  **Si hay tramos mandan los tramos; si no, sigue `CancellationWindowHours`** (el front viejo no
+  se entera). El validador exige un tramo de 0h (así todo momento cae en uno) y umbrales únicos.
+  El tramo `NotAllowed` lanza el mismo `CANCELLATION_WINDOW_ELAPSED` de siempre; los demás
+  **permiten** cancelar y devuelven el tramo aplicado en `AppointmentDto.AppliedCancellationTier`.
+  **Agendia NO cobra la penalización**: solo expone la regla (el dinero es de gestión/pagos, #172).
 - **Lista de espera:** apuntarse a una franja completa; al liberarse un hueco, aviso FIFO
   (evento `WaitlistSlotAvailable`) tras re-chequear capacidad, serializado por el guard. Índice
   único filtrado `IX_WaitlistEntry_UniqueWaiting` con `NULLS NOT DISTINCT`.
