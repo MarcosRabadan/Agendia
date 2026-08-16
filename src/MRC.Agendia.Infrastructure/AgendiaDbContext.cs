@@ -4,6 +4,7 @@ using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Domain.Common;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
+using MRC.Agendia.Infrastructure.Idempotency;
 using MRC.Agendia.Infrastructure.Messaging;
 using MRC.Agendia.Infrastructure.Persistence;
 
@@ -90,6 +91,9 @@ public class AgendiaDbContext : DbContext
 
     // Transactional outbox (#246): integration events pending delivery.
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
+    /// <summary>Requests already served under an Idempotency-Key (#266).</summary>
+    public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -335,6 +339,26 @@ public class AgendiaDbContext : DbContext
             .HasIndex(m => m.OccurredOnUtc)
             .HasFilter("\"ProcessedOnUtc\" IS NULL")
             .HasDatabaseName("IX_OutboxMessage_Pending");
+
+        // Idempotency records (#266): the key IS the primary key, so a concurrent twin
+        // request loses the INSERT instead of booking a second appointment.
+        modelBuilder.Entity<IdempotencyRecord>()
+            .HasKey(r => r.Key);
+
+        modelBuilder.Entity<IdempotencyRecord>()
+            .Property(r => r.Key)
+            .HasMaxLength(IdempotencyLimits.MaxStorageKeyLength);
+
+        modelBuilder.Entity<IdempotencyRecord>()
+            .Property(r => r.RequestHash)
+            .IsRequired()
+            .HasMaxLength(64);
+
+        // The purge scans by age; keeping it indexed stops the table from being swept
+        // whole once the traffic piles rows up.
+        modelBuilder.Entity<IdempotencyRecord>()
+            .HasIndex(r => r.CreatedAtUtc)
+            .HasDatabaseName("IX_IdempotencyRecord_CreatedAtUtc");
 
         // Guid primary keys are generated as sequential UUIDv7 client-side, at Add
         // time (not by the database), so ids are known before SaveChanges - two

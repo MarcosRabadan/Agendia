@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MRC.Agendia.Api.Filters;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Constants;
@@ -64,11 +65,18 @@ namespace MRC.Agendia.Api.Controllers
             return Ok(result);
         }
 
-        /// <summary>Creates a new appointment.</summary>
+        /// <summary>
+        /// Creates a new appointment. Send an optional <c>Idempotency-Key</c> header to make
+        /// the call safe to retry: an identical retry returns the appointment the first
+        /// request created instead of booking a second one (409 while the first one is still
+        /// in flight, or if the key is reused with a different body).
+        /// </summary>
         [Authorize]
         [HttpPost]
+        [ServiceFilter(typeof(IdempotencyFilter))]
         [ProducesResponseType(typeof(AppointmentDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<ActionResult<AppointmentDto>> Create([FromBody] CreateAppointmentDto dto)
         {
             var result = await _mediator.Send(new CreateAppointmentCommand(dto));
@@ -114,6 +122,7 @@ namespace MRC.Agendia.Api.Controllers
         /// </summary>
         [Authorize(Roles = RolePolicies.Staff)]
         [HttpPost("series")]
+        [ServiceFilter(typeof(IdempotencyFilter))]
         [ProducesResponseType(typeof(AppointmentSeriesResultDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]

@@ -65,6 +65,18 @@ El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan 
 | `SLOT_HAS_CAPACITY` | `SlotHasCapacityException` | Al apuntarse a la lista de espera, la franja todavía tiene hueco (reserva directa). |
 | `DUPLICATE_WAITLIST_ENTRY` | `DuplicateWaitlistEntryException` | El cliente ya está en la lista de espera de esa franja. |
 
+## Idempotencia de reserva (#266)
+
+Estos tres no vienen de una excepción de dominio: los emite directamente el
+`IdempotencyFilter` (capa API) cuando la petición trae cabecera `Idempotency-Key`. El
+cuerpo tiene el mismo formato (`code`/`message`/`traceId`).
+
+| Código | HTTP | Cuándo |
+|--------|------|--------|
+| `IDEMPOTENCY_KEY_INVALID` | 400 | La cabecera `Idempotency-Key` supera la longitud máxima. |
+| `IDEMPOTENT_REQUEST_IN_PROGRESS` | 409 | Una petición idéntica con esa misma clave sigue en curso (reintento concurrente). |
+| `IDEMPOTENCY_KEY_REUSED` | 409 | Esa clave ya se usó para una petición con **otro** cuerpo. |
+
 ## Cómo añadir un código nuevo
 
 1. Crea la excepción en `MRC.Agendia.Domain.Exceptions` heredando de `NotFoundException` (→404) o de `DomainException` (→400), con su `Code`.
