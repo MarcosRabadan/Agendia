@@ -99,6 +99,8 @@ namespace MRC.Agendia.Tests.Integration.Notifications
             private readonly DateTime _now;
             public FixedClock(DateTime now) => _now = now;
             public DateTime BusinessNow => _now;
+            // The tests never cross timezones: the instant is already the wall clock.
+            public DateTime ToBusinessTime(DateTime utcInstant) => utcInstant;
         }
     }
 }

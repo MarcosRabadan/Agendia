@@ -33,5 +33,11 @@ namespace MRC.Agendia.Infrastructure.Time
 
         /// <inheritdoc />
         public DateTime BusinessNow => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _timeZone);
+
+        /// <inheritdoc />
+        public DateTime ToBusinessTime(DateTime utcInstant)
+            // ConvertTimeFromUtc refuses a value already marked Local, so normalise the
+            // Kind first: every caller passes an instant it knows to be UTC.
+            => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utcInstant, DateTimeKind.Utc), _timeZone);
     }
 }

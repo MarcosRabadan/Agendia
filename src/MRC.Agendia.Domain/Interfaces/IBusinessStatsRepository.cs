@@ -26,6 +26,22 @@ namespace MRC.Agendia.Domain.Interfaces
                                                                       CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// The appointments that OCCUPIED the agenda of a business in [fromInclusive,
+        /// toExclusive) - everything except the cancelled ones, since a no-show still kept
+        /// the slot from being sold to anyone else. Projected, untracked, same soft-delete
+        /// semantics as the other reads here.
+        /// </summary>
+        /// <param name="businessId">Business id (resolved through the employee).</param>
+        /// <param name="fromInclusive">Range start (inclusive).</param>
+        /// <param name="toExclusive">Range end (exclusive).</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>One row per occupying appointment.</returns>
+        Task<IReadOnlyList<UtilizationAppointmentRow>> GetUtilizationAppointmentsAsync(Guid businessId,
+                                                                                       DateTime fromInclusive,
+                                                                                       DateTime toExclusive,
+                                                                                       CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Gets the status of every live appointment a client (their Harmony user id) has
         /// in a business whose start falls in [fromInclusive, toExclusive). Only the status
         /// is projected: it is all the reliability metrics need. Same soft-delete semantics

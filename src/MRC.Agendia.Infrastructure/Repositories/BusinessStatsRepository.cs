@@ -37,6 +37,22 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
         /// <inheritdoc />
+        public async Task<IReadOnlyList<UtilizationAppointmentRow>> GetUtilizationAppointmentsAsync(Guid businessId,
+                                                                                                    DateTime fromInclusive,
+                                                                                                    DateTime toExclusive,
+                                                                                                    CancellationToken cancellationToken = default)
+            => await _context.Appointments
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Where(a => !a.IsDeleted
+                    && a.Employee.BusinessId == businessId
+                    && a.Status != AppointmentStatus.Cancelled
+                    && a.StartDate >= fromInclusive
+                    && a.StartDate < toExclusive)
+                .Select(a => new UtilizationAppointmentRow(a.EmployeeId, a.StartDate, a.EndDate, a.CreatedAt))
+                .ToListAsync(cancellationToken);
+
+        /// <inheritdoc />
         public async Task<IReadOnlyList<AppointmentStatus>> GetClientAppointmentStatusesAsync(Guid businessId,
                                                                                               string clientUserId,
                                                                                               DateTime fromInclusive,
