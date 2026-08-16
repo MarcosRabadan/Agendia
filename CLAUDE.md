@@ -55,7 +55,7 @@ Forma parte de un ecosistema de microservicios:
 - **Serilog + Seq** (`http://localhost:5341`) para logging
 - **Swagger / OpenAPI** (con XML docs de endpoints)
 - **Tests:** xUnit + NSubstitute + EF InMemory (unit); WebApplicationFactory + **Testcontainers**
-  (Postgres real para tests de constraints/concurrencia) (integration).
+  (Postgres real por HTTP y a nivel de `DbContext`) (integration). Ver "Estrategia de tests".
 
 ### Gotchas de entorno (IMPORTANTES)
 
@@ -125,10 +125,11 @@ Tras cerrar el epic se hizo una auditoría a fondo y una tanda de fixes/mejoras:
 - **Runtime a inglés** (#274): logs, `exception messages` y validación FluentValidation en inglés.
 - **Bug cazado y arreglado**: `Appointment.StartDate/EndDate` estaban en `timestamptz`; con hora
   de pared (`Kind=Unspecified`) Npgsql lanza → ahora `timestamp without time zone` (#273).
+- **Tests full-stack sobre Postgres real** (#272): `PostgresWebApplicationFactory` (API + Npgsql
+  de Testcontainers). Ver "Estrategia de tests" más abajo.
 
 **Pendiente:** cutover del front · elegir + cablear el **broker real** (RabbitMQ/ASB/Kafka) en
-`IEventTransport` · **infra de tests** (WebApplicationFactory sobre Postgres real, #272) ·
-**features** de producto (#266 idempotencia, #267 no-show, #268 auto-rebooking, #269 analítica,
+`IEventTransport` · **features** de producto (#266 idempotencia, #267 no-show, #268 auto-rebooking, #269 analítica,
 #270 cancelación por tramos, #271 time-off) · **B9** (concurrencia optimista `xmin`, aplazada) ·
 **pruebas a fondo** (el usuario las quiere al final).
 
@@ -184,7 +185,8 @@ docs/
 └── error-codes.md            ← Catálogo de códigos de error de la API
 tests/
 ├── MRC.Agendia.Tests.Unit/       ← xUnit + NSubstitute + EF InMemory
-└── MRC.Agendia.Tests.Integration/← WebApplicationFactory + InMemory + Testcontainers (Postgres real)
+└── MRC.Agendia.Tests.Integration/← WebApplicationFactory (InMemory) + PostgresWebApplicationFactory
+                                    (API sobre Postgres real) + Testcontainers a pelo
 deploy/
 └── docker-compose.yml            ← Seq (5341) + RabbitMQ (15672, user/pass agendia) + Postgres (5433)
 ```
@@ -359,6 +361,30 @@ Repository (EF Core / Npgsql) → PostgreSQL
 - **CancellationToken** propagado handlers → services → repos → EF.
 - **Auditoría** (`IAuditLogger`, best-effort, tras persistir): login/estado de cita/horarios/
   service-token… `GET /api/admin/audit-logs` (Admin, con filtros).
+
+### Estrategia de tests (#272)
+
+Tres niveles, de más rápido a más fiel. **Elige el más barato que cubra el riesgo:**
+
+| Nivel | Cómo | Para qué |
+|---|---|---|
+| Unit | xUnit + NSubstitute (+ EF InMemory) | Lógica de handlers/servicios/validadores. |
+| Full-stack InMemory | `CustomWebApplicationFactory` | **Camino por defecto** del grueso de los tests de API: rutas, auth, códigos de error, flujos. |
+| Full-stack Postgres real | `PostgresWebApplicationFactory` (`[Collection(PostgresApiCollection.Name)]`) | Solo lo que InMemory **no puede** ver: tipos de columna (hora de pared), constraints/índices únicos, transacciones, `pg_advisory_xact_lock`, escritura del outbox. |
+| `DbContext` + Postgres real | `PostgresContainerFixture` (`PostgresCollection`) | Persistencia/concurrencia sin necesidad de pasar por la API. |
+
+- **No migres la suite entera a Postgres real:** es más lenta y no aporta nada donde no hay
+  semántica de BD en juego.
+- **Aislamiento:** un contenedor por colección; cada test empieza con
+  `await _factory.ResetDatabaseAsync()` → `TRUNCATE` de todas las tablas **derivadas del modelo
+  EF** (`PostgresDatabaseReset`), conservando esquema e historial de migraciones. Las dos
+  colecciones Postgres van separadas para que el truncate de una no borre datos de la otra
+  (xUnit serializa clases dentro de una colección, pero paraleliza colecciones).
+- La factory de Postgres **quita los hosted services** (outbox dispatcher y reminder): si no,
+  entregarían/marcarían las filas del outbox que el test va a comprobar y consultarían tablas
+  mientras otro test las trunca. Su lógica tiene tests propios.
+- Todos los tests de Postgres son `[SkippableFact]` con `Skip.IfNot(available, ...)`: **sin
+  Docker se omiten**, no fallan.
 
 ### Advisories de seguridad aceptados
 `Directory.Build.props` suprime **solo** 2 advisories (con `NuGetAuditSuppress`, cualquier otro
