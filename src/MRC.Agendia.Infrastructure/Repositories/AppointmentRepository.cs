@@ -121,6 +121,25 @@ namespace MRC.Agendia.Infrastructure.Repositories
                     cancellationToken);
 
         /// <inheritdoc />
+        public async Task<IReadOnlyList<Guid>> GetOverlappingIdsForEmployeeAsync(Guid employeeId,
+                                                                                 DateTime startDate,
+                                                                                 DateTime endDate,
+                                                                                 CancellationToken cancellationToken = default)
+            // Same predicate as the count above (which is what capacity uses), projecting
+            // just the ids: the caller only reports them back to the staff.
+            => await Set
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Where(a => !a.IsDeleted
+                    && a.EmployeeId == employeeId
+                    && (a.Status == AppointmentStatus.Pending || a.Status == AppointmentStatus.Confirmed)
+                    && a.StartDate < endDate
+                    && a.EndDate > startDate)
+                .OrderBy(a => a.StartDate)
+                .Select(a => a.Id)
+                .ToListAsync(cancellationToken);
+
+        /// <inheritdoc />
         public async Task<IReadOnlyList<Appointment>> GetUpcomingForDelayAsync(Guid businessId,
                                                                                Guid? employeeId,
                                                                                DateTime fromInclusive,

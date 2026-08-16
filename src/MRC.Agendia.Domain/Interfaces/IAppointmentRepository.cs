@@ -98,6 +98,21 @@ namespace MRC.Agendia.Domain.Interfaces
         /// <param name="excludeAppointmentId">Appointment id to exclude (the one being rescheduled), or null.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
         /// <returns>The number of overlapping occupying appointments.</returns>
+        /// <summary>
+        /// The ids of the employee's active appointments overlapping [startDate, endDate),
+        /// for reporting what a new time-off block collides with (#271). Same soft-delete
+        /// and capacity semantics as <see cref="CountOverlappingForEmployeeAsync"/>.
+        /// </summary>
+        /// <param name="employeeId">Employee id.</param>
+        /// <param name="startDate">Range start (inclusive).</param>
+        /// <param name="endDate">Range end (exclusive).</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>The overlapping appointment ids, oldest first.</returns>
+        Task<IReadOnlyList<Guid>> GetOverlappingIdsForEmployeeAsync(Guid employeeId,
+                                                                    DateTime startDate,
+                                                                    DateTime endDate,
+                                                                    CancellationToken cancellationToken = default);
+
         Task<int> CountOverlappingForEmployeeAsync(Guid employeeId,
                                                    DateTime startDate,
                                                    DateTime endDate,

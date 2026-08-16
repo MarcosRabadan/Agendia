@@ -17,6 +17,7 @@ namespace MRC.Agendia.Application.Availability
         private readonly IServiceRepository _serviceRepository;
         private readonly IEmployeeRepository _employeeRepository;
         private readonly IAppointmentRepository _appointmentRepository;
+        private readonly IEmployeeTimeOffRepository _timeOffRepository;
         private readonly IScheduleResolver _scheduleResolver;
         private readonly IClock _clock;
 
@@ -24,9 +25,11 @@ namespace MRC.Agendia.Application.Availability
                                    IServiceRepository serviceRepository,
                                    IEmployeeRepository employeeRepository,
                                    IAppointmentRepository appointmentRepository,
+                                   IEmployeeTimeOffRepository timeOffRepository,
                                    IScheduleResolver scheduleResolver,
                                    IClock clock)
         {
+            _timeOffRepository = timeOffRepository;
             _businessRepository = businessRepository;
             _serviceRepository = serviceRepository;
             _employeeRepository = employeeRepository;
@@ -138,6 +141,13 @@ namespace MRC.Agendia.Application.Availability
                 .GroupBy(a => a.EmployeeId)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
+            // ---------- Load the day's time-off blocks (#271) ----------
+            // One query for every candidate employee instead of one per employee/slot.
+            var timeOff = (await _timeOffRepository.GetByEmployeesAndRangeAsync(
+                    employees.Select(e => e.Id).ToList(), dayStart, dayEnd, cancellationToken))
+                .GroupBy(t => t.EmployeeId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
             // ---------- Compute slots ----------
             // For each candidate window, per employee:
             //   remainingCapacity = MaxConcurrentAppointments - overlappingCount
@@ -170,6 +180,11 @@ namespace MRC.Agendia.Application.Availability
 
                     foreach (var employee in employees)
                     {
+                        // A block takes the employee out of this slot entirely, whatever
+                        // their capacity (#271).
+                        if (IsBlocked(timeOff, employee.Id, date, current, slotEnd))
+                            continue;
+
                         var overlapping = CountOverlapping(appointments, employee.Id, date, current, slotEnd);
                         var remaining = employee.MaxConcurrentAppointments - overlapping;
                         if (remaining > 0)
@@ -253,8 +268,18 @@ namespace MRC.Agendia.Application.Availability
             var start = date.ToDateTime(startTime);
             var end = date.ToDateTime(endTime);
             var capacity = 0;
+            // Time-off blocks for the exact window, so the waitlist does not consider a
+            // slot free just because nobody booked the hour the employee is away (#271).
+            var blocked = (await _timeOffRepository.GetByEmployeesAndRangeAsync(
+                    employees.Select(e => e.Id).ToList(), start, end, cancellationToken))
+                .Select(t => t.EmployeeId)
+                .ToHashSet();
+
             foreach (var employee in employees)
             {
+                if (blocked.Contains(employee.Id))
+                    continue;
+
                 var overlapping = await _appointmentRepository.CountOverlappingForEmployeeAsync(employee.Id, start, end, null, cancellationToken);
                 var remaining = employee.MaxConcurrentAppointments - overlapping;
                 if (remaining > 0)
@@ -283,6 +308,22 @@ namespace MRC.Agendia.Application.Availability
             // Two ranges [a.Start, a.End) and [slotStart, slotEnd) overlap iff
             // a.Start < slotEnd && a.End > slotStart.
             return appts.Count(a => a.StartDate < slotEndDt && a.EndDate > slotStartDt);
+        }
+
+        // Same half-open overlap test, against the employee's time-off blocks (#271).
+        private static bool IsBlocked(Dictionary<Guid, List<EmployeeTimeOff>> timeOffByEmployee,
+                                      Guid employeeId,
+                                      DateOnly date,
+                                      TimeOnly slotStart,
+                                      TimeOnly slotEnd)
+        {
+            if (!timeOffByEmployee.TryGetValue(employeeId, out var blocks) || blocks.Count == 0)
+                return false;
+
+            var slotStartDt = date.ToDateTime(slotStart);
+            var slotEndDt = date.ToDateTime(slotEnd);
+
+            return blocks.Any(t => t.Start < slotEndDt && t.End > slotStartDt);
         }
 
         private static AvailabilityDto EmptyAvailability(

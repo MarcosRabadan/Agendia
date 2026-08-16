@@ -20,6 +20,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Availability
         private readonly IServiceRepository _serviceRepository = Substitute.For<IServiceRepository>();
         private readonly IEmployeeRepository _employeeRepository = Substitute.For<IEmployeeRepository>();
         private readonly IAppointmentRepository _appointmentRepository = Substitute.For<IAppointmentRepository>();
+        private readonly IEmployeeTimeOffRepository _timeOffRepository = Substitute.For<IEmployeeTimeOffRepository>();
         private readonly IScheduleResolver _scheduleResolver = Substitute.For<IScheduleResolver>();
         private readonly IClock _clock = Substitute.For<IClock>();
         private readonly AvailabilityService _sut;
@@ -28,7 +29,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Availability
         {
             _sut = new AvailabilityService(
                 _businessRepository, _serviceRepository, _employeeRepository,
-                _appointmentRepository, _scheduleResolver, _clock);
+                _appointmentRepository, _timeOffRepository, _scheduleResolver, _clock);
         }
 
         [Fact]
