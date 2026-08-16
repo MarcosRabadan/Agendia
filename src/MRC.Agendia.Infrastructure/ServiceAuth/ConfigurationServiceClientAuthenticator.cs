@@ -12,6 +12,11 @@ namespace MRC.Agendia.Infrastructure.ServiceAuth
     /// </summary>
     public class ConfigurationServiceClientAuthenticator : IServiceClientAuthenticator
     {
+        // Fixed valid hash used to burn the same PBKDF2 work when there is no matching client,
+        // so a missing/disabled clientId cannot be told apart from a wrong secret by response
+        // time (prevents clientId enumeration by timing). Computed once per process.
+        private static readonly string DummyHash = ServiceClientSecretHasher.Hash("constant-time-dummy");
+
         private readonly IOptionsMonitor<ServiceClientRegistryOptions> _options;
 
         public ConfigurationServiceClientAuthenticator(IOptionsMonitor<ServiceClientRegistryOptions> options)
@@ -28,11 +33,14 @@ namespace MRC.Agendia.Infrastructure.ServiceAuth
             var match = _options.CurrentValue.ServiceClients
                 .FirstOrDefault(c => c.Enabled && string.Equals(c.ClientId, clientId, StringComparison.Ordinal));
 
-            // Whether the clientId exists is not sensitive; the SECRET comparison is
-            // the one that must be constant-time, and it is (FixedTimeEquals inside
-            // the hasher). A missing/disabled client short-circuits to null.
             if (match is null)
+            {
+                // Constant-time: run the same PBKDF2 work as a real verification so a
+                // missing/disabled clientId takes as long as a wrong secret, closing the
+                // timing side channel that would otherwise leak which clientIds exist.
+                ServiceClientSecretHasher.Verify(clientSecret, DummyHash);
                 return null;
+            }
 
             if (!ServiceClientSecretHasher.Verify(clientSecret, match.ClientSecretHash))
                 return null;

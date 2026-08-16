@@ -66,7 +66,9 @@ namespace MRC.Agendia.Application.Appointments
             var expansion = RecurrenceExpander.Expand(
                 dto.Frequency, dto.Interval, dto.DaysOfWeek, dto.DayOfMonth, from, dto.UntilDate);
 
-            var seriesId = Guid.NewGuid();
+            // UUIDv7 (time-ordered) like the entity PKs: SeriesId is indexed
+            // (IX_Appointment_SeriesId), so a sequential id keeps that index local.
+            var seriesId = Guid.CreateVersion7();
             var created = new List<Appointment>();
             var skipped = new List<SkippedOccurrenceDto>();
 
