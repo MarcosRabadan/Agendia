@@ -304,6 +304,23 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             Assert.Empty(past.DomainEvents); // past occurrence untouched, no event
         }
 
+        [Fact]
+        public async Task MoveSeriesAsync_RaisesRescheduledEventPerMovedOccurrence()
+        {
+            var seriesId = Guid.NewGuid();
+            var a1 = Appt(1, new DateTime(2030, 2, 1, 10, 0, 0), AppointmentStatus.Confirmed, seriesId);
+            a1.EndDate = new DateTime(2030, 2, 1, 10, 30, 0);
+            _repository.GetBySeriesIdAsync(seriesId, Arg.Any<CancellationToken>())
+                .Returns(new List<Appointment> { a1 });
+            ConfigureNotificationContext();
+
+            await _sut.MoveSeriesAsync(seriesId, new MoveAppointmentSeriesDto(NewStartTime: null, DayShift: 7));
+
+            Assert.Contains(a1.DomainEvents, e => e is AppointmentRescheduled r
+                && r.PreviousStartDate == new DateTime(2030, 2, 1, 10, 0, 0)
+                && r.StartDate == new DateTime(2030, 2, 8, 10, 0, 0));
+        }
+
         private void ConfigureNotificationContext()
             => _repository.GetNotificationContextAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                 .Returns(ci => new AppointmentNotificationContext(

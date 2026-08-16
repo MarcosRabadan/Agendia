@@ -33,14 +33,16 @@ por `clientUserId` (el `sub` de Harmony).
 |------------------------|--------------------------------------------------------|
 | `AppointmentConfirmed` | Al crear una cita.                                     |
 | `AppointmentCancelled` | Al pasar una cita a `Cancelled`.                       |
+| `AppointmentRescheduled` | Al mover una cita a otro horario (no en una cancelacion). |
 | `AppointmentReminder`  | Job de recordatorio 24h (idempotente por `ReminderSentAt`). |
 | `AppointmentDelayed`   | El personal avisa de un retraso, por cita afectada.   |
 | `WaitlistSlotAvailable`| Se libera una franja que un cliente esperaba (FIFO).  |
 
 > **Series:** las operaciones de serie emiten los mismos eventos **por ocurrencia**: crear una
 > serie emite un `AppointmentConfirmed` por cita creada; cancelar una serie, un
-> `AppointmentCancelled` por ocurrencia futura cancelada. Borrar o mover una serie no emite
-> evento (igual que la cita individual).
+> `AppointmentCancelled` por ocurrencia futura cancelada; mover una serie, un
+> `AppointmentRescheduled` por ocurrencia movida. Borrar una serie no emite evento (igual que
+> la cita individual).
 
 ### Payload de los eventos de cita
 
@@ -65,6 +67,9 @@ Los identificadores de entidad (`appointmentId`, `businessId`, `employeeId`,
 es el `sub` opaco de Harmony (string, no GUID).
 
 `AppointmentDelayed` añade `"delayMinutes": 15`.
+
+`AppointmentRescheduled` añade `"previousStartDate"` y `"previousEndDate"` (el horario anterior);
+`startDate`/`endDate` son el nuevo horario.
 
 ### Payload de `WaitlistSlotAvailable`
 

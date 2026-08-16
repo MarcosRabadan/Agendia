@@ -232,10 +232,13 @@ namespace MRC.Agendia.Application.Appointments
                             endDate: newEnd,
                             cancellationToken: cancellationToken);
 
+                        var previousStart = appointment.StartDate;
+                        var previousEnd = appointment.EndDate;
                         appointment.StartDate = newStart;
                         appointment.EndDate = newEnd;
                         appointment.ReminderSentAt = null; // re-arm the 24h reminder for the new time
                         _repository.Update(appointment);
+                        await RaiseSeriesRescheduledAsync(appointment, previousStart, previousEnd, cancellationToken);
                         await _unitOfWork.Save(cancellationToken);
                     }, cancellationToken);
 
@@ -304,6 +307,19 @@ namespace MRC.Agendia.Application.Appointments
             appointment.RaiseEvent(new AppointmentCancelled(
                 context.AppointmentId, context.BusinessId, context.EmployeeId, context.ClientUserId,
                 context.ServiceId, context.StartDate, context.EndDate, context.Language, DateTime.UtcNow));
+        }
+
+        // Rescheduled is raised on a moved occurrence (new dates already set in memory); no Save
+        // here because the guarded Save that persists the move enlists the event.
+        private async Task RaiseSeriesRescheduledAsync(Appointment appointment, DateTime previousStart, DateTime previousEnd, CancellationToken cancellationToken)
+        {
+            var context = await _repository.GetNotificationContextAsync(appointment.Id, cancellationToken);
+            if (context is null)
+                return;
+
+            appointment.RaiseEvent(new AppointmentRescheduled(
+                context.AppointmentId, context.BusinessId, context.EmployeeId, context.ClientUserId, context.ServiceId,
+                previousStart, previousEnd, appointment.StartDate, appointment.EndDate, context.Language, DateTime.UtcNow));
         }
 
         private async Task<IReadOnlyList<Appointment>> GetSeriesOrThrowAsync(Guid seriesId, CancellationToken cancellationToken)
