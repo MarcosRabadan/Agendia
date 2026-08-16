@@ -136,6 +136,7 @@ namespace MRC.Agendia.Application.Appointments
 
             var previousStatus = entity.Status;
             var previousStartDate = entity.StartDate;
+            var previousEndDate = entity.EndDate;
 
             // Terminal states (Completed/NoShow/Cancelled) are final: block any change
             // out of them - e.g. a client cancelling an already-Completed appointment,
@@ -184,6 +185,15 @@ namespace MRC.Agendia.Application.Appointments
                 // is sent again for the new date.
                 if (entity.StartDate != previousStartDate)
                     entity.ReminderSentAt = null;
+
+                // A time move (and not a cancellation) raises a reschedule event so the
+                // consumer can tell the client the appointment moved (previous -> new).
+                var timeChanged = entity.StartDate != previousStartDate || entity.EndDate != previousEndDate;
+                if (timeChanged && !becomesCancelled)
+                    await RaiseAppointmentEventAsync(entity, ctx => new AppointmentRescheduled(
+                        ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId, ctx.ServiceId,
+                        previousStartDate, previousEndDate, entity.StartDate, entity.EndDate, ctx.Language, DateTime.UtcNow),
+                        cancellationToken);
 
                 // Cancellation event written in the SAME save as the status change
                 // (transactional outbox): a cancelled appointment always yields its event.

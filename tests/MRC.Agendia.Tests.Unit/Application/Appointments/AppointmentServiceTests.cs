@@ -398,6 +398,54 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                 default, default, default, default, default, default, default);
         }
 
+        [Fact]
+        public async Task UpdateAsync_Reschedule_RaisesRescheduledEvent()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = FutureAppointment(start);
+            var previousStart = entity.StartDate;
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
+            // The mock mapper applies the new booking fields so the reschedule is detected.
+            _mapper.Map(Arg.Any<UpdateAppointmentDto>(), Arg.Any<Appointment>()).Returns(ci =>
+            {
+                var e = ci.Arg<Appointment>();
+                var d = ci.Arg<UpdateAppointmentDto>();
+                e.StartDate = d.StartDate;
+                e.EndDate = d.EndDate;
+                return e;
+            });
+            _clock.BusinessNow.Returns(start.AddDays(-10)); // staff caller, window irrelevant
+
+            var newStart = start.AddDays(3);
+            var dto = new UpdateAppointmentDto(
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
+                newStart, newStart.AddMinutes(30), entity.Status, Notes: null);
+
+            await _sut.UpdateAsync(dto);
+
+            Assert.Contains(entity.DomainEvents, e => e is AppointmentRescheduled r
+                && r.PreviousStartDate == previousStart && r.StartDate == newStart);
+        }
+
+        [Fact]
+        public async Task UpdateAsync_StatusOrNotesOnly_DoesNotRaiseRescheduledEvent()
+        {
+            var entity = PastAppointment();
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
+            // default staff caller
+
+            // Same booking fields; only the status changes -> no reschedule event.
+            var dto = new UpdateAppointmentDto(
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
+                entity.StartDate, entity.EndDate, AppointmentStatus.Completed, Notes: "actualizada");
+
+            await _sut.UpdateAsync(dto);
+
+            Assert.DoesNotContain(entity.DomainEvents, e => e is AppointmentRescheduled);
+        }
+
         private static Appointment FutureAppointment(DateTime start) => new()
         {
             Id = TestIds.Of(7),
