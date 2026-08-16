@@ -171,10 +171,12 @@ namespace MRC.Agendia.Application.Appointments
             // CURRENT start time (you cannot act on an imminent appointment yourself).
             var becomesCancelled =
                 dto.Status == AppointmentStatus.Cancelled && previousStatus != AppointmentStatus.Cancelled;
+            CancellationPolicyTier? appliedTier = null;
             if (!IsStaff() && (becomesCancelled || bookingChanged))
             {
-                var windowHours = await _repository.GetCancellationWindowHoursAsync(entity.Id, cancellationToken);
-                AppointmentCancellationPolicy.EnsureSelfServiceAllowed(previousStartDate, windowHours, _clock.BusinessNow);
+                var policy = await _repository.GetCancellationPolicyAsync(entity.Id, cancellationToken);
+                appliedTier = AppointmentCancellationPolicy.EnsureSelfServiceAllowed(
+                    previousStartDate, policy, _clock.BusinessNow);
             }
 
             async Task ApplyAsync()
@@ -258,7 +260,17 @@ namespace MRC.Agendia.Application.Appointments
             // Return WITH the extra services (#170): the tracked entity was loaded
             // without them, so re-read so the response matches GET/Create.
             var refreshed = await _repository.GetByIdWithExtrasAsync(entity.Id, cancellationToken);
-            return _mapper.Map<AppointmentDto>(refreshed ?? entity);
+            var result = _mapper.Map<AppointmentDto>(refreshed ?? entity);
+
+            // Tell the client what their own cancellation cost, when the business states
+            // its policy as tiers (#270). Agendia does not charge it: it reports the rule.
+            return appliedTier is null || !becomesCancelled
+                ? result
+                : result with
+                {
+                    AppliedCancellationTier = new AppliedCancellationTierDto(
+                        appliedTier.MinHoursBefore, appliedTier.PenaltyKind, appliedTier.PenaltyValue)
+                };
         }
 
         /// <inheritdoc />
@@ -270,8 +282,8 @@ namespace MRC.Agendia.Application.Appointments
             // #171: deleting is a hard cancel, so the self-service window applies too.
             if (!IsStaff())
             {
-                var windowHours = await _repository.GetCancellationWindowHoursAsync(entity.Id, cancellationToken);
-                AppointmentCancellationPolicy.EnsureSelfServiceAllowed(entity.StartDate, windowHours, _clock.BusinessNow);
+                var policy = await _repository.GetCancellationPolicyAsync(entity.Id, cancellationToken);
+                AppointmentCancellationPolicy.EnsureSelfServiceAllowed(entity.StartDate, policy, _clock.BusinessNow);
             }
 
             // Deleting an occupying appointment frees a slot for the waitlist.

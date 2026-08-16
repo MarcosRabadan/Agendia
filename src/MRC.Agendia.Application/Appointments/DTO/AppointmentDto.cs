@@ -12,5 +12,9 @@ namespace MRC.Agendia.Application.Appointments.DTO
         AppointmentStatus Status,
         string? Notes,
         Guid? SeriesId = null,
-        IReadOnlyList<Guid>? ExtraServiceIds = null);
+        IReadOnlyList<Guid>? ExtraServiceIds = null,
+        // Only filled when the operation cancelled the appointment through self-service
+        // and the business has cancellation tiers (#270): tells the front what the
+        // cancellation cost, so it can branch. Null everywhere else.
+        AppliedCancellationTierDto? AppliedCancellationTier = null);
 }
