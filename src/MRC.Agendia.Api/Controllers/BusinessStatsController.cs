@@ -39,5 +39,27 @@ namespace MRC.Agendia.Api.Controllers
             var result = await _mediator.Send(new GetBusinessStatsQuery(businessId, from, to));
             return Ok(result);
         }
+
+        /// <summary>
+        /// How well the agenda was used over a date range: occupancy overall, per hour of
+        /// the day, per weekday and per employee, plus how far in advance clients book on
+        /// average. Measured in minutes of agenda (the effective schedule's open minutes
+        /// times each employee's capacity, minus their time off), so no price is involved:
+        /// the catalog service owns those. Range capped at 92 days. Business staff only
+        /// (owner, an active employee of the business, or an admin).
+        /// </summary>
+        [Authorize(Roles = RolePolicies.Staff)]
+        [HttpGet("utilization")]
+        [ProducesResponseType(typeof(UtilizationDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<UtilizationDto>> GetUtilization(
+            Guid businessId,
+            [FromQuery] DateOnly from,
+            [FromQuery] DateOnly to)
+        {
+            var result = await _mediator.Send(new GetBusinessUtilizationQuery(businessId, from, to));
+            return Ok(result);
+        }
     }
 }

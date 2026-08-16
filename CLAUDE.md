@@ -321,6 +321,13 @@ Repository (EF Core / Npgsql) → PostgreSQL
 - **Transiciones de estado:** un Client solo puede poner `Cancelled`; el resto es del personal.
   Cambiar el estado de una cita terminal (Completed/NoShow/Cancelled) → 400
   `INVALID_APPOINTMENT_STATUS_TRANSITION`.
+- **Analítica de utilización (#269):** `GET /api/businesses/{id}/stats/utilization?from&to`
+  (Staff, rango ≤ 92 días) → ocupación global, por hora, por día de la semana y por empleado,
+  más el lead time medio. **La unidad es el minuto de agenda**: ofertado = minutos abiertos del
+  horario efectivo × capacidad del empleado − su time-off; reservado = minutos de citas no
+  canceladas (un no-show ocupó la agenda igual). `UtilizationCalculator` es puro. El lead time
+  cruza los dos mundos de tiempo: `IClock.ToBusinessTime` pasa el `CreatedAt` (UTC) a hora de
+  pared antes de restarlo del `StartDate`.
 - **Multiservicio (aditivo):** `Appointment.ServiceId` principal + colección `ExtraServices`
   (duración total = suma). Aditivo para no romper el front. Stats cuenta solo el principal.
 - **Series recurrentes:** materializa una `Appointment` por ocurrencia (reusa validador+guard),
