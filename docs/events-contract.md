@@ -1,7 +1,8 @@
 # Contrato de eventos de integración (Agendia → consumidor)
 
 Desde la Fase 5 del epic #241, **Agendia ya no envía notificaciones** (email/push). En su
-lugar **publica eventos de dominio** y un servicio consumidor (Notifications/Harmony)
+lugar **publica eventos de dominio** y un servicio consumidor (Notifications/SoundMate, antes
+*Harmony*)
 resuelve el contacto del destinatario (email/teléfono/nombre) por su `clientUserId` y
 entrega el mensaje en el `language` indicado.
 

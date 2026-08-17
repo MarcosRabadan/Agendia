@@ -6,7 +6,7 @@ Lee con atención antes de tocar código.
 > **Estado (Fase 7 del epic #241, 2026-08-15).** Agendia es un **microservicio de
 > reservas puras**: gestiona agenda (negocios como contenedores, empleados/recursos,
 > servicios, horarios, citas, lista de espera) y **nada más**. La identidad la posee
-> **Harmony** (Agendia solo valida sus JWT); el perfil del negocio y el catálogo/precio
+> **SoundMate**, antes *Harmony* (Agendia solo valida sus JWT); el perfil del negocio y el catálogo/precio
 > del servicio los posee el **servicio de gestión**. Persistencia en **PostgreSQL**,
 > PK/FK en **GUID (UUIDv7)**, y las notificaciones salen como **eventos de integración**
 > por un outbox transaccional (Agendia ya no envía email/push). Contexto de datos en
@@ -14,17 +14,43 @@ Lee con atención antes de tocar código.
 
 ## Qué es este proyecto
 
-API REST de gestión de citas para negocios (peluquerías, clínicas, talleres…). Cubre alta
-de negocios, empleados/recursos, servicios y citas, con un sistema de horarios potente
-(plantillas anuales, festivos, vacaciones, overrides por día, turnos partidos), lista de
-espera, series recurrentes, disponibilidad y estadísticas.
+API REST de gestión de citas para **academias de música y profesores particulares**: es el
+micro que usan una academia o un profe de guitarra para organizar sus clases y reservas.
+Cubre alta de negocios, empleados/recursos, servicios y citas, con un sistema de horarios
+potente (plantillas anuales, festivos, vacaciones, overrides por día, turnos partidos), lista
+de espera, series recurrentes, disponibilidad y estadísticas.
+
+El modelo es **genérico a propósito** (`Business`/`Employee`/`Service`/`Appointment`), así que
+el dominio se lee traduciendo:
+
+| Entidad | En el dominio real |
+|---|---|
+| `Business` | la academia — o el profe particular, como negocio de una sola persona |
+| `Employee` | el profesor. También un **recurso**: un aula, una sala de ensayo |
+| `Service` | tipo de clase (30/60 min). Agendia solo guarda la **duración**, no el precio |
+| `Appointment` | la clase |
+| `Employee.MaxConcurrentAppointments` | **clase grupal**: cuántos alumnos caben a la vez |
+| Series recurrentes | **la clase semanal fija** — el caso de uso central del producto |
+| `EmployeeTimeOff` | la semana que el profe no da clase |
+| Lista de espera + hold | alumno esperando que se libere un hueco |
+| Tramos de cancelación | la política de cancelación de clases de la academia |
 
 Forma parte de un ecosistema de microservicios:
-- **Harmony** — identidad: registra usuarios, firma los JWT, gestiona credenciales/roles.
+- **SoundMate** (antes *Harmony*, ver nota abajo) — identidad y negocio de la plataforma:
+  registra usuarios, firma los JWT, gestiona credenciales/roles.
 - **Gestión / catálogo** — perfil del negocio (nombre, dirección, contacto) y catálogo de
   servicios (nombre, descripción, **precio**).
 - **Agendia** (este repo) — la **agenda**.
 - **Consumidor de notificaciones** — recibe los eventos de Agendia y entrega email/push.
+
+> **Nota de nombres: `Harmony` es `SoundMate`.** El servicio de identidad se renombró, y
+> **`SoundMate` es un nombre TEMPORAL**. Son el mismo servicio: vive en el repo hermano
+> `SoundMate/`, y en Agendia ya aparece como el `clientId` del token M2M (`soundmate`). El
+> nombre viejo sigue vivo a propósito en **nombres de fichero** (`docs/harmony-token-contract.md`,
+> `HarmonyTokenContractTests.cs`), **identificadores** y **datos de test** (`harmony-abc`,
+> `harmony-counter-…`): son ~160 líneas en ~60 ficheros y renombrarlas con un nombre que va a
+> cambiar es pagar el peaje dos veces (#300). Cuando el nombre sea definitivo, se renombra todo
+> de golpe. Hasta entonces: si lees `Harmony`, es SoundMate.
 
 ## Idiomas (convención del equipo)
 

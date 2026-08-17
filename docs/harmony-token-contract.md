@@ -1,5 +1,10 @@
 # Contrato de token: Harmony → Agendia
 
+> **Nota de nombres:** el servicio de identidad se renombró a **SoundMate**, y ese nombre es
+> **temporal**. Todo lo que este documento llama `Harmony` es SoundMate: el contrato no cambia,
+> solo el nombre. El fichero y los identificadores conservan el nombre viejo a propósito hasta
+> que el definitivo esté decidido, para no renombrar dos veces (#300).
+
 Agendia es un microservicio de Harmony. **No emite tokens ni guarda credenciales**:
 Harmony es el servicio de identidad, registra a los usuarios en su propia base de
 datos, firma los access tokens y llama a Agendia con ellos. Agendia solo los valida.

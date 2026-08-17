@@ -6,6 +6,12 @@ el servicio de gestión/catálogo). Este documento fija qué dato pertenece a qu
 identificadores cruzan el límite del servicio **sin FK**, y cómo se aprovisiona una
 agenda desde fuera.
 
+> **Nota de nombres:** el servicio de identidad se renombró a **SoundMate** (nombre
+> **temporal**). `Harmony` y `SoundMate` son el mismo servicio; el nombre viejo sigue en
+> nombres de fichero, identificadores y datos de test hasta que el definitivo esté decidido
+> (#300). El dominio real son **academias de música y profesores particulares**: el `Business`
+> es la academia o el profe, el `Employee` el profesor o un aula, y el `Appointment` una clase.
+
 Complementa a:
 - [`harmony-token-contract.md`](harmony-token-contract.md) — cómo llega y se valida la identidad.
 - [`events-contract.md`](events-contract.md) — cómo salen los avisos (Agendia no notifica; publica eventos).
