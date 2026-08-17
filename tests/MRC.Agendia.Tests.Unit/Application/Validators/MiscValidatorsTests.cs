@@ -14,6 +14,8 @@ using MRC.Agendia.Application.ServiceAuth.Commands;
 using MRC.Agendia.Application.ServiceAuth.DTO;
 using MRC.Agendia.Application.Services.Commands.Delete;
 using MRC.Agendia.Application.Services.Commands.Restore;
+using MRC.Agendia.Application.TimeOff.Commands;
+using MRC.Agendia.Application.TimeOff.DTO;
 using MRC.Agendia.Application.Waitlist.Commands.Join;
 using MRC.Agendia.Application.Waitlist.Commands.Leave;
 using MRC.Agendia.Application.Waitlist.DTO;
@@ -25,8 +27,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
     /// <summary>
     /// Rule coverage for the remaining validators: availability, waitlist (with the
     /// clock-based "future slot" rule), auditing/pagination, holidays (year vs. date),
-    /// service-auth credentials, device tokens, and the shared id-only delete/restore
-    /// and pagination validators of every aggregate.
+    /// service-auth credentials, device tokens, employee time off, and the shared id-only
+    /// delete/restore and pagination validators of every aggregate.
     /// </summary>
     public class MiscValidatorsTests
     {
@@ -160,6 +162,41 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         {
             new DeleteBusinessCommandValidator().Check(new DeleteBusinessCommand(TestIds.Of(1))).ShouldBeValid();
             new RestoreServiceCommandValidator().Check(new RestoreServiceCommand(TestIds.Of(1))).ShouldBeValid();
+        }
+
+        // ---------- Employee time off (#271) ----------
+
+        private static readonly DateTime TimeOffStart = new(2026, 6, 1, 10, 0, 0);
+
+        private static CreateEmployeeTimeOffCommand ValidTimeOff() =>
+            new(TestIds.Of(1), new CreateEmployeeTimeOffDto(TimeOffStart, TimeOffStart.AddHours(3)));
+
+        [Fact]
+        public void TimeOff_valid_passes()
+            => new CreateEmployeeTimeOffCommandValidator().Check(ValidTimeOff()).ShouldBeValid();
+
+        [Fact]
+        public void TimeOff_end_not_after_start_fails()
+            => new CreateEmployeeTimeOffCommandValidator()
+                .Check(ValidTimeOff() with { Dto = new CreateEmployeeTimeOffDto(TimeOffStart, TimeOffStart) })
+                .ShouldFailOn("Dto.End");
+
+        // Wall-clock range (#290): the block is stored in `timestamp without time zone`
+        // columns, so a zoned bound is rejected instead of being shifted or refused deeper.
+        [Theory]
+        [InlineData(DateTimeKind.Utc)]
+        [InlineData(DateTimeKind.Local)]
+        public void TimeOff_zoned_range_fails(DateTimeKind kind)
+        {
+            var result = new CreateEmployeeTimeOffCommandValidator().Check(ValidTimeOff() with
+            {
+                Dto = new CreateEmployeeTimeOffDto(
+                    DateTime.SpecifyKind(TimeOffStart, kind),
+                    DateTime.SpecifyKind(TimeOffStart.AddHours(3), kind))
+            });
+
+            result.ShouldFailOn("Dto.Start");
+            result.ShouldFailOn("Dto.End");
         }
 
         // ---------- Shared pagination validators ----------

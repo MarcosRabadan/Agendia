@@ -254,6 +254,12 @@ Repository (EF Core / Npgsql) → PostgreSQL
 14. **Hora "ahora" en el flujo de citas → `IClock.BusinessNow`, NUNCA `DateTime.UtcNow`.** Las
     fechas de cita son hora de pared (zona `Scheduling:TimeZone`, default `Europe/Madrid`).
     `UtcNow` se reserva para instantes reales (audit, `CreatedAt`, `OccurredOnUtc`).
+    **Y entran por el borde HTTP SIN zona** (#290): las fechas de pared que llegan del
+    cliente (cita y time-off, body o query) se validan con `MustBeWallClock()`
+    (`Application/Common/WallClockDateRules`), que exige `Kind=Unspecified` y rechaza `Z` y
+    los offsets con 400 `VALIDATION_ERROR`. Sin esa regla, `Z` reventaba en Npgsql contra la
+    columna `timestamp without time zone` y un offset se persistía **desplazado en
+    silencio**. NO aplicarla a inputs que sí son instantes UTC (el filtro de audit-logs).
 15. **Crear/reprogramar citas pasa por `IBookingConcurrencyGuard`** (envuelve validar+insertar
     en un `pg_advisory_xact_lock` keyed por empleado+día; la clave es un hash bigint FNV-1a).
 16. **PK/FK son `Guid` (UUIDv7)** generados client-side en el `Add` por `UuidV7ValueGenerator`
