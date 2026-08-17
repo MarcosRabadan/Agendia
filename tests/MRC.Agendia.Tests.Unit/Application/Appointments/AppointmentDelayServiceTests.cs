@@ -33,12 +33,9 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
         public AppointmentDelayServiceTests()
         {
-            // A notification context so a delay event is raised for each affected id.
-            _repository.GetNotificationContextAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-                .Returns(ci => new AppointmentNotificationContext(
-                    ci.Arg<Guid>(), BusinessId, EmployeeId: TestIds.Of(2), ClientUserId: "client-1", ServiceId: TestIds.Of(3),
-                    StartDate: new DateTime(2030, 6, 3, 11, 0, 0),
-                    EndDate: new DateTime(2030, 6, 3, 11, 30, 0), Language: "es"));
+            // The owning business, so a delay event is raised for each affected appointment.
+            _repository.GetNotificationBusinessByEmployeeAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(new AppointmentNotificationBusiness(BusinessId, "es"));
 
             _sut = new AppointmentDelayService(_repository, _scheduleResolver, _unitOfWork, _auditLogger, _clock);
         }

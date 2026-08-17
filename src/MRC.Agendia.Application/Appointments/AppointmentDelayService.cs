@@ -68,14 +68,16 @@ namespace MRC.Agendia.Application.Appointments
             // the business language).
             foreach (var appointment in affected)
             {
-                var context = await _repository.GetNotificationContextAsync(appointment.Id, cancellationToken);
-                if (context is null)
+                // Business + language from the employee; the rest straight off the entity
+                // (see IAppointmentRepository.GetNotificationBusinessByEmployeeAsync, #293).
+                var business = await _repository.GetNotificationBusinessByEmployeeAsync(appointment.EmployeeId, cancellationToken);
+                if (business is null)
                     continue;
 
                 appointment.RaiseEvent(new AppointmentDelayed(
-                    context.AppointmentId, context.BusinessId, context.EmployeeId, context.ClientUserId,
-                    context.ServiceId, context.StartDate, context.EndDate,
-                    dto.DelayMinutes, context.Language, DateTime.UtcNow));
+                    appointment.Id, business.BusinessId, appointment.EmployeeId, appointment.ClientUserId,
+                    appointment.ServiceId, appointment.StartDate, appointment.EndDate,
+                    dto.DelayMinutes, business.Language, DateTime.UtcNow));
             }
 
             if (affected.Count > 0)

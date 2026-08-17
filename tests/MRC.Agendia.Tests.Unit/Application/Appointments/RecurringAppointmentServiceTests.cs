@@ -400,10 +400,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         }
 
         private void ConfigureNotificationContext()
-            => _repository.GetNotificationContextAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-                .Returns(ci => new AppointmentNotificationContext(
-                    ci.Arg<Guid>(), TestIds.Of(10), TestIds.Of(2), "client-1", TestIds.Of(3),
-                    new DateTime(2030, 1, 1, 16, 0, 0), new DateTime(2030, 1, 1, 16, 30, 0), "es"));
+            => _repository.GetNotificationBusinessByEmployeeAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(new AppointmentNotificationBusiness(TestIds.Of(10), "es"));
 
         private static CreateAppointmentSeriesDto WeeklySeries(DateOnly start, DateOnly until) => new(
             ClientUserId: "client-1", EmployeeId: TestIds.Of(2), ServiceId: TestIds.Of(3),
