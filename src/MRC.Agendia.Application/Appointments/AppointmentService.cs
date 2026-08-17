@@ -16,6 +16,7 @@ namespace MRC.Agendia.Application.Appointments
     public class AppointmentService : IAppointmentService
     {
         private readonly IAppointmentRepository _repository;
+        private readonly IEmployeeRepository _employeeRepository;
         private readonly IAppointmentSchedulingValidator _schedulingValidator;
         private readonly IBookingConcurrencyGuard _bookingGuard;
         private readonly IClock _clock;
@@ -26,6 +27,7 @@ namespace MRC.Agendia.Application.Appointments
         private readonly IMapper _mapper;
 
         public AppointmentService(IAppointmentRepository repository,
+                                  IEmployeeRepository employeeRepository,
                                   IAppointmentSchedulingValidator schedulingValidator,
                                   IBookingConcurrencyGuard bookingGuard,
                                   IClock clock,
@@ -36,6 +38,7 @@ namespace MRC.Agendia.Application.Appointments
                                   IMapper mapper)
         {
             _repository = repository;
+            _employeeRepository = employeeRepository;
             _schedulingValidator = schedulingValidator;
             _bookingGuard = bookingGuard;
             _clock = clock;
@@ -315,11 +318,58 @@ namespace MRC.Agendia.Application.Appointments
 
             if (!entity.IsDeleted) return true;
 
+            // A past appointment, or one in a terminal status, cannot overbook anything: it is
+            // history coming back, so it returns exactly as it was. A FUTURE one that still
+            // occupies a slot has to fit, because the slot may well have been booked by someone
+            // else while this appointment was deleted (#294).
+            if (!entity.Status.OccupiesCapacity() || entity.StartDate < _clock.BusinessNow)
+            {
+                await ApplyRestoreAsync(entity, cancellationToken);
+                return true;
+            }
+
+            // Same critical section as booking: checking capacity and writing the restore have to
+            // be serialized against concurrent bookings for that employee and day, or two
+            // requests could each find the last seat free.
+            await _bookingGuard.ExecuteSerializedAsync(
+                entity.EmployeeId,
+                DateOnly.FromDateTime(entity.StartDate),
+                async () =>
+                {
+                    await EnsureSlotStillFitsAsync(entity, cancellationToken);
+                    await ApplyRestoreAsync(entity, cancellationToken);
+                },
+                cancellationToken);
+
+            return true;
+        }
+
+        private async Task ApplyRestoreAsync(Appointment entity, CancellationToken cancellationToken)
+        {
             entity.IsDeleted = false;
             entity.DeletedAt = null;
             _repository.Update(entity);
             await _unitOfWork.Save(cancellationToken);
-            return true;
+        }
+
+        // The employee must still have room for this appointment. It is counted excluding
+        // itself, and a soft-deleted employee needs no check at all: nobody can book them, so
+        // nothing can have taken the slot in the meantime.
+        private async Task EnsureSlotStillFitsAsync(Appointment entity, CancellationToken cancellationToken)
+        {
+            var employee = await _employeeRepository.GetByIdAsync(entity.EmployeeId, cancellationToken);
+            if (employee is null)
+                return;
+
+            var overlapping = await _repository.CountOverlappingForEmployeeAsync(
+                entity.EmployeeId, entity.StartDate, entity.EndDate, entity.Id, cancellationToken);
+
+            if (overlapping >= employee.MaxConcurrentAppointments)
+            {
+                throw new AppointmentConflictException(
+                    "The appointment cannot be restored: the slot was taken while it was deleted "
+                    + "and the employee would exceed their capacity.");
+            }
         }
         #endregion CRUD
 

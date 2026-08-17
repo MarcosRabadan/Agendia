@@ -24,6 +24,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
     public class AppointmentServiceTests
     {
         private readonly IAppointmentRepository _repository = Substitute.For<IAppointmentRepository>();
+        private readonly IEmployeeRepository _employeeRepository = Substitute.For<IEmployeeRepository>();
         private readonly IAppointmentSchedulingValidator _validator = Substitute.For<IAppointmentSchedulingValidator>();
         private readonly IBookingConcurrencyGuard _bookingGuard = Substitute.For<IBookingConcurrencyGuard>();
         private readonly IClock _clock = Substitute.For<IClock>();
@@ -59,7 +60,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                 .Returns(CancellationPolicySnapshot.None);
 
             _sut = new AppointmentService(
-                _repository, _validator, _bookingGuard, _clock,
+                _repository, _employeeRepository, _validator, _bookingGuard, _clock,
                 _waitlistService, _auditLogger, _currentUser, _unitOfWork, _mapper);
         }
 
@@ -482,6 +483,87 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             await _sut.UpdateAsync(dto);
 
             Assert.DoesNotContain(entity.DomainEvents, e => e is AppointmentRescheduled);
+        }
+
+        // ---------- Restore (#294) ----------
+        // Un-deleting a future appointment can overbook: the slot may have been booked by
+        // someone else while it was gone. Past or terminal ones cannot, so they come back as
+        // they were.
+
+        [Fact]
+        public async Task RestoreAsync_FranjaOcupada_LanzaConflicto()
+        {
+            var entity = DeletedFutureAppointment(out var start);
+            _repository.GetByIdIncludingDeletedAsync(entity.Id, Arg.Any<CancellationToken>()).Returns(entity);
+            _clock.BusinessNow.Returns(start.AddDays(-1));
+            _employeeRepository.GetByIdAsync(entity.EmployeeId, Arg.Any<CancellationToken>())
+                .Returns(new Employee { Id = entity.EmployeeId, MaxConcurrentAppointments = 1, IsActive = true });
+            // Someone else took the slot while this one was deleted.
+            _repository.CountOverlappingForEmployeeAsync(
+                    entity.EmployeeId, entity.StartDate, entity.EndDate, entity.Id, Arg.Any<CancellationToken>())
+                .Returns(1);
+
+            await Assert.ThrowsAsync<AppointmentConflictException>(() => _sut.RestoreAsync(entity.Id));
+
+            Assert.True(entity.IsDeleted);
+            await _unitOfWork.DidNotReceive().Save(Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task RestoreAsync_FranjaLibre_Restaura()
+        {
+            var entity = DeletedFutureAppointment(out var start);
+            _repository.GetByIdIncludingDeletedAsync(entity.Id, Arg.Any<CancellationToken>()).Returns(entity);
+            _clock.BusinessNow.Returns(start.AddDays(-1));
+            _employeeRepository.GetByIdAsync(entity.EmployeeId, Arg.Any<CancellationToken>())
+                .Returns(new Employee { Id = entity.EmployeeId, MaxConcurrentAppointments = 1, IsActive = true });
+            _repository.CountOverlappingForEmployeeAsync(
+                    entity.EmployeeId, entity.StartDate, entity.EndDate, entity.Id, Arg.Any<CancellationToken>())
+                .Returns(0);
+
+            Assert.True(await _sut.RestoreAsync(entity.Id));
+
+            Assert.False(entity.IsDeleted);
+            Assert.Null(entity.DeletedAt);
+        }
+
+        [Fact]
+        public async Task RestoreAsync_CitaPasada_RestauraSinComprobarCapacidad()
+        {
+            var entity = PastAppointment();
+            entity.IsDeleted = true;
+            _repository.GetByIdIncludingDeletedAsync(entity.Id, Arg.Any<CancellationToken>()).Returns(entity);
+            _clock.BusinessNow.Returns(new DateTime(2030, 1, 1));
+
+            Assert.True(await _sut.RestoreAsync(entity.Id));
+
+            Assert.False(entity.IsDeleted);
+            await _repository.DidNotReceive().CountOverlappingForEmployeeAsync(
+                Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task RestoreAsync_CitaCancelada_RestauraSinComprobarCapacidad()
+        {
+            var entity = DeletedFutureAppointment(out var start);
+            entity.Status = AppointmentStatus.Cancelled; // no longer occupies a slot
+            _repository.GetByIdIncludingDeletedAsync(entity.Id, Arg.Any<CancellationToken>()).Returns(entity);
+            _clock.BusinessNow.Returns(start.AddDays(-1));
+
+            Assert.True(await _sut.RestoreAsync(entity.Id));
+
+            Assert.False(entity.IsDeleted);
+            await _repository.DidNotReceive().CountOverlappingForEmployeeAsync(
+                Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+        }
+
+        private static Appointment DeletedFutureAppointment(out DateTime start)
+        {
+            start = new DateTime(2030, 5, 4, 10, 0, 0, DateTimeKind.Unspecified);
+            var entity = FutureAppointment(start);
+            entity.IsDeleted = true;
+            entity.DeletedAt = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            return entity;
         }
 
         private static Appointment FutureAppointment(DateTime start) => new()

@@ -221,6 +221,58 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
             Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
         }
 
+        /// <summary>
+        /// Restoring a future appointment cannot overbook (#294): while it was deleted the slot
+        /// was free, so someone else may well have taken it. The employee's capacity is 1 here,
+        /// so bringing the first one back would put two live appointments on one seat.
+        /// </summary>
+        [Fact]
+        public async Task RestoreAppointment_ConLaFranjaYaOcupada_DevuelveConflicto()
+        {
+            var (setup, _, appointment) = await BookWithClientAsync("sd-restore-full");
+
+            var delete = await BookableBusinessFactory.SendAsync(
+                _client, HttpMethod.Delete, $"/api/Appointment/{appointment.Id}", setup.OwnerToken);
+            delete.EnsureSuccessStatusCode();
+
+            // Another client takes the freed slot with the same employee.
+            var taken = await BookableBusinessFactory.PostAppointmentAsync(_client, setup.OwnerToken,
+                new CreateAppointmentDto(BookableBusinessFactory.CounterClientUserId(), setup.EmployeeId,
+                    setup.Service.Id, appointment.StartDate, appointment.EndDate, null));
+            Assert.Equal(HttpStatusCode.Created, taken.StatusCode);
+
+            var restore = await BookableBusinessFactory.SendAsync(
+                _client, HttpMethod.Post, $"/api/Appointment/{appointment.Id}/restore", NewAdminToken());
+
+            Assert.Equal(HttpStatusCode.BadRequest, restore.StatusCode);
+            var error = await restore.Content.ReadFromJsonAsync<ApiError>();
+            Assert.Equal("APPOINTMENT_CONFLICT", error!.Code);
+
+            // Still deleted: the rejection left nothing half-applied.
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
+            var stored = await db.Appointments.IgnoreQueryFilters().FirstAsync(a => a.Id == appointment.Id);
+            Assert.True(stored.IsDeleted);
+        }
+
+        /// <summary>Positive control: with the slot still free the restore goes through.</summary>
+        [Fact]
+        public async Task RestoreAppointment_ConLaFranjaLibre_Restaura()
+        {
+            var (setup, _, appointment) = await BookWithClientAsync("sd-restore-free");
+
+            var delete = await BookableBusinessFactory.SendAsync(
+                _client, HttpMethod.Delete, $"/api/Appointment/{appointment.Id}", setup.OwnerToken);
+            delete.EnsureSuccessStatusCode();
+
+            var restore = await BookableBusinessFactory.SendAsync(
+                _client, HttpMethod.Post, $"/api/Appointment/{appointment.Id}/restore", NewAdminToken());
+
+            Assert.Equal(HttpStatusCode.NoContent, restore.StatusCode);
+            var alive = await BookableBusinessFactory.GetAppointmentAsync(_client, setup.OwnerToken, appointment.Id);
+            Assert.Equal(appointment.Id, alive.Id);
+        }
+
         // ----- Helpers -----
 
         private const int SeriesYear = 2036;

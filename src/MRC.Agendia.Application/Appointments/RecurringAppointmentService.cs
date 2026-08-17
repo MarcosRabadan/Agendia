@@ -66,6 +66,11 @@ namespace MRC.Agendia.Application.Appointments
             var expansion = RecurrenceExpander.Expand(
                 dto.Frequency, dto.Interval, dto.DaysOfWeek, dto.DayOfMonth, from, dto.UntilDate);
 
+            // Same initial status as a single booking: the one the business configured (#294).
+            // Resolved ONCE for the whole series - every occurrence shares the employee, so it
+            // shares the business too.
+            var initialStatus = await _repository.GetBusinessDefaultStatusByEmployeeAsync(dto.EmployeeId, cancellationToken);
+
             // UUIDv7 (time-ordered) like the entity PKs: SeriesId is indexed
             // (IX_Appointment_SeriesId), so a sequential id keeps that index local.
             var seriesId = Guid.CreateVersion7();
@@ -106,7 +111,7 @@ namespace MRC.Agendia.Application.Appointments
                             ServiceId = dto.ServiceId,
                             StartDate = start,
                             EndDate = end,
-                            Status = AppointmentStatus.Pending,
+                            Status = initialStatus,
                             Notes = dto.Notes,
                             SeriesId = seriesId
                         };

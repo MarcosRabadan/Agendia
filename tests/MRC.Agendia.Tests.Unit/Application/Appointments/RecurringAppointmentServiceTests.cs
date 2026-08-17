@@ -139,6 +139,36 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             await _repository.DidNotReceive().AddAsync(Arg.Any<Appointment>(), Arg.Any<CancellationToken>());
         }
 
+        // #294: a series is a booking like any other, so its occurrences start in the status the
+        // business configured. Forcing Pending left an academy whose default is Confirmed having
+        // to confirm every single class of the course by hand.
+        [Theory]
+        [InlineData(AppointmentStatus.Confirmed)]
+        [InlineData(AppointmentStatus.Pending)]
+        public async Task CreateSeriesAsync_UsaElEstadoPorDefectoDelNegocio(AppointmentStatus defaultStatus)
+        {
+            _repository.GetBusinessDefaultStatusByEmployeeAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(defaultStatus);
+            var start = new DateOnly(2030, 1, 7);
+            var dto = WeeklySeries(start, until: start.AddDays(14)); // 3 occurrences
+
+            var result = await _sut.CreateSeriesAsync(dto);
+
+            Assert.Equal(3, result.Created.Count);
+            Assert.All(result.Created, c => Assert.Equal(defaultStatus, c.Status));
+        }
+
+        // Resolved once for the whole series: one employee means one business.
+        [Fact]
+        public async Task CreateSeriesAsync_ResuelveElEstadoPorDefectoUnaSolaVez()
+        {
+            var start = new DateOnly(2030, 1, 7);
+            await _sut.CreateSeriesAsync(WeeklySeries(start, until: start.AddDays(14)));
+
+            await _repository.Received(1).GetBusinessDefaultStatusByEmployeeAsync(
+                Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        }
+
         [Fact]
         public async Task CreateSeriesAsync_ServicioInexistente_Lanza()
         {
