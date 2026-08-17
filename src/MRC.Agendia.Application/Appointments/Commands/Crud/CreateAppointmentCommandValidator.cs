@@ -1,4 +1,5 @@
 using FluentValidation;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Enums;
 
 namespace MRC.Agendia.Application.Appointments.Commands.Crud
@@ -12,11 +13,13 @@ namespace MRC.Agendia.Application.Appointments.Commands.Crud
             RuleFor(x => x.Dto.EmployeeId).NotEmpty();
             RuleFor(x => x.Dto.ServiceId).NotEmpty();
             RuleFor(x => x.Dto.StartDate)
-                .NotEqual(default(DateTime)).WithMessage("StartDate is required.");
+                .NotEqual(default(DateTime)).WithMessage("StartDate is required.")
+                .MustBeWallClock();
             RuleFor(x => x.Dto.EndDate)
                 .NotEqual(default(DateTime)).WithMessage("EndDate is required.")
                 .GreaterThan(x => x.Dto.StartDate)
-                .WithMessage("EndDate must be after StartDate.");
+                .WithMessage("EndDate must be after StartDate.")
+                .MustBeWallClock();
             RuleFor(x => x.Dto.Notes).MaximumLength(2000);
             RuleFor(x => x.Dto.Status)
                 .Must(s => !s.HasValue || s.Value.IsValidInitialStatus())

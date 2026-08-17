@@ -202,6 +202,58 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
             => new GetAppointmentsByDateRangeQueryValidator()
                 .Check(new GetAppointmentsByDateRangeQuery(TestIds.Of(1), Start, Start.AddDays(400))).ShouldFailOn("");
 
+        // ---------- Wall-clock dates (#290) ----------
+        // The agenda's dates are wall-clock times: a value carrying a zone (Kind Utc from
+        // "Z", Local from an offset) must be rejected here, before it reaches a
+        // `timestamp without time zone` column that would refuse it or shift it silently.
+
+        [Theory]
+        [InlineData(DateTimeKind.Utc)]
+        [InlineData(DateTimeKind.Local)]
+        public void Create_zoned_dates_fail(DateTimeKind kind)
+        {
+            var result = new CreateAppointmentCommandValidator().Check(new CreateAppointmentCommand(
+                ValidCreate() with
+                {
+                    StartDate = DateTime.SpecifyKind(Start, kind),
+                    EndDate = DateTime.SpecifyKind(End, kind)
+                }));
+
+            result.ShouldFailOn("Dto.StartDate");
+            result.ShouldFailOn("Dto.EndDate");
+        }
+
+        [Theory]
+        [InlineData(DateTimeKind.Utc)]
+        [InlineData(DateTimeKind.Local)]
+        public void Update_zoned_dates_fail(DateTimeKind kind)
+        {
+            var result = new UpdateAppointmentCommandValidator().Check(new UpdateAppointmentCommand(
+                ValidUpdate() with
+                {
+                    StartDate = DateTime.SpecifyKind(Start, kind),
+                    EndDate = DateTime.SpecifyKind(End, kind)
+                }));
+
+            result.ShouldFailOn("Dto.StartDate");
+            result.ShouldFailOn("Dto.EndDate");
+        }
+
+        [Theory]
+        [InlineData(DateTimeKind.Utc)]
+        [InlineData(DateTimeKind.Local)]
+        public void ByDateRange_zoned_bounds_fail(DateTimeKind kind)
+        {
+            var result = new GetAppointmentsByDateRangeQueryValidator().Check(
+                new GetAppointmentsByDateRangeQuery(
+                    TestIds.Of(1),
+                    DateTime.SpecifyKind(Start, kind),
+                    DateTime.SpecifyKind(Start.AddDays(30), kind)));
+
+            result.ShouldFailOn("StartDate");
+            result.ShouldFailOn("EndDate");
+        }
+
         [Theory]
         [InlineData(0, 50, "Page")]
         [InlineData(1, 0, "PageSize")]

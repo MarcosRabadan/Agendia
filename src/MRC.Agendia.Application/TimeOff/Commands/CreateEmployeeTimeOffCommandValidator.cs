@@ -1,4 +1,5 @@
 using FluentValidation;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Constants;
 
 namespace MRC.Agendia.Application.TimeOff.Commands
@@ -17,13 +18,15 @@ namespace MRC.Agendia.Application.TimeOff.Commands
 
             RuleFor(x => x.Dto.Start)
                 .Must(BeWithinSupportedDates)
-                .WithMessage(SchedulingLimits.OutOfRangeMessage);
+                .WithMessage(SchedulingLimits.OutOfRangeMessage)
+                .MustBeWallClock();
 
             RuleFor(x => x.Dto.End)
                 .Must(BeWithinSupportedDates)
                 .WithMessage(SchedulingLimits.OutOfRangeMessage)
                 .GreaterThan(x => x.Dto.Start)
-                .WithMessage("End must be after Start.");
+                .WithMessage("End must be after Start.")
+                .MustBeWallClock();
 
             RuleFor(x => x.Dto)
                 .Must(d => (d.End - d.Start).TotalDays <= MaxDurationDays)

@@ -33,6 +33,17 @@ El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan 
 | `NOT_FOUND` | 404 | Recurso no encontrado sin tipar (fallback heredado). |
 | `INTERNAL_ERROR` | 500 | Excepción no controlada. |
 
+> **Fechas de agenda: hora de pared, sin zona (#290).** El inicio/fin de una cita y el rango
+> de un bloqueo de empleado (time-off) son **hora de pared** en la zona del negocio
+> (`Scheduling:TimeZone`), no instantes UTC. Deben enviarse **sin sufijo de zona**:
+> `"2026-09-01T09:00:00"`. Un valor con `Z` o con offset (`+02:00`) se rechaza con 400
+> `VALIDATION_ERROR` y el campo señalado en `errors`, tanto en el body (`POST`/`PUT
+> /api/Appointment`, `POST /api/employees/{id}/time-off`) como en la query
+> (`GET /api/Appointment/business/{id}?startDate=&endDate=`). El motivo es que `"09:00Z"`
+> designa otro momento que las 09:00 en Madrid: aceptarlo llevaba a reservar a una hora
+> distinta de la pedida. Esto **no** afecta a los filtros que sí son instantes UTC, como
+> `from`/`to` de `GET /api/admin/audit-logs`, donde la zona es correcta.
+
 ## Dominio — recursos no encontrados (404)
 
 | Code | Excepción |
