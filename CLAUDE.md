@@ -346,6 +346,8 @@ Repository (EF Core / Npgsql) → PostgreSQL
 - **Series recurrentes:** materializa una `Appointment` por ocurrencia (reusa validador+guard),
   comparten `SeriesId`; "saltar y avisar" en choques de fecha; gestión por serie (cancelar/mover/
   borrar futuras). En creación masiva no se publica evento por cita (solo el recordatorio 24h).
+  El **estado inicial** es el `DefaultAppointmentStatus` del negocio, igual que el alta
+  individual, resuelto una sola vez para toda la serie (#294).
   **Qué salta y qué aborta (#291):** cada ocurrencia commitea en su propia transacción, así que
   `RecurringAppointmentService.IsRequestLevel` enumera lo que tumba la petición entera (404,
   empleado inactivo, mismatch de negocio, duración) y **todo lo demás se salta y se reporta**.
@@ -397,6 +399,10 @@ Repository (EF Core / Npgsql) → PostgreSQL
   soft delete; global query filters `!IsDeleted`; `POST /api/{recurso}/{id}/restore` (Admin).
   **Sin cascada, se conserva el historial.** Las lecturas que cargan padres usan
   `IgnoreQueryFilters()` + `Where(!IsDeleted)` para no descartar la cita por un padre soft-deleted.
+  **Restaurar una CITA valida capacidad** (#294): si es futura y sigue ocupando plaza
+  (Pending/Confirmed), la comprobación va dentro del `IBookingConcurrencyGuard` y devuelve 400
+  `APPOINTMENT_CONFLICT` cuando la franja se ocupó mientras estaba borrada. Una cita pasada o en
+  estado terminal vuelve tal cual: no puede provocar overbooking.
 - **`RepositoryBase<T>`** centraliza el CRUD plano; los repos lo heredan. Preservar la semántica
   (FindAsync, AsNoTracking, IgnoreQueryFilters) al tocarlo.
 - **`FindAsync` aplica los query filters** (decisión aceptada; `GetByIdAsync` devuelve null para
