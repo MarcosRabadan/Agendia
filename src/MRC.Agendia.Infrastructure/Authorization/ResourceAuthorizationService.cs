@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Domain.Constants;
+using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Exceptions;
 
 namespace MRC.Agendia.Infrastructure.Authorization
@@ -14,11 +15,15 @@ namespace MRC.Agendia.Infrastructure.Authorization
     {
         private readonly AgendiaDbContext _context;
         private readonly ICurrentUserContext _currentUser;
+        private readonly ICurrentBusinessScope _businessScope;
 
-        public ResourceAuthorizationService(AgendiaDbContext context, ICurrentUserContext currentUser)
+        public ResourceAuthorizationService(AgendiaDbContext context,
+                                            ICurrentUserContext currentUser,
+                                            ICurrentBusinessScope businessScope)
         {
             _context = context;
             _currentUser = currentUser;
+            _businessScope = businessScope;
         }
 
         private string RequireUserId()
@@ -124,14 +129,38 @@ namespace MRC.Agendia.Infrastructure.Authorization
 
         // ---------- APPOINTMENT ----------
 
+        /// <summary>Appointments as resource authorization must see them.</summary>
+        /// <remarks>
+        /// Both appointment checks reach the owning business through the required
+        /// <c>Appointment -> Employee -> Business</c> navigations, and both parents carry a
+        /// soft-delete query filter. EF applies that filter to the INNER JOIN, which DROPS the
+        /// appointment as soon as a participant is soft-deleted: the client of a live future
+        /// booking was getting a 404 for their own appointment because the employee had left
+        /// the business, and so was the owner (#292). An appointment keeps its history, so the
+        /// filters come off here - and the two conditions that DO apply are re-stated, because
+        /// <c>IgnoreQueryFilters</c> is all-or-nothing in EF 9:
+        /// <list type="bullet">
+        /// <item>the appointment itself must not be soft-deleted (a deleted one stays a 404);</item>
+        /// <item>the caller's business scope still applies, so another tenant's appointment
+        /// stays invisible as a 404 instead of becoming a 403 that would confirm it exists
+        /// (the R7 convention).</item>
+        /// </list>
+        /// </remarks>
+        private IQueryable<Appointment> AppointmentsForAuthorization()
+            => _context.Appointments
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Where(a => !a.IsDeleted
+                    && (!_businessScope.IsRestricted
+                        || _businessScope.BusinessIds.Contains(a.Employee.BusinessId)));
+
         /// <inheritdoc />
         public async Task EnsureCanManageAppointmentAsync(Guid appointmentId, CancellationToken cancellationToken = default)
         {
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
 
-            var appointment = await _context.Appointments
-                .AsNoTracking()
+            var appointment = await AppointmentsForAuthorization()
                 .Where(a => a.Id == appointmentId)
                 .Select(a => new
                 {
@@ -203,8 +232,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
         {
             // Resolve the owning business from any (live) appointment of the series.
             // Doubles as an existence check: an empty series is a 404.
-            var businessId = await _context.Appointments
-                .AsNoTracking()
+            var businessId = await AppointmentsForAuthorization()
                 .Where(a => a.SeriesId == seriesId)
                 .Select(a => (Guid?)a.Employee.BusinessId)
                 .FirstOrDefaultAsync(cancellationToken);
