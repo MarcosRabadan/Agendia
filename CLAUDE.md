@@ -333,6 +333,11 @@ Repository (EF Core / Npgsql) → PostgreSQL
 - **Series recurrentes:** materializa una `Appointment` por ocurrencia (reusa validador+guard),
   comparten `SeriesId`; "saltar y avisar" en choques de fecha; gestión por serie (cancelar/mover/
   borrar futuras). En creación masiva no se publica evento por cita (solo el recordatorio 24h).
+  **Qué salta y qué aborta (#291):** cada ocurrencia commitea en su propia transacción, así que
+  `RecurringAppointmentService.IsRequestLevel` enumera lo que tumba la petición entera (404,
+  empleado inactivo, mismatch de negocio, duración) y **todo lo demás se salta y se reporta**.
+  Si añades una excepción propia de UNA fecha, no toques nada: ya degrada a skip. Si añades una
+  de nivel petición, métela en esa lista o se reportará N veces como skip.
 - **Cancelación self-service:** `Business.CancellationWindowHours` (null = sin restricción); un
   Client no cancela/reprograma dentro de la ventana → 400 `CANCELLATION_WINDOW_ELAPSED`.
 - **Política por tramos (#270), aditiva:** un negocio puede definir `CancellationPolicyTier`s

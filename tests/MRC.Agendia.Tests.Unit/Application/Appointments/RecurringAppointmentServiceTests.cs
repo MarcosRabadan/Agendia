@@ -91,6 +91,54 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             await _repository.Received(3).AddAsync(Arg.Any<Appointment>(), Arg.Any<CancellationToken>());
         }
 
+        // A time-off block (#271) and a waitlist hold (#268) are properties of ONE date, just
+        // like a closed day or a full slot: the occurrence is skipped and reported, and the
+        // rest of the series still gets booked (#291).
+        [Theory]
+        [InlineData("EMPLOYEE_UNAVAILABLE")]
+        [InlineData("SLOT_ON_HOLD")]
+        public async Task CreateSeriesAsync_OcurrenciaConBloqueoDeFecha_SeSaltaYSeReporta(string expectedCode)
+        {
+            var start = new DateOnly(2030, 1, 7);
+            var dto = WeeklySeries(start, until: start.AddDays(21)); // 4 occurrences
+
+            // The 2nd occurrence hits the date-specific block; the rest fit.
+            _validator.EnsureValidAsync(
+                    Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+                .Returns(
+                    Task.CompletedTask,
+                    Task.FromException(DateSpecificFailure(expectedCode)),
+                    Task.CompletedTask,
+                    Task.CompletedTask);
+
+            var result = await _sut.CreateSeriesAsync(dto);
+
+            Assert.Equal(3, result.Created.Count);
+            var skip = Assert.Single(result.Skipped);
+            Assert.Equal(expectedCode, skip.Code);
+            Assert.Equal(start.AddDays(7), skip.Date);
+            await _repository.Received(3).AddAsync(Arg.Any<Appointment>(), Arg.Any<CancellationToken>());
+        }
+
+        // The mirror of the rule: a failure that condemns the whole request (here an inactive
+        // employee) is not date-specific, so retrying other dates is pointless and it must
+        // propagate instead of being reported 4 times as a skip.
+        [Fact]
+        public async Task CreateSeriesAsync_FalloDeNivelPeticion_Lanza()
+        {
+            var start = new DateOnly(2030, 1, 7);
+            var dto = WeeklySeries(start, until: start.AddDays(21));
+
+            _validator.EnsureValidAsync(
+                    Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromException(new EmployeeInactiveException()));
+
+            await Assert.ThrowsAsync<EmployeeInactiveException>(() => _sut.CreateSeriesAsync(dto));
+            await _repository.DidNotReceive().AddAsync(Arg.Any<Appointment>(), Arg.Any<CancellationToken>());
+        }
+
         [Fact]
         public async Task CreateSeriesAsync_ServicioInexistente_Lanza()
         {
@@ -183,6 +231,36 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             Assert.Equal(new DateTime(2030, 2, 8, 10, 0, 0), a1.StartDate);
             Assert.Null(a1.ReminderSentAt);
             Assert.Equal(new DateTime(2030, 2, 8, 10, 0, 0), a2.StartDate);
+        }
+
+        [Theory]
+        [InlineData("EMPLOYEE_UNAVAILABLE")]
+        [InlineData("SLOT_ON_HOLD")]
+        public async Task MoveSeriesAsync_DestinoConBloqueoDeFecha_SeSaltaYSeReporta(string expectedCode)
+        {
+            var seriesId = Guid.NewGuid();
+            var a1 = Appt(1, new DateTime(2030, 2, 1, 10, 0, 0), AppointmentStatus.Confirmed, seriesId);
+            a1.EndDate = new DateTime(2030, 2, 1, 10, 30, 0);
+            var a2 = Appt(2, new DateTime(2030, 2, 8, 10, 0, 0), AppointmentStatus.Confirmed, seriesId);
+            a2.EndDate = new DateTime(2030, 2, 8, 10, 30, 0);
+            _repository.GetBySeriesIdAsync(seriesId, Arg.Any<CancellationToken>())
+                .Returns(new List<Appointment> { a1, a2 });
+
+            // a1 moves fine; a2's target date is blocked, so only that occurrence is skipped.
+            _validator.EnsureValidAsync(
+                    Arg.Any<Guid?>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
+                    Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+                .Returns(
+                    Task.CompletedTask,
+                    Task.FromException(DateSpecificFailure(expectedCode)));
+
+            var result = await _sut.MoveSeriesAsync(seriesId, new MoveAppointmentSeriesDto(NewStartTime: null, DayShift: 7));
+
+            Assert.Single(result.Moved);
+            var skip = Assert.Single(result.Skipped);
+            Assert.Equal(expectedCode, skip.Code);
+            Assert.Equal(new DateTime(2030, 2, 8, 10, 0, 0), a1.StartDate);  // moved +7
+            Assert.Equal(new DateTime(2030, 2, 8, 10, 0, 0), a2.StartDate);  // left untouched
         }
 
         [Fact]
@@ -349,5 +427,13 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
         private static AppointmentDto ToDto(Appointment a) =>
             new(a.Id, a.ClientUserId, a.EmployeeId, a.ServiceId, a.StartDate, a.EndDate, a.Status, a.Notes, a.SeriesId);
+
+        /// <summary>The date-specific rejections that must be skipped per occurrence, by code.</summary>
+        private static DomainException DateSpecificFailure(string code) => code switch
+        {
+            "EMPLOYEE_UNAVAILABLE" => new EmployeeUnavailableException(),
+            "SLOT_ON_HOLD" => new SlotOnHoldException(),
+            _ => throw new ArgumentOutOfRangeException(nameof(code), code, "Unmapped failure code.")
+        };
     }
 }
