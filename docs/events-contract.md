@@ -32,9 +32,9 @@ por `clientUserId` (el `sub` de Harmony).
 
 | `Type`                 | Cuándo                                                  |
 |------------------------|--------------------------------------------------------|
-| `AppointmentConfirmed` | Al crear una cita.                                     |
-| `AppointmentCancelled` | Al pasar una cita a `Cancelled`.                       |
-| `AppointmentRescheduled` | Al mover una cita a otro horario (no en una cancelacion). |
+| `AppointmentConfirmed` | Al crear una cita, y al **reasignarla a otro cliente** (para el que entra, #296). |
+| `AppointmentCancelled` | Al pasar una cita a `Cancelled`, al **borrarla** estando viva (`DELETE`, #296) y al **reasignarla a otro cliente** (para el que sale, con su `clientUserId`). |
+| `AppointmentRescheduled` | Al mover una cita a otro horario (no en una cancelación ni en un cambio de titular). |
 | `AppointmentReminder`  | Job de recordatorio 24h (idempotente por `ReminderSentAt`). |
 | `AppointmentDelayed`   | El personal avisa de un retraso, por cita afectada.   |
 | `WaitlistSlotAvailable`| Se libera una franja que un cliente esperaba (FIFO). Lleva `holdUntil`: la franja queda **reservada para él** hasta ese instante (#268). |
@@ -42,8 +42,16 @@ por `clientUserId` (el `sub` de Harmony).
 > **Series:** las operaciones de serie emiten los mismos eventos **por ocurrencia**: crear una
 > serie emite un `AppointmentConfirmed` por cita creada; cancelar una serie, un
 > `AppointmentCancelled` por ocurrencia futura cancelada; mover una serie, un
-> `AppointmentRescheduled` por ocurrencia movida. Borrar una serie no emite evento (igual que
-> la cita individual).
+> `AppointmentRescheduled` por ocurrencia movida. **Borrar una serie sigue sin emitir evento**,
+> a diferencia ya de la cita individual, cuyo `DELETE` sí avisa desde #296: la decisión se tomó
+> para el endpoint individual y la de serie está pendiente de decidir.
+
+> **Un update, un solo evento.** El update de una cita elige **uno** según lo que cambió, por
+> este orden: si pasa a `Cancelled` → `AppointmentCancelled`; si cambia de titular →
+> `AppointmentCancelled` (para el anterior) + `AppointmentConfirmed` (para el nuevo, ya con la
+> hora final); si solo cambia el horario → `AppointmentRescheduled`. Un cambio de titular que
+> además mueve la cita **no** emite además un `AppointmentRescheduled`: los dos eventos de
+> arriba ya llevan la hora definitiva.
 
 ### Payload de los eventos de cita
 

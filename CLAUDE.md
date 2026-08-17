@@ -340,6 +340,13 @@ Repository (EF Core / Npgsql) → PostgreSQL
   `GetNotificationBusinessByEmployeeAsync(appointment.EmployeeId)`. Releer el contexto por
   `appointmentId` describía el estado ANTERIOR: mover una cita a otra empleada anunciaba la
   empleada de la que venía. Si añades un evento, cópialo de ahí y no de la fila.
+- **Qué evento emite un update (#296),** por orden de precedencia: pasa a `Cancelled` →
+  `AppointmentCancelled`; cambia de titular → `AppointmentCancelled` (con el `clientUserId`
+  **anterior**) + `AppointmentConfirmed` (con el nuevo, ya con la hora final); solo cambia el
+  horario → `AppointmentRescheduled`. Un cambio de titular **no** emite además el de movida.
+  Y el **`DELETE` de una cita viva emite `AppointmentCancelled`** igual que el `PUT`: el mismo
+  acto no puede notificar o no según el verbo. Borrar una **serie** sigue sin emitir evento,
+  pendiente de decidir.
 
 ### Citas y disponibilidad
 - **`Employee.MaxConcurrentAppointments`** (default 1): modela capacidad (clase grupal, sala…).
@@ -392,6 +399,9 @@ Repository (EF Core / Npgsql) → PostgreSQL
   se entera). El validador exige un tramo de 0h (así todo momento cae en uno) y umbrales únicos.
   El tramo `NotAllowed` lanza el mismo `CANCELLATION_WINDOW_ELAPSED` de siempre; los demás
   **permiten** cancelar y devuelven el tramo aplicado en `AppointmentDto.AppliedCancellationTier`.
+  Los tramos rigen **cancelar y reprogramar por igual**, y desde #296 el tramo se devuelve
+  también al reprogramar (antes se calculaba y se tiraba, así que mover una clase bajo un tramo
+  del 50% se respondía como si fuese gratis).
   **Agendia NO cobra la penalización**: solo expone la regla (el dinero es de gestión/pagos, #172).
 - **Time-off de empleado (#271):** `EmployeeTimeOff` (rango **hora de pared**, semiabierto
   `[Start, End)`) bloquea a **un** empleado sin tocar la plantilla anual:
