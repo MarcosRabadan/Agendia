@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using MRC.Agendia.Application.Authorization;
 using MRC.Agendia.Domain.Constants;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
@@ -338,6 +339,43 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             await sut.EnsureCanManageAppointmentAsync(Appointment1Id);
         }
 
+        // #292: an appointment keeps its history when a participant is soft-deleted. Reaching
+        // the owning business through the required Employee navigation used to drop the row
+        // (the parent's soft-delete filter applied to the INNER JOIN), so a live booking
+        // turned into a 404 for the very people entitled to it.
+
+        [Fact]
+        public async Task ManageAppointment_ClientOfAppointment_WithDeletedEmployee_Passes()
+        {
+            var (sut, db) = await BuildAsync(AsUser(ClientUserId).WithRole(Roles.Client));
+            await SoftDeleteAppointmentEmployeeAsync(db);
+
+            await sut.EnsureCanManageAppointmentAsync(Appointment1Id);
+        }
+
+        [Fact]
+        public async Task ManageAppointment_OwnerOfBusiness_WithDeletedEmployee_Passes()
+        {
+            var (sut, db) = await BuildAsync(AsUser(OwnerUserId));
+            await SoftDeleteAppointmentEmployeeAsync(db);
+
+            await sut.EnsureCanManageAppointmentAsync(Appointment1Id);
+        }
+
+        // The other half of dropping the filters: the appointment's own soft delete still
+        // hides it, so a deleted booking is a 404 and not something its client can act on.
+        [Fact]
+        public async Task ManageAppointment_SoftDeletedAppointment_ThrowsNotFound()
+        {
+            var (sut, db) = await BuildAsync(AsUser(ClientUserId).WithRole(Roles.Client));
+            var appointment = await db.Appointments.FirstAsync(a => a.Id == Appointment1Id);
+            appointment.IsDeleted = true;
+            await db.SaveChangesAsync();
+
+            await Assert.ThrowsAnyAsync<NotFoundException>(
+                () => sut.EnsureCanManageAppointmentAsync(Appointment1Id));
+        }
+
         [Fact]
         public async Task ManageAppointment_OwnerOfDifferentBusiness_Throws()
         {
@@ -513,19 +551,32 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
 
         private static async Task<(ResourceAuthorizationService sut, AgendiaDbContext db)> BuildAsync(FakeCurrentUserContext currentUser)
         {
-            var db = CreateDb();
+            // The same scope instance the context filters with, so both agree on what the
+            // caller may see. Unrestricted here: the cross-tenant 404 that a restricted scope
+            // produces is covered end-to-end in SoftDeleteIntegrationTests, with the real
+            // CurrentBusinessScope resolving from a token.
+            var businessScope = new UnrestrictedBusinessScope();
+            var db = CreateDb(businessScope);
             await SeedDefaultGraphAsync(db);
-            var sut = new ResourceAuthorizationService(db, currentUser);
+            var sut = new ResourceAuthorizationService(db, currentUser, businessScope);
             return (sut, db);
         }
 
-        private static AgendiaDbContext CreateDb()
+        private static AgendiaDbContext CreateDb(ICurrentBusinessScope businessScope)
         {
             var options = new DbContextOptionsBuilder<AgendiaDbContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
                 .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
                 .Options;
-            return new AgendiaDbContext(options, new UnrestrictedBusinessScope());
+            return new AgendiaDbContext(options, businessScope);
+        }
+
+        /// <summary>Soft-deletes the appointment's employee, as a business dropping a member does.</summary>
+        private static async Task SoftDeleteAppointmentEmployeeAsync(AgendiaDbContext db)
+        {
+            var employee = await db.Employees.FirstAsync(e => e.Id == EmployeeActiveId);
+            employee.IsDeleted = true;
+            await db.SaveChangesAsync();
         }
 
         private static async Task SeedDefaultGraphAsync(AgendiaDbContext db)
