@@ -254,6 +254,37 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
             result.ShouldFailOn("EndDate");
         }
 
+        // ---------- Absolute date bounds (#295) ----------
+        // The series and schedule validators have always bounded their dates to
+        // SchedulingLimits so a wild value is a 400 and never an overflow deeper down
+        // (DateOnly.AddDays throws near MaxValue). The appointment ones now do the same.
+
+        [Theory]
+        [InlineData(1899)]
+        [InlineData(9999)]
+        public void Create_date_out_of_supported_range_fails(int year)
+        {
+            var wild = new DateTime(year, 6, 1, 10, 0, 0);
+            var result = new CreateAppointmentCommandValidator().Check(new CreateAppointmentCommand(
+                ValidCreate() with { StartDate = wild, EndDate = wild.AddMinutes(30) }));
+
+            result.ShouldFailOn("Dto.StartDate");
+            result.ShouldFailOn("Dto.EndDate");
+        }
+
+        [Theory]
+        [InlineData(1899)]
+        [InlineData(9999)]
+        public void Update_date_out_of_supported_range_fails(int year)
+        {
+            var wild = new DateTime(year, 6, 1, 10, 0, 0);
+            var result = new UpdateAppointmentCommandValidator().Check(new UpdateAppointmentCommand(
+                ValidUpdate() with { StartDate = wild, EndDate = wild.AddMinutes(30) }));
+
+            result.ShouldFailOn("Dto.StartDate");
+            result.ShouldFailOn("Dto.EndDate");
+        }
+
         [Theory]
         [InlineData(0, 50, "Page")]
         [InlineData(1, 0, "PageSize")]

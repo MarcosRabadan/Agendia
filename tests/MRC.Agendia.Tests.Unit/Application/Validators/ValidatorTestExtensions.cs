@@ -19,7 +19,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
 
         public static void ShouldBeValid(this ValidationResult result)
             => Assert.True(result.IsValid,
-                "Se esperaba valido pero fallo: " + string.Join(" | ",
+                "Expected valid but it failed: " + string.Join(" | ",
                     result.Errors.Select(e => e.PropertyName + ": " + e.ErrorMessage)));
 
         /// <summary>Asserts the result is invalid and that <paramref name="propertyName"/> is among the failures.</summary>
@@ -27,7 +27,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
         {
             Assert.False(result.IsValid);
             Assert.True(result.Failed(propertyName),
-                $"Se esperaba un error en '{propertyName}'. Errores: " + string.Join(" | ",
+                $"Expected an error on '{propertyName}'. Errors: " + string.Join(" | ",
                     result.Errors.Select(e => e.PropertyName)));
         }
     }

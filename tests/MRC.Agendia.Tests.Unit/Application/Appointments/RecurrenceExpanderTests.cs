@@ -23,7 +23,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             Assert.All(result.Dates, d => Assert.Equal(from.DayOfWeek, d.DayOfWeek));
             for (var i = 1; i < result.Dates.Count; i++)
                 Assert.Equal(7, result.Dates[i].DayNumber - result.Dates[i - 1].DayNumber);
-            Assert.Empty(result.ShortMonths);
+            Assert.Empty(result.Skipped);
         }
 
         [Fact]
@@ -108,9 +108,67 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                 from: new DateOnly(2026, 1, 31), until: new DateOnly(2026, 4, 30));
 
             Assert.Equal(new[] { new DateOnly(2026, 1, 31), new DateOnly(2026, 3, 31) }, result.Dates);
-            Assert.Equal(2, result.ShortMonths.Count); // February and April
-            Assert.Contains(new DateOnly(2026, 2, 1), result.ShortMonths);
-            Assert.Contains(new DateOnly(2026, 4, 1), result.ShortMonths);
+            // February and April, reported as skips carrying the calendar code.
+            Assert.Equal(2, result.Skipped.Count);
+            Assert.All(result.Skipped, s => Assert.Equal(RecurrenceExpander.MonthWithoutDayCode, s.Code));
+            Assert.Contains(result.Skipped, s => s.Date == new DateOnly(2026, 2, 1));
+            Assert.Contains(result.Skipped, s => s.Date == new DateOnly(2026, 4, 1));
+        }
+
+        // #295: the pattern used to be trimmed at the cap in silence, so a caller who asked for
+        // a class every day of the year got fewer than requested with nothing to explain it.
+        [Fact]
+        public void OverTheCap_TrimsButReportsWhatItDropped()
+        {
+            var from = new DateOnly(2030, 1, 1);
+            var everyDay = Enum.GetValues<DayOfWeek>();
+
+            var result = RecurrenceExpander.Expand(
+                RecurrenceFrequency.Weekly, interval: 1,
+                daysOfWeek: everyDay, dayOfMonth: null, from, until: from.AddDays(400));
+
+            Assert.Equal(RecurrenceExpander.MaxOccurrences, result.Dates.Count);
+            Assert.NotEmpty(result.Skipped);
+            Assert.All(result.Skipped, s => Assert.Equal(RecurrenceExpander.LimitReachedCode, s.Code));
+            // What it dropped is the tail, so every reported date is after the last kept one.
+            Assert.All(result.Skipped, s => Assert.True(s.Date > result.Dates[^1]));
+        }
+
+        // #295: a monthly day that had already gone by when the series starts is reported too.
+        // Otherwise a series whose only candidate is in the past comes back with no dates AND no
+        // skips, which reads as "nothing happened".
+        [Fact]
+        public void Monthly_DayAlreadyPassedInTheFirstMonth_IsReported()
+        {
+            var result = RecurrenceExpander.Expand(
+                RecurrenceFrequency.Monthly, interval: 1,
+                daysOfWeek: null, dayOfMonth: 10,
+                from: new DateOnly(2026, 8, 16), until: new DateOnly(2026, 8, 31));
+
+            Assert.Empty(result.Dates);
+            var skip = Assert.Single(result.Skipped);
+            Assert.Equal(RecurrenceExpander.DayAlreadyPassedCode, skip.Code);
+            Assert.Equal(new DateOnly(2026, 8, 10), skip.Date);
+        }
+
+        /// <summary>
+        /// The mirror: weekday candidates of the anchor week that precede the start date are NOT
+        /// reported. They fall outside the window the caller asked for, so nothing was lost and
+        /// reporting them would just be noise.
+        /// </summary>
+        [Fact]
+        public void Weekly_DatesBeforeTheStart_AreNotReported()
+        {
+            // From a Wednesday, asking for Mondays and Fridays: that week's Monday is behind us.
+            var result = RecurrenceExpander.Expand(
+                RecurrenceFrequency.Weekly, interval: 1,
+                daysOfWeek: new[] { DayOfWeek.Monday, DayOfWeek.Friday }, dayOfMonth: null,
+                from: new DateOnly(2030, 1, 9), until: new DateOnly(2030, 1, 15));
+
+            Assert.Equal(
+                new[] { new DateOnly(2030, 1, 11), new DateOnly(2030, 1, 14) }, // Fri, Mon
+                result.Dates);
+            Assert.Empty(result.Skipped);
         }
 
         [Fact]
@@ -135,7 +193,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
                 from: new DateOnly(2030, 2, 1), until: new DateOnly(2030, 1, 1));
 
             Assert.Empty(result.Dates);
-            Assert.Empty(result.ShortMonths);
+            Assert.Empty(result.Skipped);
         }
     }
 }

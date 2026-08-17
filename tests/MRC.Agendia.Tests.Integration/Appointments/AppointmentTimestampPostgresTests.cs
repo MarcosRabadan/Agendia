@@ -33,7 +33,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         [SkippableFact]
         public async Task Appointment_WithWallClockDates_PersistsAndReadsBackUnchanged()
         {
-            Skip.IfNot(_postgres.Available, "Docker/Postgres no disponible; test omitido.");
+            Skip.IfNot(_postgres.Available, "Docker/Postgres not available; test skipped.");
 
             await using var db = _postgres.CreateContext();
 
@@ -73,7 +73,7 @@ namespace MRC.Agendia.Tests.Integration.Appointments
         [SkippableFact]
         public async Task Migrations_ApplyCleanly_NoPendingAfterMigrate()
         {
-            Skip.IfNot(_postgres.Available, "Docker/Postgres no disponible; test omitido.");
+            Skip.IfNot(_postgres.Available, "Docker/Postgres not available; test skipped.");
 
             // The fixture applies migrations on startup; nothing should remain pending,
             // which also proves the migration chain runs cleanly from scratch.

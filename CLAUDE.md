@@ -353,6 +353,10 @@ Repository (EF Core / Npgsql) → PostgreSQL
   empleado inactivo, mismatch de negocio, duración) y **todo lo demás se salta y se reporta**.
   Si añades una excepción propia de UNA fecha, no toques nada: ya degrada a skip. Si añades una
   de nivel petición, métela en esa lista o se reportará N veces como skip.
+  **Quién reporta qué (#295):** `RecurrenceExpander` devuelve ya como skips lo que descarta el
+  calendario (`RECURRENCE_MONTH_WITHOUT_DAY`, `RECURRENCE_LIMIT_REACHED` al pasar el cap de 366,
+  `RECURRENCE_DAY_ALREADY_PASSED`) y el servicio añade lo que rechaza la agenda por fecha. Nada
+  se descarta en silencio, salvo las fechas del patrón que caen **fuera** de la ventana pedida.
 - **Cancelación self-service:** `Business.CancellationWindowHours` (null = sin restricción); un
   Client no cancela/reprograma dentro de la ventana → 400 `CANCELLATION_WINDOW_ELAPSED`.
 - **Política por tramos (#270), aditiva:** un negocio puede definir `CancellationPolicyTier`s
@@ -390,7 +394,9 @@ Repository (EF Core / Npgsql) → PostgreSQL
   gana (en resolver, repo y decorador de caché).
 - **Caché** (`IMemoryCache`) de festivos/año y plantillas/negocio (decoradores).
 - **Cap de fechas** `Domain/Constants/SchedulingLimits` (2000-01-01..2100-12-31) en los
-  validadores de rango (evita overflow de `DateOnly.AddDays` → 400, no 500).
+  validadores de rango (evita overflow de `DateOnly.AddDays` → 400, no 500). Se aplica con
+  `MustBeWithinSupportedDates()` (`Application/Common/SupportedDateRangeRules`), y desde #295
+  también a las fechas de **cita** y de **time-off**, no solo a series y horarios.
 
 ### Persistencia
 - **GUID UUIDv7** client-side (`UuidV7ValueGenerator` en el `Add`). `AuditLog.Id` = `long`.
