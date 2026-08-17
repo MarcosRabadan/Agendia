@@ -118,7 +118,7 @@ namespace MRC.Agendia.Application.Appointments
 
                     created.Add(entity);
                 }
-                catch (DomainException ex) when (IsDateSpecific(ex))
+                catch (DomainException ex) when (!IsRequestLevel(ex))
                 {
                     skipped.Add(new SkippedOccurrenceDto(date, ex.Code, ex.Message));
                 }
@@ -265,7 +265,7 @@ namespace MRC.Agendia.Application.Appointments
                             ? $"The occurrence of {originalDate:yyyy-MM-dd} collides with another appointment of the same series on the target date."
                             : ex.Message));
                 }
-                catch (DomainException ex) when (IsDateSpecific(ex))
+                catch (DomainException ex) when (!IsRequestLevel(ex))
                 {
                     skipped.Add(new SkippedOccurrenceDto(originalDate, ex.Code, ex.Message));
                 }
@@ -334,13 +334,23 @@ namespace MRC.Agendia.Application.Appointments
             return appointments;
         }
 
-        // Date-specific failures (closed day, capacity full, slot in the past) are
-        // skipped per occurrence; request-level failures (not found, inactive
-        // employee, business mismatch) propagate and fail the whole request.
-        private static bool IsDateSpecific(DomainException ex)
-            => ex is AppointmentOutsideScheduleException
-               or AppointmentConflictException
-               or InvalidAppointmentTimeException;
+        // Failures that condemn the WHOLE request: a service that does not exist, an inactive
+        // employee, a service from another business, a duration that does not add up. Nothing
+        // about them is date-specific, so retrying other dates is pointless and they
+        // propagate. Everything else the validator raises belongs to ONE date - closed day,
+        // full capacity, employee time off (#271), a slot held for a waitlist client (#268),
+        // a start time already past - so that occurrence is skipped and reported.
+        //
+        // Enumerating the request-level failures instead of the date-specific ones is
+        // deliberate (#291): a date-specific exception added later then degrades to a
+        // reported skip. The other way round, EMPLOYEE_UNAVAILABLE and SLOT_ON_HOLD were
+        // added without touching the old whitelist and silently started aborting whole
+        // series mid-way, leaving the occurrences already committed orphaned.
+        private static bool IsRequestLevel(DomainException ex)
+            => ex is NotFoundException
+               or EmployeeInactiveException
+               or ServiceEmployeeMismatchException
+               or AppointmentDurationMismatchException;
 
         // True when the moved occurrence's new slot overlaps another still-active
         // occurrence of the same series for the same employee. Uses each sibling's

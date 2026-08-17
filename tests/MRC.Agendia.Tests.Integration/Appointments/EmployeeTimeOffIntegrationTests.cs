@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Availability.DTO;
 using MRC.Agendia.Application.TimeOff.DTO;
+using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Tests.Integration.Infrastructure;
 
 namespace MRC.Agendia.Tests.Integration.Appointments
@@ -154,6 +155,52 @@ namespace MRC.Agendia.Tests.Integration.Appointments
                 new CreateEmployeeTimeOffDto(Day.ToDateTime(new TimeOnly(13, 0)), Day.ToDateTime(new TimeOnly(10, 0))));
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        /// <summary>
+        /// A block on ONE date of a recurring series only costs that occurrence (#291). The
+        /// block is deliberately on the SECOND occurrence: before the fix the first one was
+        /// already created and committed when the second aborted the whole request, leaving a
+        /// half-booked series its author never saw.
+        /// </summary>
+        [Fact]
+        public async Task A_series_skips_only_the_occurrence_inside_a_block()
+        {
+            var setup = await BookableBusinessFactory.CreateAsync(_client, _factory.Services, "off-series", Year);
+            var blockedDay = Day.AddDays(7);
+
+            var block = await BookableBusinessFactory.SendAsync(_client, HttpMethod.Post,
+                TimeOffUrl(setup.EmployeeId), setup.OwnerToken,
+                new CreateEmployeeTimeOffDto(
+                    blockedDay.ToDateTime(new TimeOnly(10, 0)),
+                    blockedDay.ToDateTime(new TimeOnly(13, 0)),
+                    "Doctor"));
+            block.EnsureSuccessStatusCode();
+
+            // Weekly at 11:00 on Day, Day+7 (blocked) and Day+14.
+            var response = await BookableBusinessFactory.SendAsync(_client, HttpMethod.Post,
+                "/api/Appointment/series", setup.OwnerToken,
+                new CreateAppointmentSeriesDto(
+                    ClientUserId: setup.ClientUserId,
+                    EmployeeId: setup.EmployeeId,
+                    ServiceId: setup.Service.Id,
+                    StartTime: new TimeOnly(11, 0),
+                    Frequency: RecurrenceFrequency.Weekly,
+                    Interval: 1,
+                    DaysOfWeek: new[] { Day.DayOfWeek },
+                    DayOfMonth: null,
+                    StartDate: Day,
+                    UntilDate: Day.AddDays(14),
+                    Notes: null));
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var result = await response.Content.ReadFromJsonAsync<AppointmentSeriesResultDto>();
+
+            Assert.Equal(2, result!.Created.Count);
+            Assert.DoesNotContain(result.Created, a => a.StartDate.Date == blockedDay.ToDateTime(TimeOnly.MinValue));
+            var skip = Assert.Single(result.Skipped);
+            Assert.Equal(blockedDay, skip.Date);
+            Assert.Equal("EMPLOYEE_UNAVAILABLE", skip.Code);
         }
 
         // ----- Helpers -----
