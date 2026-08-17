@@ -102,6 +102,26 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             Assert.Equal(newStart, payload.GetProperty("startDate").GetDateTime());
         }
 
+        /// <summary>
+        /// Cancelling by DELETE announces the cancellation just like cancelling by PUT (#296).
+        /// Before this, the same act notified or not depending on the verb the front used, so a
+        /// student who dropped the class could vanish from the academy's agenda in silence.
+        /// </summary>
+        [Fact]
+        public async Task Deleting_a_live_appointment_announces_the_cancellation()
+        {
+            var setup = await BookableBusinessFactory.CreateAsync(_client, _factory.Services, "evt-del", Year);
+            var appointment = await BookAsync(setup, new TimeOnly(16, 0));
+
+            var delete = await BookableBusinessFactory.SendAsync(
+                _client, HttpMethod.Delete, $"/api/Appointment/{appointment.Id}", setup.OwnerToken);
+            Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
+
+            var payload = await ReadEventAsync(appointment.Id, "AppointmentCancelled");
+            Assert.Equal(appointment.ClientUserId, payload.GetProperty("clientUserId").GetString());
+            Assert.Equal(appointment.StartDate, payload.GetProperty("startDate").GetDateTime());
+        }
+
         // ----- Helpers -----
 
         private async Task<AppointmentDto> BookAsync(BookableBusiness setup, TimeOnly at)

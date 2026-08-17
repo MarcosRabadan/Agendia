@@ -147,6 +147,7 @@ namespace MRC.Agendia.Application.Appointments
             var previousStatus = entity.Status;
             var previousStartDate = entity.StartDate;
             var previousEndDate = entity.EndDate;
+            var previousClientUserId = entity.ClientUserId;
 
             // Terminal states (Completed/NoShow/Cancelled) are final: block any change
             // out of them - e.g. a client cancelling an already-Completed appointment,
@@ -198,22 +199,45 @@ namespace MRC.Agendia.Application.Appointments
                 if (entity.StartDate != previousStartDate)
                     entity.ReminderSentAt = null;
 
-                // A time move (and not a cancellation) raises a reschedule event so the
-                // consumer can tell the client the appointment moved (previous -> new).
+                // What the update means for the people involved, in order of precedence. All of
+                // these are written in the SAME save as the change (transactional outbox).
                 var timeChanged = entity.StartDate != previousStartDate || entity.EndDate != previousEndDate;
-                if (timeChanged && !becomesCancelled)
-                    await RaiseAppointmentEventAsync(entity, ctx => new AppointmentRescheduled(
-                        ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId, ctx.ServiceId,
-                        previousStartDate, previousEndDate, entity.StartDate, entity.EndDate, ctx.Language, DateTime.UtcNow),
-                        cancellationToken);
+                var clientChanged = entity.ClientUserId != previousClientUserId;
 
-                // Cancellation event written in the SAME save as the status change
-                // (transactional outbox): a cancelled appointment always yields its event.
                 if (becomesCancelled)
+                {
+                    // A cancelled appointment always yields its event.
                     await RaiseAppointmentEventAsync(entity, ctx => new AppointmentCancelled(
                         ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId,
                         ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, DateTime.UtcNow),
                         cancellationToken);
+                }
+                else if (clientChanged)
+                {
+                    // Handing the appointment to somebody else is TWO facts about two different
+                    // people, not a reschedule (#296): the one who loses it has to hear it is
+                    // gone, and the one who gets it has to be confirmed - with the final time,
+                    // so a move bundled into the same request needs no extra event. The
+                    // cancellation names the PREVIOUS client: the entity already holds the new
+                    // one, so it is the only field not taken from it.
+                    await RaiseAppointmentEventAsync(entity, ctx => new AppointmentCancelled(
+                        ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, previousClientUserId,
+                        ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, DateTime.UtcNow),
+                        cancellationToken);
+
+                    await RaiseAppointmentEventAsync(entity, ctx => new AppointmentConfirmed(
+                        ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId,
+                        ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, DateTime.UtcNow),
+                        cancellationToken);
+                }
+                else if (timeChanged)
+                {
+                    // A plain move: the consumer tells the client it changed (previous -> new).
+                    await RaiseAppointmentEventAsync(entity, ctx => new AppointmentRescheduled(
+                        ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId, ctx.ServiceId,
+                        previousStartDate, previousEndDate, entity.StartDate, entity.EndDate, ctx.Language, DateTime.UtcNow),
+                        cancellationToken);
+                }
 
                 _repository.Update(entity);
                 await _unitOfWork.Save(cancellationToken);
@@ -273,9 +297,13 @@ namespace MRC.Agendia.Application.Appointments
             var refreshed = await _repository.GetByIdWithExtrasAsync(entity.Id, cancellationToken);
             var result = _mapper.Map<AppointmentDto>(refreshed ?? entity);
 
-            // Tell the client what their own cancellation cost, when the business states
-            // its policy as tiers (#270). Agendia does not charge it: it reports the rule.
-            return appliedTier is null || !becomesCancelled
+            // Tell the client what their own cancellation OR reschedule cost, when the business
+            // states its policy as tiers (#270). Agendia does not charge it: it reports the rule.
+            // The tier is only resolved for a client acting on their own appointment, so a
+            // non-null value here always belongs to them (#296: it used to be computed for a
+            // reschedule and then dropped, so moving a class under a 50% tier answered as if it
+            // were free).
+            return appliedTier is null
                 ? result
                 : result with
                 {
@@ -299,6 +327,20 @@ namespace MRC.Agendia.Application.Appointments
 
             // Deleting an occupying appointment frees a slot for the waitlist.
             var freedSlot = entity.Status.OccupiesCapacity();
+
+            // Deleting a live appointment IS a cancellation for whoever was booked, so it
+            // announces one just like PUT with status Cancelled does (#296). Before this the
+            // same act notified or not depending on which verb the front happened to use.
+            // Raised before the save so the event commits in the same transaction as the
+            // (soft) delete; only when it still occupied a slot, mirroring the PUT path, which
+            // stays silent for an appointment that was already cancelled or finished.
+            if (freedSlot)
+            {
+                await RaiseAppointmentEventAsync(entity, ctx => new AppointmentCancelled(
+                    ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId,
+                    ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, DateTime.UtcNow),
+                    cancellationToken);
+            }
 
             _repository.Delete(entity);
             await _unitOfWork.Save(cancellationToken);

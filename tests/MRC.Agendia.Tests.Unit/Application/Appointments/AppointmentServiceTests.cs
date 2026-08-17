@@ -485,6 +485,92 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             Assert.DoesNotContain(entity.DomainEvents, e => e is AppointmentRescheduled);
         }
 
+        // ---------- Tramos y eventos del update (#296) ----------
+
+        /// <summary>
+        /// The tier was computed for a self-service reschedule and then thrown away, so moving a
+        /// class under a 50% tier answered as if it were free. It has to come back.
+        /// </summary>
+        [Fact]
+        public async Task UpdateAsync_ClienteReprograma_DevuelveElTramoAplicado()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = FutureAppointment(start);
+            AsClient(entity.ClientUserId);
+            MapBookingFields();
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _repository.GetByIdWithExtrasAsync(entity.Id, Arg.Any<CancellationToken>()).Returns(entity);
+            // Free 24h ahead, 50% from 0h; the client acts 5h before, so the 50% tier applies.
+            _repository.GetCancellationPolicyAsync(entity.Id).Returns(new CancellationPolicySnapshot(
+                null,
+                new[]
+                {
+                    new CancellationPolicyTier { MinHoursBefore = 0, PenaltyKind = CancellationPenaltyKind.Percentage, PenaltyValue = 50 },
+                    new CancellationPolicyTier { MinHoursBefore = 24, PenaltyKind = CancellationPenaltyKind.None }
+                }));
+            _clock.BusinessNow.Returns(start.AddHours(-5));
+
+            var newStart = start.AddDays(3);
+            var result = await _sut.UpdateAsync(new UpdateAppointmentDto(
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
+                newStart, newStart.AddMinutes(30), entity.Status, Notes: null));
+
+            Assert.NotNull(result.AppliedCancellationTier);
+            Assert.Equal(CancellationPenaltyKind.Percentage, result.AppliedCancellationTier!.PenaltyKind);
+            Assert.Equal(50, result.AppliedCancellationTier.PenaltyValue);
+        }
+
+        /// <summary>
+        /// Handing the class to another student is two facts about two people: the one who loses
+        /// it is told, the one who gets it is confirmed. And it is NOT also a reschedule.
+        /// </summary>
+        [Fact]
+        public async Task UpdateAsync_CambioDeTitular_AvisaAlQueSaleYAlQueEntra()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = FutureAppointment(start);
+            var previousClient = entity.ClientUserId;
+            MapBookingFields();
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _clock.BusinessNow.Returns(start.AddDays(-10)); // staff caller
+
+            var newStart = start.AddDays(1); // moved in the same request, on purpose
+            await _sut.UpdateAsync(new UpdateAppointmentDto(
+                entity.Id, "student-2", entity.EmployeeId, entity.ServiceId,
+                newStart, newStart.AddMinutes(30), entity.Status, Notes: null));
+
+            var cancelled = Assert.Single(entity.DomainEvents.OfType<AppointmentCancelled>());
+            Assert.Equal(previousClient, cancelled.ClientUserId);
+
+            var confirmed = Assert.Single(entity.DomainEvents.OfType<AppointmentConfirmed>());
+            Assert.Equal("student-2", confirmed.ClientUserId);
+            Assert.Equal(newStart, confirmed.StartDate); // carries the final time
+
+            // The move is already covered by those two: no extra reschedule notice.
+            Assert.Empty(entity.DomainEvents.OfType<AppointmentRescheduled>());
+        }
+
+        /// <summary>
+        /// Deleting a live appointment is a cancellation for whoever was booked, whatever verb
+        /// the front used. An already-cancelled one has nothing left to announce.
+        /// </summary>
+        [Theory]
+        [InlineData(AppointmentStatus.Confirmed, true)]
+        [InlineData(AppointmentStatus.Pending, true)]
+        [InlineData(AppointmentStatus.Cancelled, false)]
+        [InlineData(AppointmentStatus.Completed, false)]
+        public async Task DeleteAsync_AvisaSoloSiLaCitaSeguiaViva(AppointmentStatus status, bool expectsEvent)
+        {
+            var entity = FutureAppointment(new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified));
+            entity.Status = status;
+            _repository.GetByIdAsync(entity.Id, Arg.Any<CancellationToken>()).Returns(entity);
+            _clock.BusinessNow.Returns(new DateTime(2029, 12, 1));
+
+            await _sut.DeleteAsync(entity.Id);
+
+            Assert.Equal(expectsEvent, entity.DomainEvents.OfType<AppointmentCancelled>().Any());
+        }
+
         // ---------- Restore (#294) ----------
         // Un-deleting a future appointment can overbook: the slot may have been booked by
         // someone else while it was gone. Past or terminal ones cannot, so they come back as
@@ -555,6 +641,34 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             Assert.False(entity.IsDeleted);
             await _repository.DidNotReceive().CountOverlappingForEmployeeAsync(
                 Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+        }
+
+        /// <summary>Turns the caller into a plain Client (no staff role) acting on their own appointment.</summary>
+        private void AsClient(string clientUserId)
+        {
+            _currentUser.IsInRole(Arg.Any<string>()).Returns(false);
+            _currentUser.UserId.Returns(clientUserId);
+        }
+
+        /// <summary>
+        /// Makes the mapper apply the booking fields of the DTO, so the service sees the change
+        /// the same way AutoMapper would.
+        /// </summary>
+        private void MapBookingFields()
+        {
+            _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
+            _mapper.Map(Arg.Any<UpdateAppointmentDto>(), Arg.Any<Appointment>()).Returns(ci =>
+            {
+                var e = ci.Arg<Appointment>();
+                var d = ci.Arg<UpdateAppointmentDto>();
+                e.StartDate = d.StartDate;
+                e.EndDate = d.EndDate;
+                e.EmployeeId = d.EmployeeId;
+                e.ServiceId = d.ServiceId;
+                e.ClientUserId = d.ClientUserId;
+                e.Status = d.Status;
+                return e;
+            });
         }
 
         private static Appointment DeletedFutureAppointment(out DateTime start)
