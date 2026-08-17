@@ -15,7 +15,6 @@ namespace MRC.Agendia.Application.Appointments
 {
     public class RecurringAppointmentService : IRecurringAppointmentService
     {
-        private const string MonthWithoutDayCode = "RECURRENCE_MONTH_WITHOUT_DAY";
         private const string SeriesMoveTargetCollisionCode = "SERIES_MOVE_TARGET_COLLISION";
 
         private readonly IServiceRepository _serviceRepository;
@@ -70,14 +69,11 @@ namespace MRC.Agendia.Application.Appointments
             // (IX_Appointment_SeriesId), so a sequential id keeps that index local.
             var seriesId = Guid.CreateVersion7();
             var created = new List<Appointment>();
-            var skipped = new List<SkippedOccurrenceDto>();
 
-            foreach (var shortMonth in expansion.ShortMonths)
-            {
-                skipped.Add(new SkippedOccurrenceDto(
-                    shortMonth, MonthWithoutDayCode,
-                    $"Month {shortMonth:yyyy-MM} does not have day {dto.DayOfMonth}."));
-            }
+            // What the calendar itself ruled out (a month without that day, the safety cap, a
+            // day already gone by) comes described from the expander; the loop below adds what
+            // the agenda rules out per date.
+            var skipped = new List<SkippedOccurrenceDto>(expansion.Skipped);
 
             foreach (var date in expansion.Dates)
             {
@@ -331,6 +327,12 @@ namespace MRC.Agendia.Application.Appointments
         // the whole context by appointment id would describe the row before the pending change,
         // because EF does not flush before a query (#293). Null when the employee is missing:
         // there is nobody to notify on behalf of.
+        //
+        // Deliberately NOT resolved once per series (#295): a single occurrence can be moved to
+        // another employee - and with it another business - through the individual update
+        // endpoint, so occurrences of one series do not necessarily share a business. Caching
+        // the first one's answer would announce the wrong business and language for a diverged
+        // occurrence, and the reads it saves are single-row lookups by primary key.
         private async Task<AppointmentNotificationContext?> BuildNotificationContextAsync(Appointment appointment,
                                                                                           CancellationToken cancellationToken)
         {

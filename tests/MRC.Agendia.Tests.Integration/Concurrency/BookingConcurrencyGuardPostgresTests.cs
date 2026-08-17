@@ -25,7 +25,7 @@ namespace MRC.Agendia.Tests.Integration.Concurrency
         [SkippableFact]
         public async Task ExecuteSerializedAsync_SameKey_SerializesConcurrentCriticalSections()
         {
-            Skip.IfNot(_postgres.Available, "Docker/Postgres no disponible; test de concurrencia omitido.");
+            Skip.IfNot(_postgres.Available, "Docker/Postgres not available; concurrency test skipped.");
 
             var date = new DateOnly(2026, 7, 1);
             var events = new System.Collections.Concurrent.ConcurrentQueue<(string Phase, long Ticks)>();

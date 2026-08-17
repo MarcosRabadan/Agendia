@@ -55,6 +55,23 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             AssertNoDelayEvent(13);
         }
 
+        // #295: the business id and language are business-level and every affected appointment
+        // belongs to the business being notified, so they are resolved once and not once per
+        // appointment (a whole day of classes used to mean one query each).
+        [Fact]
+        public async Task NotifyDelay_ResuelveElNegocioUnaSolaVez()
+        {
+            SetNow(new DateTime(2030, 6, 3, 10, 0, 0));
+            OpenWith(Slot(9, 14));
+            ReturnCandidates(Appt(11, 11, 0), Appt(12, 12, 0), Appt(13, 13, 0));
+
+            var result = await _sut.NotifyDelayAsync(BusinessId, new NotifyDelayDto(EmployeeId: null, DelayMinutes: 15, MaxAppointments: null));
+
+            Assert.Equal(3, result.Notified);
+            await _repository.Received(1).GetNotificationBusinessByEmployeeAsync(
+                Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        }
+
         [Fact]
         public async Task NotifyDelay_RespetaMaxAppointments()
         {

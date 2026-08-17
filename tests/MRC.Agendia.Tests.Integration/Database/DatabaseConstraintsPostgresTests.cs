@@ -32,7 +32,7 @@ namespace MRC.Agendia.Tests.Integration.Database
         [SkippableFact]
         public async Task ScheduleOverride_DuplicateBusinessDate_IsRejected()
         {
-            Skip.IfNot(_postgres.Available, "Docker/Postgres no disponible; test de constraints omitido.");
+            Skip.IfNot(_postgres.Available, "Docker/Postgres not available; constraints test skipped.");
 
             await using var db = _postgres.CreateContext();
             var business = await SeedBusinessAsync(db);
@@ -51,7 +51,7 @@ namespace MRC.Agendia.Tests.Integration.Database
         [SkippableFact]
         public async Task WaitlistEntry_DuplicateActiveSlot_IsRejected_ButReJoinAfterCancelIsAllowed()
         {
-            Skip.IfNot(_postgres.Available, "Docker/Postgres no disponible; test de constraints omitido.");
+            Skip.IfNot(_postgres.Available, "Docker/Postgres not available; constraints test skipped.");
 
             await using var db = _postgres.CreateContext();
             var business = await SeedBusinessAsync(db);
@@ -94,7 +94,7 @@ namespace MRC.Agendia.Tests.Integration.Database
         [SkippableFact]
         public async Task WaitlistEntry_DuplicateActiveSlot_ViaUnitOfWork_ThrowsTypedDomainException()
         {
-            Skip.IfNot(_postgres.Available, "Docker/Postgres no disponible; test de constraints omitido.");
+            Skip.IfNot(_postgres.Available, "Docker/Postgres not available; constraints test skipped.");
 
             await using var db = _postgres.CreateContext();
             var business = await SeedBusinessAsync(db);

@@ -17,13 +17,11 @@ namespace MRC.Agendia.Application.TimeOff.Commands
             RuleFor(x => x.Dto).NotNull();
 
             RuleFor(x => x.Dto.Start)
-                .Must(BeWithinSupportedDates)
-                .WithMessage(SchedulingLimits.OutOfRangeMessage)
+                .MustBeWithinSupportedDates()
                 .MustBeWallClock();
 
             RuleFor(x => x.Dto.End)
-                .Must(BeWithinSupportedDates)
-                .WithMessage(SchedulingLimits.OutOfRangeMessage)
+                .MustBeWithinSupportedDates()
                 .GreaterThan(x => x.Dto.Start)
                 .WithMessage("End must be after Start.")
                 .MustBeWallClock();

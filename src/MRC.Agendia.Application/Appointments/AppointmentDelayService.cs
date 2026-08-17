@@ -62,32 +62,37 @@ namespace MRC.Agendia.Application.Appointments
             if (dto.MaxAppointments is int max)
                 affected = affected.Take(max).ToList();
 
+            if (affected.Count == 0)
+                return new DelayNotificationResultDto(0);
+
+            // Business id and language are properties of the BUSINESS, and the repository already
+            // filtered every affected appointment by this one, so they are resolved ONCE instead
+            // of once per appointment. Taken from the first one's employee: with a null
+            // dto.EmployeeId the list spans several employees, but they all hang off this
+            // business, so any of them answers the same (#295).
+            var business = await _repository.GetNotificationBusinessByEmployeeAsync(
+                affected[0].EmployeeId, cancellationToken);
+            if (business is null)
+                return new DelayNotificationResultDto(0);
+
             // Raise a delay event on each affected (tracked) appointment; the DbContext
             // SaveChanges override enlists them all into the outbox in the single Save below
             // (the consumer resolves each client's contact from ClientUserId and delivers in
-            // the business language).
+            // the business language). Everything about the appointment comes off the entity
+            // (see IAppointmentRepository.GetNotificationBusinessByEmployeeAsync, #293).
             foreach (var appointment in affected)
             {
-                // Business + language from the employee; the rest straight off the entity
-                // (see IAppointmentRepository.GetNotificationBusinessByEmployeeAsync, #293).
-                var business = await _repository.GetNotificationBusinessByEmployeeAsync(appointment.EmployeeId, cancellationToken);
-                if (business is null)
-                    continue;
-
                 appointment.RaiseEvent(new AppointmentDelayed(
                     appointment.Id, business.BusinessId, appointment.EmployeeId, appointment.ClientUserId,
                     appointment.ServiceId, appointment.StartDate, appointment.EndDate,
                     dto.DelayMinutes, business.Language, DateTime.UtcNow));
             }
 
-            if (affected.Count > 0)
-            {
-                await _unitOfWork.Save(cancellationToken);
+            await _unitOfWork.Save(cancellationToken);
 
-                await _auditLogger.LogAsync(
-                    AuditActions.AppointmentDelayNotified, "Business", businessId.ToString(),
-                    new { dto.EmployeeId, dto.DelayMinutes, notified = affected.Count }, cancellationToken);
-            }
+            await _auditLogger.LogAsync(
+                AuditActions.AppointmentDelayNotified, "Business", businessId.ToString(),
+                new { dto.EmployeeId, dto.DelayMinutes, notified = affected.Count }, cancellationToken);
 
             return new DelayNotificationResultDto(affected.Count);
         }

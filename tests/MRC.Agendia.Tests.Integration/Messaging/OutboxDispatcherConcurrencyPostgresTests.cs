@@ -30,7 +30,7 @@ namespace MRC.Agendia.Tests.Integration.Messaging
         [SkippableFact]
         public async Task DispatchPendingAsync_ConcurrentInstances_DeliverEachEventExactlyOnce()
         {
-            Skip.IfNot(_postgres.Available, "Docker/Postgres no disponible; test de concurrencia omitido.");
+            Skip.IfNot(_postgres.Available, "Docker/Postgres not available; concurrency test skipped.");
 
             const int total = 6;
             await using (var seed = _postgres.CreateContext())
