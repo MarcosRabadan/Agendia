@@ -47,12 +47,11 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             // Default to a staff caller so status changes (e.g. Completed) are allowed.
             _currentUser.IsInRole(Roles.Employee).Returns(true);
 
-            // A notification context so the confirmation/cancellation events fire.
-            _repository.GetNotificationContextAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-                .Returns(ci => new AppointmentNotificationContext(
-                    ci.Arg<Guid>(), BusinessId: TestIds.Of(100), EmployeeId: TestIds.Of(2), ClientUserId: "user-1", ServiceId: TestIds.Of(3),
-                    StartDate: new DateTime(2030, 1, 1, 9, 0, 0),
-                    EndDate: new DateTime(2030, 1, 1, 9, 30, 0), Language: "es"));
+            // The owning business, so the confirmation/cancellation events fire. Only the
+            // business id and language are read; every other field of the event now comes from
+            // the appointment entity, which is what makes a stale payload detectable here.
+            _repository.GetNotificationBusinessByEmployeeAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                .Returns(new AppointmentNotificationBusiness(TestIds.Of(100), "es"));
 
             // Default: a business with no cancellation rule at all. The tests that care
             // about the self-service window override it.
@@ -431,6 +430,40 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
 
             Assert.Contains(entity.DomainEvents, e => e is AppointmentRescheduled r
                 && r.PreviousStartDate == previousStart && r.StartDate == newStart);
+        }
+
+        // #293: the event must describe where the appointment ENDED UP. Before the fix the
+        // whole payload came from a read by appointment id issued before the save, so it
+        // described the state the appointment was moved away from.
+        [Fact]
+        public async Task UpdateAsync_ChangeOfEmployee_RaisesRescheduledEventWithTheDestination()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = FutureAppointment(start);
+            var destinationEmployeeId = TestIds.Of(77);
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _mapper.Map<AppointmentDto>(Arg.Any<Appointment>()).Returns(ci => ToDto(ci.Arg<Appointment>()));
+            _mapper.Map(Arg.Any<UpdateAppointmentDto>(), Arg.Any<Appointment>()).Returns(ci =>
+            {
+                var e = ci.Arg<Appointment>();
+                var d = ci.Arg<UpdateAppointmentDto>();
+                e.StartDate = d.StartDate;
+                e.EndDate = d.EndDate;
+                e.EmployeeId = d.EmployeeId;
+                return e;
+            });
+            _clock.BusinessNow.Returns(start.AddDays(-10)); // staff caller, window irrelevant
+
+            var newStart = start.AddDays(3);
+            var dto = new UpdateAppointmentDto(
+                entity.Id, entity.ClientUserId, destinationEmployeeId, entity.ServiceId,
+                newStart, newStart.AddMinutes(30), entity.Status, Notes: null);
+
+            await _sut.UpdateAsync(dto);
+
+            var rescheduled = Assert.IsType<AppointmentRescheduled>(Assert.Single(entity.DomainEvents));
+            Assert.Equal(destinationEmployeeId, rescheduled.EmployeeId);
+            Assert.Equal(newStart, rescheduled.StartDate);
         }
 
         [Fact]

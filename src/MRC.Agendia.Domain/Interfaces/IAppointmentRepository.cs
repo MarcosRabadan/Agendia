@@ -167,15 +167,20 @@ namespace MRC.Agendia.Domain.Interfaces
         Task<CancellationPolicySnapshot> GetCancellationPolicyAsync(Guid appointmentId, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Projects the fields an appointment integration event needs (including the
-        /// business default language) in a single query, or null when no row has that
-        /// id. Ignores soft-delete filters so a just-created or just-cancelled
-        /// appointment can still be read back to raise its event.
+        /// Resolves the owning business and its notification language from the appointment's
+        /// employee, in a single query. Ignores soft-delete filters so an appointment whose
+        /// participants were deactivated still yields its event.
+        ///
+        /// <para>Deliberately keyed by EMPLOYEE and not by appointment id (#293): the caller
+        /// raises events on a TRACKED entity that already holds the new state, while the row on
+        /// disk is still the old one (EF does not flush pending changes before a query).
+        /// Everything the event says about the appointment must therefore come from the entity;
+        /// only these two fields belong to the business and need a read.</para>
         /// </summary>
-        /// <param name="appointmentId">Appointment id.</param>
+        /// <param name="employeeId">Employee the appointment is booked with, after any change.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
-        /// <returns>The notification context, or null when the appointment is missing.</returns>
-        Task<AppointmentNotificationContext?> GetNotificationContextAsync(Guid appointmentId, CancellationToken cancellationToken = default);
+        /// <returns>The owning business and its language, or null when the employee is missing.</returns>
+        Task<AppointmentNotificationBusiness?> GetNotificationBusinessByEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// The owning business's default initial appointment status, resolved through

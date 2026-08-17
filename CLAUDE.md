@@ -307,6 +307,13 @@ Repository (EF Core / Npgsql) → PostgreSQL
   `Entity.RaiseEvent(...)` (interfaz `IHasDomainEvents`) al cambiar de estado; el **override de
   `SaveChanges` de `AgendiaDbContext`** los vuelca al outbox en la MISMA transacción que el
   cambio y los limpia. No hay publisher aparte. Las series emiten los eventos por ocurrencia.
+- **El payload se construye desde la ENTIDAD, nunca releyendo la fila (#293).** El evento se
+  levanta sobre la entidad *trackeada*, que ya tiene el estado nuevo, mientras la fila en disco
+  sigue siendo la vieja (EF **no** vuelca los cambios pendientes antes de una query). De la BD
+  se pide solo lo que no vive en la cita: negocio + idioma, vía
+  `GetNotificationBusinessByEmployeeAsync(appointment.EmployeeId)`. Releer el contexto por
+  `appointmentId` describía el estado ANTERIOR: mover una cita a otra empleada anunciaba la
+  empleada de la que venía. Si añades un evento, cópialo de ahí y no de la fila.
 
 ### Citas y disponibilidad
 - **`Employee.MaxConcurrentAppointments`** (default 1): modela capacidad (clase grupal, sala…).

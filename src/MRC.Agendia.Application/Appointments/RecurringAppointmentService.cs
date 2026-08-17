@@ -290,7 +290,7 @@ namespace MRC.Agendia.Application.Appointments
         // guarded transaction as the insert.
         private async Task RaiseSeriesConfirmedAsync(Appointment appointment, CancellationToken cancellationToken)
         {
-            var context = await _repository.GetNotificationContextAsync(appointment.Id, cancellationToken);
+            var context = await BuildNotificationContextAsync(appointment, cancellationToken);
             if (context is null)
                 return;
 
@@ -304,7 +304,7 @@ namespace MRC.Agendia.Application.Appointments
         // caller persists all cancellations in a single Save, which enlists the events.
         private async Task RaiseSeriesCancelledAsync(Appointment appointment, CancellationToken cancellationToken)
         {
-            var context = await _repository.GetNotificationContextAsync(appointment.Id, cancellationToken);
+            var context = await BuildNotificationContextAsync(appointment, cancellationToken);
             if (context is null)
                 return;
 
@@ -317,13 +317,30 @@ namespace MRC.Agendia.Application.Appointments
         // here because the guarded Save that persists the move enlists the event.
         private async Task RaiseSeriesRescheduledAsync(Appointment appointment, DateTime previousStart, DateTime previousEnd, CancellationToken cancellationToken)
         {
-            var context = await _repository.GetNotificationContextAsync(appointment.Id, cancellationToken);
+            var context = await BuildNotificationContextAsync(appointment, cancellationToken);
             if (context is null)
                 return;
 
             appointment.RaiseEvent(new AppointmentRescheduled(
                 context.AppointmentId, context.BusinessId, context.EmployeeId, context.ClientUserId, context.ServiceId,
                 previousStart, previousEnd, appointment.StartDate, appointment.EndDate, context.Language, DateTime.UtcNow));
+        }
+
+        // The event describes the occurrence as it stands IN MEMORY; only the owning business
+        // and its language come from the database, keyed by the occurrence's employee. Reading
+        // the whole context by appointment id would describe the row before the pending change,
+        // because EF does not flush before a query (#293). Null when the employee is missing:
+        // there is nobody to notify on behalf of.
+        private async Task<AppointmentNotificationContext?> BuildNotificationContextAsync(Appointment appointment,
+                                                                                          CancellationToken cancellationToken)
+        {
+            var business = await _repository.GetNotificationBusinessByEmployeeAsync(appointment.EmployeeId, cancellationToken);
+            if (business is null)
+                return null;
+
+            return new AppointmentNotificationContext(
+                appointment.Id, business.BusinessId, appointment.EmployeeId, appointment.ClientUserId,
+                appointment.ServiceId, appointment.StartDate, appointment.EndDate, business.Language);
         }
 
         private async Task<IReadOnlyList<Appointment>> GetSeriesOrThrowAsync(Guid seriesId, CancellationToken cancellationToken)

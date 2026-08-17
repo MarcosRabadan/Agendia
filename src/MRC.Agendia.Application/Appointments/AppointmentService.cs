@@ -338,20 +338,28 @@ namespace MRC.Agendia.Application.Appointments
                || _currentUser.IsInRole(Roles.BusinessOwner)
                || _currentUser.IsInRole(Roles.Employee);
 
-        // Loads the notification context (business id + language + booking fields) for the
-        // appointment and raises the built event ON THE TRACKED ENTITY. The DbContext's
-        // SaveChanges override enlists the entity's domain events into the outbox in the same
-        // save as the state change, so nothing is published here. A missing appointment is a
-        // no-op (nothing to notify about).
+        // Raises the built event ON THE TRACKED ENTITY. The DbContext's SaveChanges override
+        // enlists the entity's domain events into the outbox in the same save as the state
+        // change, so nothing is published here.
+        //
+        // Everything the event says about the appointment is taken from the ENTITY, which
+        // already holds the new state; only the owning business and its language are read, keyed
+        // by the appointment's CURRENT employee. Reading the whole context by appointment id
+        // instead would describe the state BEFORE the update, because the row on disk is still
+        // the old one at this point - EF does not flush pending changes before running a query.
+        // That is how a move to another employee ended up announcing the employee the
+        // appointment had just been moved away from (#293).
         private async Task RaiseAppointmentEventAsync(Appointment appointment,
                                                       Func<AppointmentNotificationContext, IIntegrationEvent> build,
                                                       CancellationToken cancellationToken)
         {
-            var context = await _repository.GetNotificationContextAsync(appointment.Id, cancellationToken);
-            if (context is null)
+            var business = await _repository.GetNotificationBusinessByEmployeeAsync(appointment.EmployeeId, cancellationToken);
+            if (business is null)
                 return;
 
-            appointment.RaiseEvent(build(context));
+            appointment.RaiseEvent(build(new AppointmentNotificationContext(
+                appointment.Id, business.BusinessId, appointment.EmployeeId, appointment.ClientUserId,
+                appointment.ServiceId, appointment.StartDate, appointment.EndDate, business.Language)));
         }
     }
 }

@@ -202,24 +202,15 @@ namespace MRC.Agendia.Infrastructure.Repositories
         }
 
         /// <inheritdoc />
-        public Task<AppointmentNotificationContext?> GetNotificationContextAsync(Guid appointmentId, CancellationToken cancellationToken = default)
-            // Single projection with the business default language, resolved through
-            // employee -> business. IgnoreQueryFilters so a just-cancelled appointment
-            // (or one with a soft-deleted participant) is still read back to raise its
-            // event, consistent with the other appointment reads.
-            => Set
+        public Task<AppointmentNotificationBusiness?> GetNotificationBusinessByEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default)
+            // Resolved through employee -> business. IgnoreQueryFilters so an appointment with a
+            // soft-deleted participant is still able to raise its event, consistent with the
+            // other appointment reads.
+            => Context.Employees
                 .AsNoTracking()
                 .IgnoreQueryFilters()
-                .Where(a => a.Id == appointmentId)
-                .Select(a => new AppointmentNotificationContext(
-                    a.Id,
-                    a.Employee.BusinessId,
-                    a.EmployeeId,
-                    a.ClientUserId,
-                    a.ServiceId,
-                    a.StartDate,
-                    a.EndDate,
-                    a.Employee.Business.DefaultLanguage))
+                .Where(e => e.Id == employeeId)
+                .Select(e => new AppointmentNotificationBusiness(e.BusinessId, e.Business.DefaultLanguage))
                 .FirstOrDefaultAsync(cancellationToken);
 
         /// <inheritdoc />
