@@ -5,10 +5,17 @@ namespace MRC.Agendia.Domain.Entities
 {
     /// <summary>
     /// A client's request to be notified when a full slot frees up. The client is
-    /// notified (FIFO by <see cref="CreatedAt"/>) and gets a PRIORITY HOLD on the slot
-    /// until <see cref="HoldUntil"/> (#268): nobody else can book it in that window, but
-    /// the client still books it themselves - there is no auto-booking.
-    /// <see cref="EmployeeId"/> null means "any employee".
+    /// notified (FIFO by <see cref="CreatedAt"/>) and gets a PRIORITY HOLD until
+    /// <see cref="HoldUntil"/> (#268), but they still book it themselves - there is no
+    /// auto-booking.
+    ///
+    /// <para><b>The hold reserves ONE seat, not the slot.</b> Where the slot has more free
+    /// seats than holds - a group class, or several employees - the rest stay bookable by
+    /// anyone. Reading it as a block on the whole slot is what made availability hide free
+    /// seats and refuse bookings it had just offered (#308).</para>
+    ///
+    /// <see cref="EmployeeId"/> null means "any employee": that seat is held on the
+    /// business as a whole rather than on one person.
     /// </summary>
     public class WaitlistEntry : Entity
     {

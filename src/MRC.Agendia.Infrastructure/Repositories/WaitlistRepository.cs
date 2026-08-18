@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MRC.Agendia.Domain.Availability;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Interfaces;
@@ -45,20 +46,44 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 .FirstOrDefaultAsync(cancellationToken);
 
         /// <inheritdoc />
-        public async Task<IReadOnlyList<WaitlistEntry>> GetActiveHoldsAsync(Guid businessId,
-                                                                            DateOnly date,
-                                                                            DateTime nowUtc,
-                                                                            CancellationToken cancellationToken = default)
-            // Read-only: the availability calculation only subtracts these seats.
-            => await Set
+        public async Task<IReadOnlyList<SlotHold>> GetActiveHoldsAsync(Guid businessId,
+                                                                       DateOnly date,
+                                                                       DateTime nowUtc,
+                                                                       CancellationToken cancellationToken = default)
+        {
+            // Read-only: the callers only subtract these seats. IgnoreQueryFilters plus an
+            // explicit liveness check, like GetNextWaitingForSlotAsync: a hold on a
+            // soft-deleted service holds nothing (BIZ-03). WaitlistEntry carries no soft
+            // delete of its own, so there is nothing else to re-declare here.
+            var rows = await Set
                 .AsNoTracking()
                 .IgnoreQueryFilters()
                 .Where(w => w.Status == WaitlistStatus.Notified
                     && w.BusinessId == businessId
                     && w.Date == date
                     && w.HoldUntil != null
-                    && w.HoldUntil > nowUtc)
+                    && w.HoldUntil > nowUtc
+                    && !w.Service.IsDeleted)
+                .Select(w => new
+                {
+                    w.ClientUserId,
+                    w.EmployeeId,
+                    w.Date,
+                    w.StartTime,
+                    w.Service.DurationMinutes
+                })
                 .ToListAsync(cancellationToken);
+
+            // The held window is the slot the client was offered, so it lasts as long as
+            // THEIR service. Composed in memory to keep the projection translatable.
+            return rows
+                .Select(r =>
+                {
+                    var start = r.Date.ToDateTime(r.StartTime);
+                    return new SlotHold(r.ClientUserId, r.EmployeeId, start, start.AddMinutes(r.DurationMinutes));
+                })
+                .ToList();
+        }
 
         /// <inheritdoc />
         public async Task<IReadOnlyList<WaitlistEntry>> GetExpiredHoldsAsync(DateTime nowUtc,

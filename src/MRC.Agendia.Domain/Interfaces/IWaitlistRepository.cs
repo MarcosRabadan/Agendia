@@ -1,3 +1,4 @@
+using MRC.Agendia.Domain.Availability;
 using MRC.Agendia.Domain.Entities;
 
 namespace MRC.Agendia.Domain.Interfaces
@@ -50,17 +51,19 @@ namespace MRC.Agendia.Domain.Interfaces
 
         /// <summary>
         /// The active priority holds (#268) of a business on a date: entries Notified whose
-        /// HoldUntil has not passed. Untracked - the availability read only counts them.
+        /// HoldUntil has not passed. Untracked - the callers only count these seats.
+        /// Returned already resolved to the window each hold covers, so nobody has to
+        /// recompute it and drift from the others (#308).
         /// </summary>
         /// <param name="businessId">Business id.</param>
         /// <param name="date">Slot date (wall clock).</param>
         /// <param name="nowUtc">Current UTC instant, to drop the expired ones.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
-        /// <returns>The entries still holding a slot that day.</returns>
-        Task<IReadOnlyList<WaitlistEntry>> GetActiveHoldsAsync(Guid businessId,
-                                                               DateOnly date,
-                                                               DateTime nowUtc,
-                                                               CancellationToken cancellationToken = default);
+        /// <returns>The seats still held that day, one per active hold.</returns>
+        Task<IReadOnlyList<SlotHold>> GetActiveHoldsAsync(Guid businessId,
+                                                          DateOnly date,
+                                                          DateTime nowUtc,
+                                                          CancellationToken cancellationToken = default);
 
         /// <summary>
         /// The holds whose window has already run out (Notified with HoldUntil in the past),
