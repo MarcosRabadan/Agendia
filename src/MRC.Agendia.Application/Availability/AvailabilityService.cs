@@ -149,12 +149,10 @@ namespace MRC.Agendia.Application.Availability
                 .ToDictionary(g => g.Key, g => g.ToList());
 
             // ---------- Load the day's waitlist holds (#268) ----------
-            // A slot held for another client is not free: its seat is subtracted below.
-            // The holder's own hold is skipped, or they could not see the slot they were
-            // just told to book.
-            var holds = (await _waitlistRepository.GetActiveHoldsAsync(businessId, date, DateTime.UtcNow, cancellationToken))
-                .Where(h => h.ClientUserId != _currentUser.UserId)
-                .ToList();
+            // A hold is ONE seat reserved for ONE client, not a block on the slot. The
+            // accounting lives in SlotHoldCalculator so this read, the capacity probe the
+            // waitlist uses and the scheduling validator cannot drift apart again (#308).
+            var holds = await _waitlistRepository.GetActiveHoldsAsync(businessId, date, DateTime.UtcNow, cancellationToken);
 
             // ---------- Load the day's time-off blocks (#271) ----------
             // One query for every candidate employee instead of one per employee/slot.
@@ -193,6 +191,12 @@ namespace MRC.Agendia.Application.Availability
                     var availableEmployeeIds = new List<Guid>();
                     var totalCapacity = 0;
 
+                    // Seats other clients hold over THIS window. The requester's own hold is
+                    // skipped inside, or they could not see the slot they were just told to
+                    // book.
+                    var held = SlotHoldCalculator.Count(
+                        holds, _currentUser.UserId, date.ToDateTime(current), date.ToDateTime(slotEnd));
+
                     foreach (var employee in employees)
                     {
                         // A block takes the employee out of this slot entirely, whatever
@@ -200,13 +204,10 @@ namespace MRC.Agendia.Application.Availability
                         if (IsBlocked(timeOff, employee.Id, date, current, slotEnd))
                             continue;
 
-                        // Someone else is holding this exact slot with this employee (#268):
-                        // it is theirs until the hold runs out.
-                        if (holds.Any(h => h.StartTime == current && h.EmployeeId == employee.Id))
-                            continue;
-
+                        // A hold naming this employee costs them ONE seat, not the whole
+                        // slot: a group class of 3 with one hold still has 2 free (#308).
                         var overlapping = CountOverlapping(appointments, employee.Id, date, current, slotEnd);
-                        var remaining = employee.MaxConcurrentAppointments - overlapping;
+                        var remaining = employee.MaxConcurrentAppointments - overlapping - held.For(employee.Id);
                         if (remaining > 0)
                         {
                             availableEmployeeIds.Add(employee.Id);
@@ -214,9 +215,11 @@ namespace MRC.Agendia.Application.Availability
                         }
                     }
 
-                    // An "any employee" hold eats one seat of the slot as a whole (the
-                    // employee-specific ones already removed their own seat above).
-                    totalCapacity -= holds.Count(h => h.StartTime == current && h.EmployeeId is null);
+                    // An "any employee" hold is one seat of the business as a whole, so it
+                    // comes off the total instead of off every employee. AvailableEmployeeIds
+                    // can then be longer than Capacity, and that is right: the list answers
+                    // "who could serve you", the number answers "how many seats are left".
+                    totalCapacity = Math.Max(0, totalCapacity - held.AnyEmployee);
 
                     if (totalCapacity > 0)
                     {
@@ -299,18 +302,28 @@ namespace MRC.Agendia.Application.Availability
                 .Select(t => t.EmployeeId)
                 .ToHashSet();
 
+            // Holds count here too (#308). Ignoring them let this probe tell a client the
+            // slot had room while the validator rejected them with SLOT_ON_HOLD, so for as
+            // long as the hold lasted they could neither join the queue nor book; and the
+            // notify path could offer one already-held seat to a second client.
+            var holds = await _waitlistRepository.GetActiveHoldsAsync(businessId, date, DateTime.UtcNow, cancellationToken);
+            var held = SlotHoldCalculator.Count(holds, _currentUser.UserId, start, end);
+
             foreach (var employee in employees)
             {
                 if (blocked.Contains(employee.Id))
                     continue;
 
                 var overlapping = await _appointmentRepository.CountOverlappingForEmployeeAsync(employee.Id, start, end, null, cancellationToken);
-                var remaining = employee.MaxConcurrentAppointments - overlapping;
+                var remaining = employee.MaxConcurrentAppointments - overlapping - held.For(employee.Id);
                 if (remaining > 0)
                     capacity += remaining;
             }
 
-            return capacity;
+            // Subtracted even when the probe is scoped to one employee: a floating hold can
+            // land on them, and under-reporting is the safe direction here (it lets the
+            // client queue up, and holds back a false "there is a spot" notification).
+            return Math.Max(0, capacity - held.AnyEmployee);
         }
 
         /// <summary>

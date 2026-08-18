@@ -1,3 +1,4 @@
+using MRC.Agendia.Application.Availability;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
@@ -140,22 +141,15 @@ namespace MRC.Agendia.Application.Appointments
             var overlappingCount = await _appointmentRepository.CountOverlappingForEmployeeAsync(
                 employeeId, startDate, endDate, appointmentId, cancellationToken);
 
-            // A waitlist priority hold (#268) reserves a seat for someone else, so it
-            // counts as occupied here - and only for THEM is the slot still free. Reported
-            // apart from a plain conflict: "wait a few minutes" is actionable, unlike
-            // "it is full".
+            // A waitlist priority hold (#268) reserves ONE seat for ONE client, so it counts
+            // as occupied here - and only for THEM is that seat still free. Reported apart
+            // from a plain conflict: "wait a few minutes" is actionable, "it is full" is not.
+            // Same accounting as the availability read, so what the API offers and what it
+            // accepts cannot say different things (#308).
             var holds = await _waitlistRepository.GetActiveHoldsAsync(
                 employee.BusinessId, DateOnly.FromDateTime(startDate), DateTime.UtcNow, cancellationToken);
 
-            var othersHolds = holds.Count(h => h.StartTime == startTime
-                && (h.EmployeeId is null || h.EmployeeId == employeeId)
-                && h.ClientUserId != clientUserId);
-
-            if (overlappingCount < employee.MaxConcurrentAppointments
-                && overlappingCount + othersHolds >= employee.MaxConcurrentAppointments)
-            {
-                throw new SlotOnHoldException();
-            }
+            var held = SlotHoldCalculator.Count(holds, clientUserId, startDate, endDate);
 
             if (overlappingCount >= employee.MaxConcurrentAppointments)
             {
@@ -164,6 +158,62 @@ namespace MRC.Agendia.Application.Appointments
                         ? "The employee already has another appointment overlapping this time."
                         : $"The employee already has {overlappingCount} appointments at this time (max capacity: {employee.MaxConcurrentAppointments}).");
             }
+
+            // A hold naming this employee costs them one seat, never the whole slot.
+            if (overlappingCount + held.For(employeeId) >= employee.MaxConcurrentAppointments)
+                throw new SlotOnHoldException();
+
+            // An "any employee" hold belongs to no employee in particular, so it is weighed
+            // against the business as a whole. Counting it against each employee separately,
+            // as this used to, rejected EVERY employee over a single held seat. The extra
+            // queries only run when such a hold actually exists - the rare case - because
+            // this executes inside the booking advisory lock.
+            if (held.AnyEmployee > 0)
+            {
+                var freeSeats = await CountBusinessFreeSeatsAsync(
+                    employee.BusinessId, startDate, endDate, appointmentId, held, cancellationToken);
+
+                // Granting this booking takes one of the free seats; the holders still need
+                // one each.
+                if (freeSeats - 1 < held.AnyEmployee)
+                    throw new SlotOnHoldException();
+            }
+        }
+
+        /// <summary>
+        /// Free seats across the whole business over the window, already discounting the
+        /// seats other clients hold on a named employee. Only needed to weigh an
+        /// "any employee" hold, so it is never reached on the ordinary booking path.
+        /// </summary>
+        /// <param name="businessId">Business the booking belongs to.</param>
+        /// <param name="startDate">Start of the candidate window (wall clock).</param>
+        /// <param name="endDate">End of the candidate window (wall clock).</param>
+        /// <param name="appointmentId">Appointment being moved, excluded from its own count.</param>
+        /// <param name="held">Seats already held by other clients over the window.</param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>Seats still bookable across the business.</returns>
+        private async Task<int> CountBusinessFreeSeatsAsync(Guid businessId,
+                                                            DateTime startDate,
+                                                            DateTime endDate,
+                                                            Guid? appointmentId,
+                                                            HeldSeats held,
+                                                            CancellationToken cancellationToken)
+        {
+            var employees = await _employeeRepository.GetActiveByBusinessIdAsync(businessId, cancellationToken);
+            var freeSeats = 0;
+
+            foreach (var candidate in employees)
+            {
+                if (await _timeOffRepository.HasOverlapAsync(candidate.Id, startDate, endDate, cancellationToken))
+                    continue;
+
+                var overlapping = await _appointmentRepository.CountOverlappingForEmployeeAsync(
+                    candidate.Id, startDate, endDate, appointmentId, cancellationToken);
+
+                freeSeats += Math.Max(0, candidate.MaxConcurrentAppointments - overlapping - held.For(candidate.Id));
+            }
+
+            return freeSeats;
         }
     }
 }
