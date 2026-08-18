@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Interfaces;
+using MRC.Agendia.Domain.Services;
 
 namespace MRC.Agendia.Infrastructure.Repositories
 {
@@ -27,14 +28,22 @@ namespace MRC.Agendia.Infrastructure.Repositories
 
         /// <inheritdoc />
         public async Task<ScheduleTemplate?> GetEffectiveTemplateAsync(Guid businessId, DateOnly date, CancellationToken cancellationToken = default)
-            => await Set
+        {
+            // Fetch the candidates and pick in memory with the shared rule (#307). The set is
+            // one template in practice and a handful at worst, so ordering here instead of in
+            // SQL costs nothing - and it keeps every caller on ONE tie-break rather than four
+            // copies that happened to agree. Postgres guarantees no order past IsDefault, so
+            // the SQL version could not be made deterministic without repeating the rule.
+            var candidates = await Set
                 .AsNoTracking()
                 .Include(st => st.WeeklySlots)
                 .Where(st => st.BusinessId == businessId
                     && st.EffectiveFrom <= date
                     && st.EffectiveTo >= date)
-                .OrderByDescending(st => st.IsDefault)
-                .FirstOrDefaultAsync(cancellationToken);
+                .ToListAsync(cancellationToken);
+
+            return ScheduleTemplateSelection.SelectFor(candidates, date);
+        }
 
         /// <inheritdoc />
         public async Task<bool> HasOverlappingTemplateAsync(Guid businessId,

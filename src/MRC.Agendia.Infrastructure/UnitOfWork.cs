@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Domain.Interfaces;
+using MRC.Agendia.Infrastructure.Caching;
 using Npgsql;
 
 namespace MRC.Agendia.Infrastructure
@@ -11,11 +12,20 @@ namespace MRC.Agendia.Infrastructure
         // (see AgendiaDbContext). Npgsql reports it as the violated constraint name.
         private const string WaitlistUniqueWaitingIndexName = "IX_WaitlistEntry_UniqueWaiting";
 
-        private readonly AgendiaDbContext _context;
+        // Filtered unique index that keeps a business to one default template (#307).
+        private const string ScheduleTemplateOneDefaultIndexName = "IX_ScheduleTemplate_OneDefaultPerBusiness";
 
-        public UnitOfWork(AgendiaDbContext context)
+        private readonly AgendiaDbContext _context;
+        private readonly PendingCacheInvalidations _pendingInvalidations;
+
+        // True while ExecuteInTransactionAsync is running, so the saves inside it hold their
+        // cache evictions back until the transaction actually commits (#306).
+        private bool _inTransaction;
+
+        public UnitOfWork(AgendiaDbContext context, PendingCacheInvalidations pendingInvalidations)
         {
             _context = context;
+            _pendingInvalidations = pendingInvalidations;
         }
 
         /// <inheritdoc />
@@ -23,7 +33,15 @@ namespace MRC.Agendia.Infrastructure
         {
             try
             {
-                return await _context.SaveChangesAsync(cancellationToken);
+                var affected = await _context.SaveChangesAsync(cancellationToken);
+
+                // Evict only once the write is durable (#306). Inside a transaction the rows
+                // are not visible to anyone else yet, so the eviction waits for the commit -
+                // otherwise a concurrent reader would re-cache the pre-write state.
+                if (!_inTransaction)
+                    _pendingInvalidations.Flush();
+
+                return affected;
             }
             catch (DbUpdateException ex)
                 when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg)
@@ -35,6 +53,8 @@ namespace MRC.Agendia.Infrastructure
                 // unique violations keep their original behaviour (rethrown as-is).
                 if (pg.ConstraintName == WaitlistUniqueWaitingIndexName)
                     throw new DuplicateWaitlistEntryException();
+                if (pg.ConstraintName == ScheduleTemplateOneDefaultIndexName)
+                    throw new DuplicateDefaultScheduleTemplateException();
                 throw;
             }
         }
@@ -52,8 +72,20 @@ namespace MRC.Agendia.Infrastructure
             }
 
             await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
-            await work();
-            await transaction.CommitAsync(cancellationToken);
+            _inTransaction = true;
+            try
+            {
+                await work();
+                await transaction.CommitAsync(cancellationToken);
+            }
+            finally
+            {
+                _inTransaction = false;
+            }
+
+            // Committed: now the evictions the inner saves queued up can happen. On a rollback
+            // we never get here, and the queued keys simply cost a later cache miss.
+            _pendingInvalidations.Flush();
         }
 
         /// <inheritdoc />

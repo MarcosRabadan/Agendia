@@ -60,13 +60,19 @@ namespace MRC.Agendia.Infrastructure
 
             // Schedule templates + holidays are decorated with a caching layer (#55):
             // register the concrete repo, then wrap it with the caching decorator.
+            // Scoped, so the decorators and the UnitOfWork of one request share the same
+            // queue of invalidations and the eviction lands after the commit (#306).
+            services.AddScoped<PendingCacheInvalidations>();
             services.AddScoped<ScheduleTemplateRepository>();
             services.AddScoped<IScheduleTemplateRepository>(sp => new CachingScheduleTemplateRepository(
-                sp.GetRequiredService<ScheduleTemplateRepository>(), sp.GetRequiredService<IMemoryCache>()));
+                sp.GetRequiredService<ScheduleTemplateRepository>(),
+                sp.GetRequiredService<IMemoryCache>(),
+                sp.GetRequiredService<PendingCacheInvalidations>()));
             services.AddScoped<HolidayCalendarRepository>();
             services.AddScoped<IHolidayCalendarRepository>(sp => new CachingHolidayCalendarRepository(
                 sp.GetRequiredService<HolidayCalendarRepository>(),
                 sp.GetRequiredService<IMemoryCache>(),
+                sp.GetRequiredService<PendingCacheInvalidations>(),
                 sp.GetRequiredService<AgendiaDbContext>()));
             services.AddScoped<IAuditLogRepository, AuditLogRepository>();
             services.AddScoped<IBusinessStatsRepository, BusinessStatsRepository>();

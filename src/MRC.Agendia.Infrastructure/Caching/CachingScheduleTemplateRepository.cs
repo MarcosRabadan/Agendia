@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Interfaces;
+using MRC.Agendia.Domain.Services;
 
 namespace MRC.Agendia.Infrastructure.Caching
 {
@@ -11,9 +12,11 @@ namespace MRC.Agendia.Infrastructure.Caching
     /// detached) is cached for a short TTL and evicted on any write.
     /// <see cref="GetEffectiveTemplateAsync"/> is served from that same cached list.
     ///
-    /// Eviction happens at write time (before SaveChanges); on rollback the worst
-    /// case is an extra cache miss. The TTL bounds any staleness from a concurrent
-    /// reader re-caching during the brief write window.
+    /// Writes queue their key in <see cref="PendingCacheInvalidations"/> and the unit of
+    /// work evicts it once the change is COMMITTED (#306). Evicting at write time - before
+    /// SaveChanges - let a concurrent reader re-cache the pre-write state, and nothing
+    /// invalidated again afterwards, so the stale list survived the whole TTL. On rollback
+    /// the worst case is an extra cache miss.
     /// </summary>
     public class CachingScheduleTemplateRepository : IScheduleTemplateRepository
     {
@@ -21,11 +24,15 @@ namespace MRC.Agendia.Infrastructure.Caching
 
         private readonly IScheduleTemplateRepository _inner;
         private readonly IMemoryCache _cache;
+        private readonly PendingCacheInvalidations _pendingInvalidations;
 
-        public CachingScheduleTemplateRepository(IScheduleTemplateRepository inner, IMemoryCache cache)
+        public CachingScheduleTemplateRepository(IScheduleTemplateRepository inner,
+                                                 IMemoryCache cache,
+                                                 PendingCacheInvalidations pendingInvalidations)
         {
             _inner = inner;
             _cache = cache;
+            _pendingInvalidations = pendingInvalidations;
         }
 
         private static string Key(Guid businessId) => $"sched-templates:{businessId}";
@@ -37,12 +44,10 @@ namespace MRC.Agendia.Infrastructure.Caching
         /// <inheritdoc />
         public async Task<ScheduleTemplate?> GetEffectiveTemplateAsync(Guid businessId, DateOnly date, CancellationToken cancellationToken = default)
         {
-            // Same selection rule as ScheduleResolver.SelectTemplate, served from cache.
+            // The shared selection rule (#307), served from cache. Cached lists come back in
+            // whatever order they were built, which is exactly why the order must be total.
             var templates = await GetCachedByBusinessAsync(businessId, cancellationToken);
-            return templates
-                .Where(t => t.EffectiveFrom <= date && t.EffectiveTo >= date)
-                .OrderByDescending(t => t.IsDefault)
-                .FirstOrDefault();
+            return ScheduleTemplateSelection.SelectFor(templates, date);
         }
 
         private async Task<IReadOnlyList<ScheduleTemplate>> GetCachedByBusinessAsync(Guid businessId, CancellationToken cancellationToken)
@@ -55,27 +60,27 @@ namespace MRC.Agendia.Infrastructure.Caching
             return templates;
         }
 
-        // ----- Writes: evict the business's cached templates -----
+        // ----- Writes: queue the business's key, evicted on commit (#306) -----
 
         /// <inheritdoc />
         public async Task AddAsync(ScheduleTemplate template, CancellationToken cancellationToken = default)
         {
             await _inner.AddAsync(template, cancellationToken);
-            _cache.Remove(Key(template.BusinessId));
+            _pendingInvalidations.Add(Key(template.BusinessId));
         }
 
         /// <inheritdoc />
         public void Update(ScheduleTemplate template)
         {
             _inner.Update(template);
-            _cache.Remove(Key(template.BusinessId));
+            _pendingInvalidations.Add(Key(template.BusinessId));
         }
 
         /// <inheritdoc />
         public void Delete(ScheduleTemplate template)
         {
             _inner.Delete(template);
-            _cache.Remove(Key(template.BusinessId));
+            _pendingInvalidations.Add(Key(template.BusinessId));
         }
 
         // ----- Pass-through (not cached) -----

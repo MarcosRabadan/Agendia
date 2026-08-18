@@ -136,6 +136,23 @@ public class AgendiaDbContext : DbContext
             .HasForeignKey(ws => ws.ScheduleTemplateId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // At most ONE default template per business (#307). Nothing stopped a business from
+        // holding two IsDefault rows, and then the tie-break had nothing left to separate
+        // them: the same date resolved to a different template depending on who asked.
+        // Filtered, so only the defaults are constrained and the rest coexist freely.
+        //
+        // The plain FK index is declared EXPLICITLY here: EF's foreign-key convention drops
+        // its own once any index covers BusinessId, and the filtered one below cannot stand
+        // in for it - it only contains the default rows, so it cannot serve the "templates of
+        // this business" lookups that the resolver and the caching decorator run constantly.
+        modelBuilder.Entity<ScheduleTemplate>()
+            .HasIndex(st => st.BusinessId);
+
+        modelBuilder.Entity<ScheduleTemplate>()
+            .HasIndex(st => st.BusinessId, "IX_ScheduleTemplate_OneDefaultPerBusiness")
+            .IsUnique()
+            .HasFilter("\"IsDefault\"");
+
         modelBuilder.Entity<WeeklyTimeSlot>()
             .Property(ws => ws.DayOfWeek)
             .HasConversion<int>();

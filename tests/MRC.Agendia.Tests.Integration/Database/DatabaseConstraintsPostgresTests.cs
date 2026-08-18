@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Exceptions;
 using MRC.Agendia.Infrastructure;
+using MRC.Agendia.Infrastructure.Caching;
 using MRC.Agendia.Tests.Integration.Infrastructure;
 // The sibling "...Integration.Business" namespace (a test folder) shadows the entity.
 using BusinessEntity = MRC.Agendia.Domain.Entities.Business;
@@ -99,7 +101,7 @@ namespace MRC.Agendia.Tests.Integration.Database
             await using var db = _postgres.CreateContext();
             var business = await SeedBusinessAsync(db);
             var service = await SeedServiceAsync(db, business.Id);
-            var unitOfWork = new UnitOfWork(db);
+            var unitOfWork = new UnitOfWork(db, new PendingCacheInvalidations(new MemoryCache(new MemoryCacheOptions())));
             var clientUserId = $"harmony-{Guid.NewGuid():N}";
             var date = new DateOnly(2026, 6, 7);
             var start = new TimeOnly(16, 0);
@@ -124,6 +126,66 @@ namespace MRC.Agendia.Tests.Integration.Database
             // (DuplicateWaitlistEntryException -> clean 4xx), not a raw DbUpdateException (500).
             db.WaitlistEntries.Add(Entry());
             await Assert.ThrowsAsync<DuplicateWaitlistEntryException>(() => unitOfWork.Save());
+        }
+
+        [SkippableFact]
+        public async Task ScheduleTemplate_SecondDefaultForTheBusiness_ViaUnitOfWork_ThrowsTypedDomainException()
+        {
+            Skip.IfNot(_postgres.Available, "Docker/Postgres not available; constraints test skipped.");
+
+            await using var db = _postgres.CreateContext();
+            var business = await SeedBusinessAsync(db);
+            var unitOfWork = new UnitOfWork(db, new PendingCacheInvalidations(new MemoryCache(new MemoryCacheOptions())));
+
+            ScheduleTemplate Template(string name, bool isDefault, int year) => new()
+            {
+                BusinessId = business.Id,
+                Name = name,
+                EffectiveFrom = new DateOnly(year, 1, 1),
+                EffectiveTo = new DateOnly(year, 12, 31),
+                IsDefault = isDefault,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            db.ScheduleTemplates.Add(Template("Base", isDefault: true, 2035));
+            await unitOfWork.Save();
+
+            // Nothing in the application layer ever stopped a second default, and with two of
+            // them the tie-break had nothing left to separate them: the same date resolved to
+            // a different template depending on who asked (#307). The filtered unique index
+            // stops it, and UnitOfWork must surface it as a TYPED domain exception (clean 4xx)
+            // rather than a raw DbUpdateException (500).
+            db.ScheduleTemplates.Add(Template("Otra", isDefault: true, 2036));
+            await Assert.ThrowsAsync<DuplicateDefaultScheduleTemplateException>(() => unitOfWork.Save());
+        }
+
+        [SkippableFact]
+        public async Task ScheduleTemplate_SeveralNonDefaultsForTheBusiness_AreAllowed()
+        {
+            Skip.IfNot(_postgres.Available, "Docker/Postgres not available; constraints test skipped.");
+
+            await using var db = _postgres.CreateContext();
+            var business = await SeedBusinessAsync(db);
+            var unitOfWork = new UnitOfWork(db, new PendingCacheInvalidations(new MemoryCache(new MemoryCacheOptions())));
+
+            // The index is FILTERED: it constrains the defaults only. A business normally has
+            // several ordinary templates and they must keep coexisting.
+            for (var year = 2035; year <= 2037; year++)
+            {
+                db.ScheduleTemplates.Add(new ScheduleTemplate
+                {
+                    BusinessId = business.Id,
+                    Name = $"Curso {year}",
+                    EffectiveFrom = new DateOnly(year, 1, 1),
+                    EffectiveTo = new DateOnly(year, 12, 31),
+                    IsDefault = false,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            await unitOfWork.Save();
+
+            Assert.Equal(3, await db.ScheduleTemplates.CountAsync(t => t.BusinessId == business.Id));
         }
 
         // ----- helpers -----
