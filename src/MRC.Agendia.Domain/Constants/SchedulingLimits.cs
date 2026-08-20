@@ -17,7 +17,7 @@ namespace MRC.Agendia.Domain.Constants
         /// <summary>Latest date any range endpoint may reference.</summary>
         public static readonly DateOnly MaxDate = new(2100, 12, 31);
 
-        /// <summary>Uniform Spanish message for an out-of-bounds date.</summary>
-        public const string OutOfRangeMessage = "La fecha debe estar entre el 01/01/2000 y el 31/12/2100.";
+        /// <summary>Uniform message for an out-of-bounds date. Keep it in sync with the bounds above.</summary>
+        public const string OutOfRangeMessage = "The date must be between 2000-01-01 and 2100-12-31.";
     }
 }

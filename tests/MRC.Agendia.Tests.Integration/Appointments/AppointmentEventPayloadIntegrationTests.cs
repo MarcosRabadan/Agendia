@@ -13,9 +13,9 @@ namespace MRC.Agendia.Tests.Integration.Appointments
     /// <summary>
     /// What the integration events actually CARRY, read back from the outbox row the request
     /// wrote (#293). The unit tests cover which event is raised, but they stub
-    /// <c>GetNotificationContextAsync</c> with a fixed context, so they cannot see whether the
-    /// payload matches the appointment's real state after the update. That needs the real
-    /// repository and the real DbContext, which is what this class exercises.
+    /// <c>GetNotificationBusinessByEmployeeAsync</c> with a fixed business, so they cannot see
+    /// whether the payload matches the appointment's real state after the update. That needs
+    /// the real repository and the real DbContext, which is what this class exercises.
     ///
     /// InMemory is enough: nothing here depends on PostgreSQL semantics, only on EF not
     /// flushing pending changes before a query.

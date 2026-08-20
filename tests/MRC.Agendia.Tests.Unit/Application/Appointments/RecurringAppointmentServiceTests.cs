@@ -375,8 +375,9 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
         }
 
         // #263 / B5: series occurrences emit integration events per occurrence, reusing the
-        // single-appointment events. (In the other tests GetNotificationContextAsync is left
-        // unconfigured -> null -> the raise is a no-op, which is why they do not assert events.)
+        // single-appointment events. (In the other tests GetNotificationBusinessByEmployeeAsync
+        // is left unconfigured -> null -> the raise is a no-op, which is why they do not
+        // assert events.)
 
         [Fact]
         public async Task CreateSeriesAsync_RaisesConfirmedEventPerOccurrence()

@@ -199,6 +199,26 @@ namespace MRC.Agendia.Tests.Unit.Application.Validators
             result.ShouldFailOn("Dto.End");
         }
 
+        // The delete had no validator at all, so an empty id reached the handler instead of
+        // dying in the pipeline with a structured 400 like every other command (#312).
+        [Fact]
+        public void TimeOff_delete_valid_passes()
+            => new DeleteEmployeeTimeOffCommandValidator()
+                .Check(new DeleteEmployeeTimeOffCommand(TestIds.Of(1), TestIds.Of(2)))
+                .ShouldBeValid();
+
+        [Fact]
+        public void TimeOff_delete_empty_employee_fails()
+            => new DeleteEmployeeTimeOffCommandValidator()
+                .Check(new DeleteEmployeeTimeOffCommand(Guid.Empty, TestIds.Of(2)))
+                .ShouldFailOn("EmployeeId");
+
+        [Fact]
+        public void TimeOff_delete_empty_time_off_fails()
+            => new DeleteEmployeeTimeOffCommandValidator()
+                .Check(new DeleteEmployeeTimeOffCommand(TestIds.Of(1), Guid.Empty))
+                .ShouldFailOn("TimeOffId");
+
         // ---------- Shared pagination validators ----------
 
         [Fact]

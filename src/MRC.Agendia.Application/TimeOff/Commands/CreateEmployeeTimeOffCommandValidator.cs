@@ -1,6 +1,5 @@
 using FluentValidation;
 using MRC.Agendia.Application.Common;
-using MRC.Agendia.Domain.Constants;
 
 namespace MRC.Agendia.Application.TimeOff.Commands
 {
@@ -33,14 +32,6 @@ namespace MRC.Agendia.Application.TimeOff.Commands
             RuleFor(x => x.Dto.Reason)
                 .MaximumLength(MaxReasonLength)
                 .When(x => x.Dto.Reason is not null);
-        }
-
-        // Same absolute bounds the schedule validators use, so a wild date is a 400 and
-        // never an overflow deeper down.
-        private static bool BeWithinSupportedDates(DateTime value)
-        {
-            var date = DateOnly.FromDateTime(value);
-            return date >= SchedulingLimits.MinDate && date <= SchedulingLimits.MaxDate;
         }
     }
 }
