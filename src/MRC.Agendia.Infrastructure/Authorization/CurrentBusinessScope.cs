@@ -47,38 +47,83 @@ namespace MRC.Agendia.Infrastructure.Authorization
             get { Resolve(); return _businessIds; }
         }
 
+        /// <inheritdoc />
+        public async Task EnsureResolvedAsync(CancellationToken cancellationToken = default)
+        {
+            if (_resolved) return;
+            _resolved = true;
+
+            if (!NeedsLookup(out var userId))
+                return;
+
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
+
+            _businessIds = await BusinessIdsOf(db, userId).ToArrayAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Lazy fallback for anything that reaches the DbContext without going through the
+        /// pipeline: the background jobs (anonymous, so they never get as far as the query)
+        /// and tests that build a context by hand. On a request the middleware has already
+        /// resolved, so this is a field read (#313).
+        /// </summary>
         private void Resolve()
         {
             if (_resolved) return;
             _resolved = true;
 
+            if (!NeedsLookup(out var userId))
+                return;
+
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
+
+            _businessIds = BusinessIdsOf(db, userId).ToArray();
+        }
+
+        /// <summary>
+        /// Decides restriction from the ROLE and reports whether a database lookup is still
+        /// needed. Shared by both paths so they cannot drift apart on who is restricted.
+        /// </summary>
+        /// <param name="userId">The caller's subject, when a lookup is needed.</param>
+        /// <returns>True when the business ids still have to be read from the database.</returns>
+        private bool NeedsLookup(out string userId)
+        {
+            userId = string.Empty;
+
             // Anonymous and Admin callers see everything -> no restriction.
             if (!_currentUser.IsAuthenticated || _currentUser.IsInRole(Roles.Admin))
-                return;
+                return false;
 
             // Only tenant-bound roles are scoped. A Client browses the public
             // catalogue and belongs to no business, so it stays unrestricted.
             var isTenantBound = _currentUser.IsInRole(Roles.BusinessOwner)
                 || _currentUser.IsInRole(Roles.Employee);
             if (!isTenantBound)
-                return;
+                return false;
 
             // From here on the caller IS restricted, whatever the lookup returns.
             _isRestricted = true;
 
             // An authenticated token with no subject cannot be matched to any
             // business, so it gets the empty scope rather than a free pass.
-            var userId = _currentUser.UserId;
-            if (string.IsNullOrEmpty(userId))
-                return;
+            var subject = _currentUser.UserId;
+            if (string.IsNullOrEmpty(subject))
+                return false;
 
-            // Resolve on a separate scope/context with filters OFF: the request's
-            // own DbContext filter calls into this service, so querying it here
-            // would re-enter. IgnoreQueryFilters also bypasses the new business
-            // filter, so this lookup is never recursive.
-            using var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
+            userId = subject;
+            return true;
+        }
 
+        /// <summary>
+        /// The businesses the caller owns or works at, on a separate scope/context with
+        /// filters OFF: the request's own DbContext filter calls into this service, so
+        /// querying it here would re-enter. IgnoreQueryFilters also bypasses soft delete,
+        /// hence the explicit !IsDeleted on both sides.
+        /// </summary>
+        private static IQueryable<Guid> BusinessIdsOf(AgendiaDbContext db, string userId)
+        {
             var ownerBusinessIds = db.Businesses
                 .IgnoreQueryFilters()
                 .Where(b => b.OwnerUserId == userId && !b.IsDeleted)
@@ -89,7 +134,7 @@ namespace MRC.Agendia.Infrastructure.Authorization
                 .Where(e => e.UserId == userId && !e.IsDeleted)
                 .Select(e => e.BusinessId);
 
-            _businessIds = ownerBusinessIds.Union(employeeBusinessIds).ToArray();
+            return ownerBusinessIds.Union(employeeBusinessIds);
         }
     }
 }

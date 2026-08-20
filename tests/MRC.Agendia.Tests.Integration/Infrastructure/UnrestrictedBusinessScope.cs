@@ -10,5 +10,8 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
     {
         public bool IsRestricted => false;
         public IReadOnlyCollection<Guid> BusinessIds => Array.Empty<Guid>();
+
+        // Nothing to resolve: this double never looks anything up (#313).
+        public Task EnsureResolvedAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

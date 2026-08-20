@@ -61,6 +61,10 @@ namespace MRC.Agendia.Api.Configuration
 
             app.UseMiddleware<ExceptionHandlingMiddleware>();
             app.UseAuthentication();
+            // Right after authentication: the business scope is read from inside EF's
+            // (synchronous) global query filter, so it is resolved here with an await
+            // instead of blocking a thread on the first scoped query (#313).
+            app.UseMiddleware<BusinessScopeResolutionMiddleware>();
             app.UseAuthorization();
             app.MapControllers();
 
