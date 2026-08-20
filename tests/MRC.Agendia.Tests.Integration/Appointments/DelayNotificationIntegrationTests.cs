@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Schedules.DTO;
@@ -15,20 +17,34 @@ using MRC.Agendia.Tests.Integration.Infrastructure;
 namespace MRC.Agendia.Tests.Integration.Appointments
 {
     /// <summary>
-    /// End-to-end coverage for the delay alert (issue #168): Staff-only endpoint,
-    /// and notifying the upcoming appointments of "today". The happy path seeds an
-    /// appointment later today; it is skipped near midnight when there is no room
-    /// for a future same-day slot.
+    /// End-to-end coverage for the delay alert (issue #168): Staff-only endpoint, and
+    /// notifying the upcoming appointments of "today".
+    ///
+    /// <para>The clock is pinned (#310). The happy path needs "an appointment later today",
+    /// which real time cannot promise: the test used to skip itself from 22:00 onwards, so
+    /// the only end-to-end cover of this flow quietly disappeared on a nightly CI and the
+    /// suite still reported green. The DATE stays today - the generated schedule is for the
+    /// current year - and only the time of day is fixed.</para>
     /// </summary>
     public class DelayNotificationIntegrationTests : IClassFixture<CustomWebApplicationFactory>
     {
-        private readonly CustomWebApplicationFactory _factory;
+        private static readonly DateTime FixedNow = DateTime.Today.AddHours(10);
+
+        private readonly WebApplicationFactory<Program> _host;
         private readonly HttpClient _client;
 
         public DelayNotificationIntegrationTests(CustomWebApplicationFactory factory)
         {
-            _factory = factory;
-            _client = factory.CreateClient();
+            _host = factory.WithWebHostBuilder(builder =>
+                builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IClock>();
+                    services.AddSingleton<IClock>(new FixedClock(FixedNow));
+                }));
+
+            // Everything - client and scopes - goes through _host, so the requests and the
+            // seeding share one service provider and therefore one in-memory store.
+            _client = _host.CreateClient();
         }
 
         [Fact]
@@ -59,22 +75,20 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             Assert.Equal(0, body.Notified);
         }
 
-        [SkippableFact]
+        [Fact]
         public async Task NotifyDelay_ConCitaFuturaHoy_NotificaAlMenosUna()
         {
             var owner = await RegisterOwnerAsync("delay-ok");
             await GenerateAllDayScheduleAsync(owner);
             var service = await CreateServiceAsAsync(owner);
 
-            using (var scope = _factory.Services.CreateScope())
+            using (var scope = _host.Services.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
-                var now = scope.ServiceProvider.GetRequiredService<IClock>().BusinessNow;
-                Skip.If(now.Hour >= 22, "No hay margen para una cita futura el mismo dia.");
-
                 var employeeId = owner.EmployeeId;
 
-                var start = now.AddHours(1);
+                // 11:00 against a pinned 10:00: always later today, whatever time it really is.
+                var start = FixedNow.AddHours(1);
                 db.Appointments.Add(new Appointment
                 {
                     ClientUserId = "harmony-delay-test",
