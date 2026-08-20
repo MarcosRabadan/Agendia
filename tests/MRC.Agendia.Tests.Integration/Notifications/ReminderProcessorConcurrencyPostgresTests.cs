@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Events;
@@ -92,15 +91,6 @@ namespace MRC.Agendia.Tests.Integration.Notifications
                 .IgnoreQueryFilters()
                 .CountAsync(a => appointmentIds.Contains(a.Id) && a.ReminderSentAt != null);
             Assert.Equal(3, reminded);
-        }
-
-        private sealed class FixedClock : IClock
-        {
-            private readonly DateTime _now;
-            public FixedClock(DateTime now) => _now = now;
-            public DateTime BusinessNow => _now;
-            // The tests never cross timezones: the instant is already the wall clock.
-            public DateTime ToBusinessTime(DateTime utcInstant) => utcInstant;
         }
     }
 }
