@@ -12,6 +12,10 @@ namespace MRC.Agendia.Infrastructure.Caching
     /// evicts exactly the affected year(s) - no shared key-tracking needed. An
     /// <see cref="Update"/> that moves a holiday across a year boundary also evicts
     /// the previous year (read from the change tracker) so neither list goes stale.
+    ///
+    /// <para>Writes do not evict on the spot: they queue the key in
+    /// <see cref="PendingCacheInvalidations"/>, which the unit of work empties once the
+    /// change is committed (#306).</para>
     /// </summary>
     public class CachingHolidayCalendarRepository : IHolidayCalendarRepository
     {
@@ -19,12 +23,17 @@ namespace MRC.Agendia.Infrastructure.Caching
 
         private readonly IHolidayCalendarRepository _inner;
         private readonly IMemoryCache _cache;
+        private readonly PendingCacheInvalidations _pendingInvalidations;
         private readonly AgendiaDbContext _context;
 
-        public CachingHolidayCalendarRepository(IHolidayCalendarRepository inner, IMemoryCache cache, AgendiaDbContext context)
+        public CachingHolidayCalendarRepository(IHolidayCalendarRepository inner,
+                                                IMemoryCache cache,
+                                                PendingCacheInvalidations pendingInvalidations,
+                                                AgendiaDbContext context)
         {
             _inner = inner;
             _cache = cache;
+            _pendingInvalidations = pendingInvalidations;
             _context = context;
         }
 
@@ -41,13 +50,13 @@ namespace MRC.Agendia.Infrastructure.Caching
             return holidays;
         }
 
-        // ----- Writes: evict exactly the affected year(s) -----
+        // ----- Writes: queue exactly the affected year(s), evicted on commit (#306) -----
 
         /// <inheritdoc />
         public async Task AddAsync(HolidayCalendar holiday, CancellationToken cancellationToken = default)
         {
             await _inner.AddAsync(holiday, cancellationToken);
-            _cache.Remove(Key(holiday.Year));
+            _pendingInvalidations.Add(Key(holiday.Year));
         }
 
         /// <inheritdoc />
@@ -56,7 +65,7 @@ namespace MRC.Agendia.Infrastructure.Caching
             var list = holidays as IReadOnlyCollection<HolidayCalendar> ?? holidays.ToList();
             await _inner.AddRangeAsync(list, cancellationToken);
             foreach (var year in list.Select(h => h.Year).Distinct())
-                _cache.Remove(Key(year));
+                _pendingInvalidations.Add(Key(year));
         }
 
         /// <inheritdoc />
@@ -72,16 +81,16 @@ namespace MRC.Agendia.Infrastructure.Caching
 
             _inner.Update(holiday);
 
-            _cache.Remove(Key(holiday.Year));
+            _pendingInvalidations.Add(Key(holiday.Year));
             if (previousYear != holiday.Year)
-                _cache.Remove(Key(previousYear));
+                _pendingInvalidations.Add(Key(previousYear));
         }
 
         /// <inheritdoc />
         public void Delete(HolidayCalendar holiday)
         {
             _inner.Delete(holiday);
-            _cache.Remove(Key(holiday.Year));
+            _pendingInvalidations.Add(Key(holiday.Year));
         }
 
         // ----- Pass-through (not cached) -----

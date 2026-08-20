@@ -82,11 +82,10 @@ namespace MRC.Agendia.Infrastructure.Services
             return results;
         }
 
+        // One shared rule for every caller (#307): see ScheduleTemplateSelection for why
+        // the order has to be total.
         private static ScheduleTemplate? SelectTemplate(IEnumerable<ScheduleTemplate> templates, DateOnly date)
-            => templates
-                .Where(t => t.EffectiveFrom <= date && t.EffectiveTo >= date)
-                .OrderByDescending(t => t.IsDefault)
-                .FirstOrDefault();
+            => ScheduleTemplateSelection.SelectFor(templates, date);
 
         /// <summary>
         /// Single source of truth for turning an (optional) override + (optional)

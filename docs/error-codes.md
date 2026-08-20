@@ -63,6 +63,7 @@ El mapeo vive en `ExceptionHandlingMiddleware`. Las excepciones tipadas heredan 
 | Code | Excepción | Cuándo |
 |---|---|---|
 | `SCHEDULE_TEMPLATES_OVERLAP` | `TemplatesOverlapException` | Plantillas de horario con fechas solapadas. |
+| `DUPLICATE_DEFAULT_SCHEDULE_TEMPLATE` | `DuplicateDefaultScheduleTemplateException` | El negocio ya tiene una plantilla por defecto (#307). Lo garantiza el índice único filtrado `IX_ScheduleTemplate_OneDefaultPerBusiness`; `UnitOfWork` traduce la violación 23505 a este código en vez de dejarla salir como 500. |
 | `SCHEDULE_OVERRIDE_CONFLICT` | `ScheduleOverrideConflictException` | Ya existe una excepción de horario para esa fecha en el negocio. |
 | `SCHEDULE_YEAR_ALREADY_EXISTS` | `ScheduleAlreadyExistsForYearException` | Se intenta generar el horario de un año que el negocio ya tiene configurado sin confirmar el reemplazo. Reenviar con `replaceExisting: true` para rehacerlo. |
 | `APPOINTMENT_OUTSIDE_SCHEDULE` | `AppointmentOutsideScheduleException` | La cita cae en día cerrado o fuera de las franjas abiertas. |

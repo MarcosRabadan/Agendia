@@ -19,11 +19,13 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Caching
         private readonly IHolidayCalendarRepository _inner = Substitute.For<IHolidayCalendarRepository>();
         private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
         private readonly AgendiaDbContext _context = NewContext();
+        private readonly PendingCacheInvalidations _pending;
         private readonly CachingHolidayCalendarRepository _sut;
 
         public CachingHolidayCalendarRepositoryTests()
         {
-            _sut = new CachingHolidayCalendarRepository(_inner, _cache, _context);
+            _pending = new PendingCacheInvalidations(_cache);
+            _sut = new CachingHolidayCalendarRepository(_inner, _cache, _pending, _context);
         }
 
         private static AgendiaDbContext NewContext() =>
@@ -49,7 +51,8 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Caching
             await _sut.GetByYearAsync(2030); // cache 2030
             await _sut.GetByYearAsync(2031); // cache 2031
 
-            await _sut.AddAsync(new HolidayCalendar { Year = 2030 }); // evicts only 2030
+            await _sut.AddAsync(new HolidayCalendar { Year = 2030 }); // queues only 2030
+            _pending.Flush();                                        // commit (#306)
 
             await _sut.GetByYearAsync(2030); // re-fetches
             await _sut.GetByYearAsync(2031); // still cached
@@ -74,7 +77,8 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Caching
             // Move it across the year boundary; the entity now carries the new year.
             holiday.Date = new DateOnly(2026, 1, 1);
             holiday.Year = 2026;
-            _sut.Update(holiday); // must evict BOTH 2025 (old) and 2026 (new)
+            _sut.Update(holiday); // must queue BOTH 2025 (old) and 2026 (new)
+            _pending.Flush();     // commit (#306)
 
             await _sut.GetByYearAsync(2025); // re-fetches (old year was evicted)
             await _sut.GetByYearAsync(2026); // re-fetches (new year was evicted)
