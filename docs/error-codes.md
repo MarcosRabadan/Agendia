@@ -92,8 +92,77 @@ cuerpo tiene el mismo formato (`code`/`message`/`traceId`).
 | `IDEMPOTENT_REQUEST_IN_PROGRESS` | 409 | Una petición idéntica con esa misma clave sigue en curso (reintento concurrente). |
 | `IDEMPOTENCY_KEY_REUSED` | 409 | Esa clave ya se usó para una petición con **otro** cuerpo. |
 
+## Códigos de omisión de serie (dentro de una respuesta 200)
+
+Las operaciones de serie —`POST /api/Appointment/series` y
+`POST /api/Appointment/series/{seriesId}/move`— responden **200 aunque no hayan podido con
+todas las ocurrencias**: lo que no cabe se devuelve en `skipped[]` en vez de tumbar la
+petición. **Un 200 no significa que se hayan creado (o movido) todas**, y un cliente que
+ignore `skipped[]` le dirá al alumno que su clase semanal está programada hasta diciembre
+cuando faltan tres viernes.
+
+```json
+{
+  "seriesId": "0198f3a1-7c4e-7b2a-9f01-2c3d4e5f6a7b",
+  "created": [ /* AppointmentDto, las que sí se reservaron */ ],
+  "skipped": [
+    { "date": "2027-02-01", "code": "RECURRENCE_MONTH_WITHOUT_DAY", "reason": "Month 2027-02 does not have day 31." },
+    { "date": "2027-03-31", "code": "APPOINTMENT_CONFLICT", "reason": "The employee already has another appointment overlapping this time." }
+  ]
+}
+```
+
+La respuesta de `move` es igual con `moved[]` en lugar de `created[]`. Cada omisión lleva un
+`code` para **ramificar** y un `reason` legible para mostrar.
+
+### Propios de la recurrencia
+
+No son códigos de excepción: no salen nunca en un 4xx y solo existen aquí.
+
+| Código | Operación | Cuándo | Qué fecha lleva |
+|--------|-----------|--------|-----------------|
+| `RECURRENCE_MONTH_WITHOUT_DAY` | crear | Serie mensual el día N y ese mes no lo tiene (el 31 en febrero). | **El día 1 de ese mes**, no el día pedido. Pintarla en crudo dice "no se pudo el 1 de febrero" cuando se había pedido el 31. |
+| `RECURRENCE_LIMIT_REACHED` | crear | El patrón produjo más de 366 fechas (`RecurrenceExpander.MaxOccurrences`). Las que pasan del tope se reportan **una a una**, no como un único aviso. | La fecha descartada. |
+| `RECURRENCE_DAY_ALREADY_PASSED` | crear | El día del mes pedido ya había pasado cuando arranca la serie. | La fecha candidata de ese mes. |
+| `SERIES_MOVE_TARGET_COLLISION` | mover | La ocurrencia aterriza encima de **otra de la misma serie**, no de una cita ajena (#194). Es un efecto del orden en que se mueven: con un desplazamiento uniforme el estado final no se solapa, así que suele bastar reintentar. | La fecha **original** de la ocurrencia. |
+
+Los tres `RECURRENCE_*` solo pueden aparecer al **crear** —los produce la expansión del
+patrón, que `move` no ejecuta— y `SERIES_MOVE_TARGET_COLLISION` solo al **mover**.
+
+### Reutilizados del catálogo de errores
+
+Los mismos códigos de la tabla de 400, aquí dentro de un 200 y referidos a **una fecha**, no a
+la petición. Pueden aparecer en las **dos** operaciones.
+
+| Código | Cuándo, en una ocurrencia concreta |
+|--------|------------------------------------|
+| `INVALID_APPOINTMENT_TIME` | La ocurrencia cae en el pasado (típico de la primera fecha, hoy, con la hora ya pasada). |
+| `APPOINTMENT_OUTSIDE_SCHEDULE` | Ese día el negocio está cerrado, o la clase cruza el descanso entre turnos. |
+| `EMPLOYEE_UNAVAILABLE` | El profesor tiene un bloqueo de agenda ese día (#271). |
+| `APPOINTMENT_CONFLICT` | No queda capacidad libre en esa franja. |
+| `SLOT_ON_HOLD` | La franja está retenida para un alumno de la lista de espera (#268). |
+
+> **Esta segunda lista es abierta.** Desde #291 el criterio está invertido a propósito: se
+> enumeran los fallos que tumban la petición entera (`RecurringAppointmentService.IsRequestLevel`)
+> y **todo lo demás degrada a omisión reportada**. Cualquier excepción de dominio nueva que
+> lance el validador aparecerá en `skipped[]` sin que nadie lo decida. **El cliente debe tratar
+> un `code` desconocido mostrando su `reason` tal cual**, nunca descartando la entrada.
+
+Lo que **sí** tumba la petición entera, con su 4xx de siempre, porque es un problema de la
+petición y no de una fecha: `SERVICE_NOT_FOUND`, `EMPLOYEE_NOT_FOUND`, `BUSINESS_NOT_FOUND`,
+`APPOINTMENT_SERIES_NOT_FOUND`, `EMPLOYEE_INACTIVE`, `SERVICE_EMPLOYEE_MISMATCH` y
+`APPOINTMENT_DURATION_MISMATCH`.
+
+### Lo que NO aparece en `skipped[]`
+
+- Las fechas del patrón que caen **fuera de la ventana pedida** (después de `until`): no se
+  pidieron, así que no se pierde nada.
+- Al mover, las ocurrencias **pasadas o ya terminadas** (canceladas, completadas, no-show): no
+  se mueven —el histórico se deja intacto— y tampoco se reportan.
+
 ## Cómo añadir un código nuevo
 
 1. Crea la excepción en `MRC.Agendia.Domain.Exceptions` heredando de `NotFoundException` (→404) o de `DomainException` (→400), con su `Code`.
 2. Lánzala desde el servicio/validador correspondiente (no uses las builtin).
 3. El middleware ya la mapea por su tipo base; añade aquí la fila del catálogo.
+4. Si la lanza el validador de citas, mira si además puede salir en `skipped[]` de una serie: todo lo que no esté en `RecurringAppointmentService.IsRequestLevel` degrada a omisión reportada (#291) y tiene que entrar también en esa tabla.
