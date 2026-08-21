@@ -154,6 +154,32 @@ namespace MRC.Agendia.Infrastructure.Authorization
                     && (!_businessScope.IsRestricted
                         || _businessScope.BusinessIds.Contains(a.Employee.BusinessId)));
 
+        /// <summary>Employees as resource authorization must see them.</summary>
+        /// <remarks>
+        /// Same reasoning as <see cref="AppointmentsForAuthorization"/> (#292), applied to the
+        /// employee lookup that #292 did not reach: an appointment keeps its history when a
+        /// participant is soft-deleted, so acting on one whose employee has left the business
+        /// must stay possible. With the filters on, a soft-deleted employee - or a live one whose
+        /// BUSINESS is soft-deleted, since the required Employee -&gt; Business navigation turns
+        /// the projection into an INNER JOIN - produced a 404 that contradicted the appointment
+        /// service, which explicitly supports a status/notes change with a soft-deleted
+        /// participant.
+        ///
+        /// The business scope is re-stated by hand because <c>IgnoreQueryFilters</c> is
+        /// all-or-nothing in EF 9: another tenant's employee must stay invisible as a 404, not
+        /// become a 403 that would confirm it exists (the R7 convention).
+        ///
+        /// This does NOT weaken booking: the scheduling validator reads the employee through the
+        /// filtered repository, so creating on a soft-deleted employee still fails with the very
+        /// same EmployeeNotFoundException. Only the layer that raises it changes.
+        /// </remarks>
+        private IQueryable<Employee> EmployeesForAuthorization()
+            => _context.Employees
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Where(e => !_businessScope.IsRestricted
+                    || _businessScope.BusinessIds.Contains(e.BusinessId));
+
         /// <inheritdoc />
         public async Task EnsureCanManageAppointmentAsync(Guid appointmentId, CancellationToken cancellationToken = default)
         {
@@ -194,14 +220,13 @@ namespace MRC.Agendia.Infrastructure.Authorization
             if (_currentUser.IsInRole(Roles.Admin)) return;
             var userId = RequireUserId();
 
-            // NOTE (R7): for an Owner/Employee caller the global business-scope filter already
-            // restricts _context.Employees to their own business(es), so targeting an employee
-            // of ANOTHER business surfaces EmployeeNotFoundException (404) here rather than 403.
-            // It still denies correctly - only the status code differs. (Admin is unscoped and
-            // returned above; a Client is handled explicitly at the end.)
+            // NOTE (R7): for an Owner/Employee caller the business scope restricts this to their
+            // own business(es), so targeting an employee of ANOTHER business surfaces
+            // EmployeeNotFoundException (404) here rather than 403. It still denies correctly -
+            // only the status code differs. (Admin is unscoped and returned above; a Client is
+            // handled explicitly at the end.)
             // Target employee and their business
-            var employee = await _context.Employees
-                .AsNoTracking()
+            var employee = await EmployeesForAuthorization()
                 .Where(e => e.Id == employeeId)
                 .Select(e => new { e.BusinessId, BusinessOwnerUserId = e.Business.OwnerUserId })
                 .FirstOrDefaultAsync(cancellationToken)
