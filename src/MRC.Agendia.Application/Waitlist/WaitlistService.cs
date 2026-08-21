@@ -166,7 +166,7 @@ namespace MRC.Agendia.Application.Waitlist
                     // appointment may not have opened a seat (employee MaxConcurrentAppointments
                     // > 1), and an "any-employee" entry (EmployeeId null) only wants a slot that
                     // is genuinely free across the business. Skip if it is still full (0) or no
-                    // longer schedulable (null) so we do not raise a false "hay hueco" alert.
+                    // longer schedulable (null) so we do not raise a false "there is a spot" alert.
                     var capacity = await _availabilityService.GetSlotCapacityAsync(
                         entry.BusinessId, entry.Date, entry.StartTime, entry.ServiceId, entry.EmployeeId, cancellationToken);
                     if (capacity is null or <= 0)

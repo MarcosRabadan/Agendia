@@ -135,7 +135,7 @@ namespace MRC.Agendia.Infrastructure.Services
                 {
                     Date = date,
                     IsOpen = false,
-                    ClosedReason = "Sin horario definido",
+                    ClosedReason = "No schedule defined",
                     TimeSlots = new List<EffectiveTimeSlot>()
                 };
             }
@@ -154,7 +154,7 @@ namespace MRC.Agendia.Infrastructure.Services
             {
                 Date = date,
                 IsOpen = daySlots.Count > 0,
-                ClosedReason = daySlots.Count > 0 ? null : "Dia no laborable",
+                ClosedReason = daySlots.Count > 0 ? null : "Non-working day",
                 TimeSlots = daySlots
             };
         }

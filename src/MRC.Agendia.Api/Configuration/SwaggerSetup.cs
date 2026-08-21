@@ -3,7 +3,7 @@ using Microsoft.OpenApi.Models;
 namespace MRC.Agendia.Api.Configuration
 {
     /// <summary>
-    /// Swagger UI con soporte para Bearer token (boton Authorize).
+    /// Swagger UI with Bearer token support (Authorize button).
     /// </summary>
     public static class SwaggerSetup
     {

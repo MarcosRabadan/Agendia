@@ -42,7 +42,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Services
 
             Assert.Equal(MondayDate, result.Date);
             Assert.False(result.IsOpen);
-            Assert.Equal("Sin horario definido", result.ClosedReason);
+            Assert.Equal("No schedule defined", result.ClosedReason);
             Assert.Empty(result.TimeSlots);
             Assert.Null(result.OverrideType);
         }
@@ -64,7 +64,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Services
             var result = await _sut.GetEffectiveScheduleAsync(BusinessId, MondayDate);
 
             Assert.False(result.IsOpen);
-            Assert.Equal("Dia no laborable", result.ClosedReason);
+            Assert.Equal("Non-working day", result.ClosedReason);
             Assert.Empty(result.TimeSlots);
         }
 
@@ -252,7 +252,7 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Services
 
             Assert.False(results[2].IsOpen);
             Assert.Equal(to, results[2].Date);
-            Assert.Equal("Sin horario definido", results[2].ClosedReason);
+            Assert.Equal("No schedule defined", results[2].ClosedReason);
         }
 
         [Fact]
