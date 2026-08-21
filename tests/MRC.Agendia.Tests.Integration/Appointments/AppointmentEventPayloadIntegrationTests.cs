@@ -3,9 +3,13 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MRC.Agendia.Application.Appointments.DTO;
 using MRC.Agendia.Application.Employees.DTO;
+using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Infrastructure;
+using MRC.Agendia.Infrastructure.Notifications;
 using MRC.Agendia.Tests.Integration.Infrastructure;
 
 namespace MRC.Agendia.Tests.Integration.Appointments
@@ -149,11 +153,91 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             Assert.EndsWith("Z", payload.GetProperty("occurredOnUtc").GetString()!, StringComparison.Ordinal);
         }
 
+        /// <summary>
+        /// A PUT that cancels AND hands the class over in the same request. The cancellation is
+        /// for whoever HELD it: it used to be addressed with the clientUserId the body carried,
+        /// so the notice reached a student who never had the class while the one who lost it was
+        /// told nothing (#342).
+        /// </summary>
+        [Fact]
+        public async Task Cancelling_and_reassigning_at_once_names_the_previous_holder()
+        {
+            var setup = await BookableBusinessFactory.CreateAsync(_client, _factory.Services, "evt-cancel-swap", Year);
+            var appointment = await BookAsync(setup, new TimeOnly(9, 30));
+            var newHolder = BookableBusinessFactory.CounterClientUserId();
+
+            var update = await BookableBusinessFactory.SendAsync(_client, HttpMethod.Put,
+                $"/api/Appointment/{appointment.Id}", setup.OwnerToken,
+                new UpdateAppointmentDto(
+                    Id: appointment.Id,
+                    ClientUserId: newHolder,                // handed over ...
+                    EmployeeId: appointment.EmployeeId,
+                    ServiceId: appointment.ServiceId,
+                    StartDate: appointment.StartDate,
+                    EndDate: appointment.EndDate,
+                    Status: AppointmentStatus.Cancelled,    // ... and cancelled in the same act
+                    Notes: null));
+
+            Assert.Equal(HttpStatusCode.OK, update.StatusCode);
+
+            var payload = await ReadEventAsync(appointment.Id, "AppointmentCancelled");
+            Assert.Equal(appointment.ClientUserId, payload.GetProperty("clientUserId").GetString());
+
+            // And nothing is confirmed to the incoming student: the only confirmation for this
+            // appointment is still the one the booking wrote.
+            Assert.Equal(1, await CountEventsAsync(appointment.Id, "AppointmentConfirmed"));
+        }
+
+        /// <summary>
+        /// Handing the class over inside the last 24 hours, without moving it: the reminder that
+        /// already went out named the student who left, so the new one needs their own. The job
+        /// marks ReminderSentAt per appointment, so unless the handover clears it the incoming
+        /// student silently inherits "already reminded" and hears nothing before the class (#337).
+        /// The job is driven here with a pinned clock, which is what makes the whole chain -
+        /// update, mark, job, payload - observable end to end.
+        /// </summary>
+        [Fact]
+        public async Task Handing_the_class_over_re_arms_the_reminder_for_the_new_holder()
+        {
+            var setup = await BookableBusinessFactory.CreateAsync(_client, _factory.Services, "evt-rearm", Year);
+            // A day of its own so the job cannot pick up the appointments of the sibling tests.
+            var appointment = await BookAsync(setup, new TimeOnly(14, 0), Day.AddDays(1));
+            await MarkAsAlreadyRemindedAsync(appointment.Id);
+
+            var newHolder = BookableBusinessFactory.CounterClientUserId();
+            var update = await BookableBusinessFactory.SendAsync(_client, HttpMethod.Put,
+                $"/api/Appointment/{appointment.Id}", setup.OwnerToken,
+                new UpdateAppointmentDto(
+                    Id: appointment.Id,
+                    ClientUserId: newHolder,
+                    EmployeeId: appointment.EmployeeId,
+                    ServiceId: appointment.ServiceId,
+                    StartDate: appointment.StartDate,   // same time on purpose: only the holder changes
+                    EndDate: appointment.EndDate,
+                    Status: appointment.Status,
+                    Notes: null));
+
+            Assert.Equal(HttpStatusCode.OK, update.StatusCode);
+
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
+            var processor = new ReminderProcessor(
+                db,
+                new FixedClock(appointment.StartDate.AddHours(-2)),
+                Options.Create(new ReminderOptions { ReminderWindowHours = 24 }),
+                NullLogger<ReminderProcessor>.Instance);
+
+            Assert.Equal(1, await processor.ProcessDueAsync());
+
+            var payload = await ReadEventAsync(appointment.Id, "AppointmentReminder");
+            Assert.Equal(newHolder, payload.GetProperty("clientUserId").GetString());
+        }
+
         // ----- Helpers -----
 
-        private async Task<AppointmentDto> BookAsync(BookableBusiness setup, TimeOnly at)
+        private async Task<AppointmentDto> BookAsync(BookableBusiness setup, TimeOnly at, DateOnly? on = null)
         {
-            var start = Day.ToDateTime(at);
+            var start = (on ?? Day).ToDateTime(at);
             var response = await BookableBusinessFactory.PostAppointmentAsync(_client, setup.OwnerToken,
                 new CreateAppointmentDto(setup.ClientUserId, setup.EmployeeId, setup.Service.Id,
                     start, start.AddMinutes(30), null));
@@ -169,8 +253,25 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             return (await response.Content.ReadFromJsonAsync<EmployeeDto>())!.Id;
         }
 
+        /// <summary>Marks the appointment as already reminded, as the 24h job would have.</summary>
+        private async Task MarkAsAlreadyRemindedAsync(Guid appointmentId)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
+            var appointment = await db.Appointments.FirstAsync(a => a.Id == appointmentId);
+            appointment.ReminderSentAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        }
+
         /// <summary>The single outbox payload of that type written for this appointment.</summary>
-        private async Task<JsonElement> ReadEventAsync(Guid appointmentId, string type)
+        private async Task<JsonElement> ReadEventAsync(Guid appointmentId, string type) =>
+            Assert.Single(await ReadEventsAsync(appointmentId, type));
+
+        /// <summary>How many outbox payloads of that type were written for this appointment.</summary>
+        private async Task<int> CountEventsAsync(Guid appointmentId, string type) =>
+            (await ReadEventsAsync(appointmentId, type)).Count;
+
+        private async Task<List<JsonElement>> ReadEventsAsync(Guid appointmentId, string type)
         {
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
@@ -181,12 +282,10 @@ namespace MRC.Agendia.Tests.Integration.Appointments
                 .ToListAsync();
 
             // Cloned: the JsonDocument is disposed as soon as it goes out of scope.
-            var matching = payloads
+            return payloads
                 .Select(p => JsonDocument.Parse(p).RootElement.Clone())
                 .Where(e => e.GetProperty("appointmentId").GetGuid() == appointmentId)
                 .ToList();
-
-            return Assert.Single(matching);
         }
     }
 }

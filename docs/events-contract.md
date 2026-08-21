@@ -83,6 +83,13 @@ con el `DateTime` en `Kind=Unspecified`.
 > además mueve la cita **no** emite además un `AppointmentRescheduled`: los dos eventos de
 > arriba ya llevan la hora definitiva.
 
+> **Una cancelación se anuncia siempre a quien tenía la cita.** El `clientUserId` del
+> `AppointmentCancelled` sale del estado **anterior** de la cita, nunca del cuerpo de la
+> petición. Solo se distinguen si el `PUT` cancela **y** reasigna a la vez: ahí gana la
+> cancelación, se emite un único `AppointmentCancelled` para el titular **anterior** —el que
+> pierde la clase— y al titular nuevo **no** se le confirma nada, porque se le asignó una cita
+> que queda cancelada en el mismo acto.
+
 ### Payload de los eventos de cita
 
 `AppointmentConfirmed` / `AppointmentCancelled` / `AppointmentReminder`:

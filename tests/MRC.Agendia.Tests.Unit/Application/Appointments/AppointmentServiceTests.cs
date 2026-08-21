@@ -550,6 +550,155 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             Assert.Empty(entity.DomainEvents.OfType<AppointmentRescheduled>());
         }
 
+        // ---------- Destinatario de la cancelacion (#342) ----------
+
+        /// <summary>
+        /// Cancelling and reassigning in the SAME request: the cancellation names whoever HELD
+        /// the class, not the clientUserId the request happens to carry. It used to take it from
+        /// the (already mapped) entity, so the notice went to the incoming student and the one
+        /// who lost the class was told nothing.
+        /// </summary>
+        [Fact]
+        public async Task UpdateAsync_CancelaYReasignaALaVez_AvisaAlTitularAnterior()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = FutureAppointment(start);
+            var previousClient = entity.ClientUserId;
+            MapBookingFields();
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _clock.BusinessNow.Returns(start.AddDays(-10)); // staff caller
+
+            await _sut.UpdateAsync(new UpdateAppointmentDto(
+                entity.Id, "student-2", entity.EmployeeId, entity.ServiceId,
+                start, start.AddMinutes(30), AppointmentStatus.Cancelled, Notes: null));
+
+            var cancelled = Assert.Single(entity.DomainEvents.OfType<AppointmentCancelled>());
+            Assert.Equal(previousClient, cancelled.ClientUserId);
+        }
+
+        /// <summary>
+        /// And the incoming student is confirmed nothing: they were handed a class that is
+        /// cancelled in the same act, so there is nothing to confirm to them.
+        /// </summary>
+        [Fact]
+        public async Task UpdateAsync_CancelaYReasignaALaVez_NoConfirmaAlNuevo()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = FutureAppointment(start);
+            MapBookingFields();
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _clock.BusinessNow.Returns(start.AddDays(-10));
+
+            await _sut.UpdateAsync(new UpdateAppointmentDto(
+                entity.Id, "student-2", entity.EmployeeId, entity.ServiceId,
+                start, start.AddMinutes(30), AppointmentStatus.Cancelled, Notes: null));
+
+            Assert.Empty(entity.DomainEvents.OfType<AppointmentConfirmed>());
+        }
+
+        /// <summary>
+        /// Control: a plain cancellation still names the holder, so taking the recipient from the
+        /// previous state cannot be "always somebody else" without this failing.
+        /// </summary>
+        [Fact]
+        public async Task UpdateAsync_CancelaSinReasignar_AvisaAlTitular()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = FutureAppointment(start);
+            MapBookingFields();
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _clock.BusinessNow.Returns(start.AddDays(-10));
+
+            await _sut.UpdateAsync(new UpdateAppointmentDto(
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
+                start, start.AddMinutes(30), AppointmentStatus.Cancelled, Notes: null));
+
+            var cancelled = Assert.Single(entity.DomainEvents.OfType<AppointmentCancelled>());
+            Assert.Equal("user-1", cancelled.ClientUserId);
+        }
+
+        // ---------- Re-armado del recordatorio de 24h (#337) ----------
+
+        /// <summary>
+        /// Handing the class over without moving it has to re-arm the 24h reminder: the mark is
+        /// per appointment, so the incoming student would inherit the "already reminded" of the
+        /// one who left and get no reminder at all. Every test here starts from an appointment
+        /// that was ALREADY reminded on purpose - with a null mark they would pass either way,
+        /// which is exactly what let this through.
+        /// </summary>
+        [Fact]
+        public async Task UpdateAsync_CambioDeTitularSinMover_RearmaElRecordatorio()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = AlreadyRemindedAppointment(start);
+            MapBookingFields();
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _clock.BusinessNow.Returns(start.AddHours(-5)); // inside the last 24h: it already went out
+
+            await _sut.UpdateAsync(new UpdateAppointmentDto(
+                entity.Id, "student-2", entity.EmployeeId, entity.ServiceId,
+                start, start.AddMinutes(30), entity.Status, Notes: null));
+
+            Assert.Null(entity.ReminderSentAt);
+        }
+
+        /// <summary>Regression: moving the class keeps re-arming it, as it always did.</summary>
+        [Fact]
+        public async Task UpdateAsync_CambioDeHora_RearmaElRecordatorio()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = AlreadyRemindedAppointment(start);
+            MapBookingFields();
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _clock.BusinessNow.Returns(start.AddDays(-10));
+
+            var newStart = start.AddDays(1);
+            await _sut.UpdateAsync(new UpdateAppointmentDto(
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
+                newStart, newStart.AddMinutes(30), entity.Status, Notes: null));
+
+            Assert.Null(entity.ReminderSentAt);
+        }
+
+        /// <summary>Regression: a notes-only edit changes nothing the reminder said.</summary>
+        [Fact]
+        public async Task UpdateAsync_SoloNotas_NoRearmaElRecordatorio()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = AlreadyRemindedAppointment(start);
+            var reminded = entity.ReminderSentAt;
+            MapBookingFields();
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _clock.BusinessNow.Returns(start.AddDays(-10));
+
+            await _sut.UpdateAsync(new UpdateAppointmentDto(
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
+                start, start.AddMinutes(30), entity.Status, Notes: "el alumno traera su propia guitarra"));
+
+            Assert.Equal(reminded, entity.ReminderSentAt);
+        }
+
+        /// <summary>
+        /// Pins the asymmetry on purpose: stretching the class without moving its start does NOT
+        /// re-arm, because the reminder that already went out stated the right time.
+        /// </summary>
+        [Fact]
+        public async Task UpdateAsync_SoloAlargaLaClase_NoRearmaElRecordatorio()
+        {
+            var start = new DateTime(2030, 1, 10, 12, 0, 0, DateTimeKind.Unspecified);
+            var entity = AlreadyRemindedAppointment(start);
+            var reminded = entity.ReminderSentAt;
+            MapBookingFields();
+            _repository.GetByIdAsync(entity.Id).Returns(entity);
+            _clock.BusinessNow.Returns(start.AddDays(-10));
+
+            await _sut.UpdateAsync(new UpdateAppointmentDto(
+                entity.Id, entity.ClientUserId, entity.EmployeeId, entity.ServiceId,
+                start, start.AddMinutes(60), entity.Status, Notes: null));
+
+            Assert.Equal(reminded, entity.ReminderSentAt);
+        }
+
         /// <summary>
         /// Deleting a live appointment is a cancellation for whoever was booked, whatever verb
         /// the front used. An already-cancelled one has nothing left to announce.
@@ -690,6 +839,17 @@ namespace MRC.Agendia.Tests.Unit.Application.Appointments
             EndDate = start.AddMinutes(30),
             Status = AppointmentStatus.Confirmed,
         };
+
+        /// <summary>
+        /// A future appointment whose 24h reminder has already gone out. It is the only starting
+        /// state in which the re-arming can be observed at all (#337).
+        /// </summary>
+        private static Appointment AlreadyRemindedAppointment(DateTime start)
+        {
+            var entity = FutureAppointment(start);
+            entity.ReminderSentAt = new DateTime(2030, 1, 9, 12, 0, 0, DateTimeKind.Utc);
+            return entity;
+        }
 
         private static Appointment PastAppointment() => new()
         {
