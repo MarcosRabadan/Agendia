@@ -28,6 +28,36 @@ Cada fila del outbox es `{ Type, Payload, OccurredOnUtc }`:
 Agendia **no incluye email/nombre/teléfono** (no los posee): el consumidor los resuelve
 por `clientUserId` (el `sub` de Harmony).
 
+### Las fechas: dos tipos distintos, y no se parsean igual
+
+Esto es lo más fácil de equivocar del contrato (#321). Un payload lleva **dos clases de
+fecha** y solo una de ellas es un instante real:
+
+| Campo | Qué es | Formato |
+|---|---|---|
+| `startDate`, `endDate`, `previousStartDate`, `previousEndDate`, `date`, `startTime` | **Hora de pared** del negocio | Sin zona: `"2026-09-01T09:00:00"` |
+| `occurredOnUtc`, `holdUntil` | **Instante real** en UTC | Con `Z`: `"2026-08-13T16:20:00Z"` |
+
+> ⚠️ **Las horas de pared NO son UTC.** `"2026-09-01T09:00:00"` significa *las nueve de la
+> mañana en el reloj del negocio*, no las 09:00 UTC. Parsearla como UTC —o como hora local
+> del proceso consumidor— hace que el aviso al alumno **anuncie una hora equivocada**, que
+> es justo el dato que ese aviso existe para dar.
+
+Por eso todo payload con fechas de pared incluye **`timeZone`**, el identificador IANA de la
+zona del negocio:
+
+```json
+"timeZone": "Europe/Madrid"
+```
+
+Para convertir una hora de pared a instante real: interpretar el valor **en `timeZone`**.
+En .NET, `TimeZoneInfo.ConvertTimeToUtc(startDate, TimeZoneInfo.FindSystemTimeZoneById(timeZone))`
+con el `DateTime` en `Kind=Unspecified`.
+
+> **Hoy la zona es única para toda la instalación** (`Scheduling:TimeZone`, por defecto
+> `Europe/Madrid`), pero viaja en el payload a propósito: el consumidor no debe depender de
+> la configuración de Agendia, y el día que un negocio tenga zona propia el campo ya está.
+
 ## Eventos
 
 | `Type`                 | Cuándo                                                  |
@@ -67,9 +97,13 @@ por `clientUserId` (el `sub` de Harmony).
   "startDate": "2026-09-01T09:00:00",
   "endDate": "2026-09-01T09:30:00",
   "language": "es",
+  "timeZone": "Europe/Madrid",
   "occurredOnUtc": "2026-08-13T16:20:00Z"
 }
 ```
+
+`startDate`/`endDate` son **hora de pared** de `timeZone`; `occurredOnUtc` es UTC. Ver
+[Las fechas](#las-fechas-dos-tipos-distintos-y-no-se-parsean-igual).
 
 Los identificadores de entidad (`appointmentId`, `businessId`, `employeeId`,
 `serviceId`, `waitlistEntryId`) son **GUID (UUIDv7)** desde la Fase 6; `clientUserId`
@@ -93,6 +127,7 @@ es el `sub` opaco de Harmony (string, no GUID).
   "startTime": "16:00:00",
   "holdUntil": "2026-08-13T16:35:00Z",
   "language": "es",
+  "timeZone": "Europe/Madrid",
   "occurredOnUtc": "2026-08-13T16:20:00Z"
 }
 ```

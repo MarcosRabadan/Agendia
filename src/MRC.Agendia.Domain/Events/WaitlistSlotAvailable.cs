@@ -17,5 +17,6 @@ namespace MRC.Agendia.Domain.Events
                                                TimeOnly StartTime,
                                                DateTime HoldUntil,
                                                string Language,
+                                               string TimeZone,
                                                DateTime OccurredOnUtc) : IIntegrationEvent;
 }

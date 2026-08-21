@@ -13,5 +13,6 @@ namespace MRC.Agendia.Domain.Events
                                               DateTime StartDate,
                                               DateTime EndDate,
                                               string Language,
+                                              string TimeZone,
                                               DateTime OccurredOnUtc) : IIntegrationEvent;
 }

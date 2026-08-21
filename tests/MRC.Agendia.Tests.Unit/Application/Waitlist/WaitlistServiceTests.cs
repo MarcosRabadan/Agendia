@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.Extensions.Logging.Abstractions;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Availability;
 using MRC.Agendia.Application.Waitlist;
@@ -28,17 +29,19 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         private readonly IBookingConcurrencyGuard _bookingGuard = Substitute.For<IBookingConcurrencyGuard>();
         private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
         private readonly IMapper _mapper = Substitute.For<IMapper>();
+        private readonly IClock _clock = Substitute.For<IClock>();
         private readonly WaitlistService _sut;
 
         public WaitlistServiceTests()
         {
+            _clock.TimeZoneId.Returns("Europe/Madrid");
             _mapper.Map<WaitlistEntryDto>(Arg.Any<WaitlistEntry>()).Returns(ci => ToDto(ci.Arg<WaitlistEntry>()));
             // The guard just runs the critical section directly in unit tests.
             _bookingGuard.ExecuteSerializedAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
                 .Returns(ci => ci.Arg<Func<Task>>()());
             _sut = new WaitlistService(
                 _repository, _availability, _appointmentRepository, _bookingGuard, _unitOfWork,
-                NullLogger<WaitlistService>.Instance, _mapper, new WaitlistOptions());
+                NullLogger<WaitlistService>.Instance, _mapper, _clock, new WaitlistOptions());
         }
 
         private JoinWaitlistDto Dto() => new(BusinessId: TestIds.Of(10), ServiceId: TestIds.Of(3), Date: new DateOnly(2030, 6, 7), StartTime: new TimeOnly(16, 0), EmployeeId: TestIds.Of(2));

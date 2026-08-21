@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Availability;
 using MRC.Agendia.Application.Waitlist;
@@ -29,10 +30,12 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         private readonly IBusinessRepository _businessRepository = Substitute.For<IBusinessRepository>();
         private readonly IBookingConcurrencyGuard _guard = Substitute.For<IBookingConcurrencyGuard>();
         private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+        private readonly IClock _clock = Substitute.For<IClock>();
         private readonly WaitlistHoldProcessor _sut;
 
         public WaitlistHoldProcessorTests()
         {
+            _clock.TimeZoneId.Returns("Europe/Madrid");
             // The guard just runs the critical section directly in unit tests.
             _guard.ExecuteSerializedAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
                 .Returns(ci => ci.Arg<Func<Task>>()());
@@ -40,7 +43,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
                 .Returns(new BusinessEntity { DefaultLanguage = "es" });
 
             _sut = new WaitlistHoldProcessor(_repository, _availability, _businessRepository, _guard, _unitOfWork,
-                new WaitlistOptions(), NullLogger<WaitlistHoldProcessor>.Instance);
+                _clock, new WaitlistOptions(), NullLogger<WaitlistHoldProcessor>.Instance);
         }
 
         [Fact]

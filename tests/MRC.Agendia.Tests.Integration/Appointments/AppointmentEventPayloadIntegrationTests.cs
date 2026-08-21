@@ -122,6 +122,33 @@ namespace MRC.Agendia.Tests.Integration.Appointments
             Assert.Equal(appointment.StartDate, payload.GetProperty("startDate").GetDateTime());
         }
 
+        /// <summary>
+        /// The payload has to say WHICH zone its wall-clock dates are in (#321). They are
+        /// serialized with no zone marker at all, so a consumer that defaulted to UTC - or to
+        /// its own local zone - would announce the class at the wrong hour, and could not
+        /// correct it because Agendia never told it the zone.
+        /// </summary>
+        [Fact]
+        public async Task The_payload_says_which_zone_its_wall_clock_dates_are_in()
+        {
+            var setup = await BookableBusinessFactory.CreateAsync(_client, _factory.Services, "evt-tz", Year);
+            var appointment = await BookAsync(setup, new TimeOnly(11, 0));
+
+            var payload = await ReadEventAsync(appointment.Id, "AppointmentConfirmed");
+
+            Assert.Equal("Europe/Madrid", payload.GetProperty("timeZone").GetString());
+
+            // And the two kinds of instant stay distinguishable: the wall-clock dates carry no
+            // zone suffix, while occurredOnUtc is a real UTC instant and keeps its Z.
+            var startDate = payload.GetProperty("startDate").GetString();
+            Assert.NotNull(startDate);
+            Assert.DoesNotContain("Z", startDate!, StringComparison.Ordinal);
+            Assert.DoesNotContain("+", startDate!, StringComparison.Ordinal);
+            Assert.StartsWith($"{Year}-06-02T11:00:00", startDate!, StringComparison.Ordinal);
+
+            Assert.EndsWith("Z", payload.GetProperty("occurredOnUtc").GetString()!, StringComparison.Ordinal);
+        }
+
         // ----- Helpers -----
 
         private async Task<AppointmentDto> BookAsync(BookableBusiness setup, TimeOnly at)

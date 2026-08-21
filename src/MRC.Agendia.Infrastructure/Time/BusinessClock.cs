@@ -29,7 +29,16 @@ namespace MRC.Agendia.Infrastructure.Time
                 throw new InvalidOperationException(
                     $"The time zone '{id}' (Scheduling:TimeZone) does not exist on this system.", ex);
             }
+
+            // The CONFIGURED id, not _timeZone.Id: on Windows the resolved TimeZoneInfo reports
+            // the Windows id ("Romance Standard Time") while on Linux it reports the IANA one,
+            // so publishing _timeZone.Id would put a different value in the event payload
+            // depending on the host the service happens to run on.
+            TimeZoneId = id;
         }
+
+        /// <inheritdoc />
+        public string TimeZoneId { get; }
 
         /// <inheritdoc />
         public DateTime BusinessNow => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _timeZone);

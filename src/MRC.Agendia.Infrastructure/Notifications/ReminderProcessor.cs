@@ -118,7 +118,7 @@ namespace MRC.Agendia.Infrastructure.Notifications
                 appointment.RaiseEvent(new AppointmentReminder(
                     appointment.Id, appointment.Employee.BusinessId, appointment.EmployeeId,
                     appointment.ClientUserId, appointment.ServiceId, appointment.StartDate,
-                    appointment.EndDate, appointment.Employee.Business.DefaultLanguage, DateTime.UtcNow));
+                    appointment.EndDate, appointment.Employee.Business.DefaultLanguage, _clock.TimeZoneId, DateTime.UtcNow));
 
                 appointment.ReminderSentAt = DateTime.UtcNow;
                 // Persist per item, NOT once after the loop: a crash mid-batch would otherwise

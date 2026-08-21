@@ -85,7 +85,7 @@ namespace MRC.Agendia.Application.Appointments
                 appointment.RaiseEvent(new AppointmentDelayed(
                     appointment.Id, business.BusinessId, appointment.EmployeeId, appointment.ClientUserId,
                     appointment.ServiceId, appointment.StartDate, appointment.EndDate,
-                    dto.DelayMinutes, business.Language, DateTime.UtcNow));
+                    dto.DelayMinutes, business.Language, _clock.TimeZoneId, DateTime.UtcNow));
             }
 
             await _unitOfWork.Save(cancellationToken);

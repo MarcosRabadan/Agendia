@@ -18,6 +18,11 @@ namespace MRC.Agendia.Tests.Integration.Infrastructure
         public DateTime BusinessNow => _now;
 
         /// <inheritdoc />
+        // Same default as BusinessClock, so a test that asserts on an event payload sees the
+        // value the app would really publish.
+        public string TimeZoneId => "Europe/Madrid";
+
+        /// <inheritdoc />
         // The tests never cross timezones: the instant is already the wall clock.
         public DateTime ToBusinessTime(DateTime utcInstant) => utcInstant;
     }
