@@ -194,21 +194,30 @@ namespace MRC.Agendia.Application.Appointments
             {
                 _mapper.Map(dto, entity);
 
-                // Rescheduling to a different time re-arms the 24h reminder so it
-                // is sent again for the new date.
-                if (entity.StartDate != previousStartDate)
-                    entity.ReminderSentAt = null;
-
                 // What the update means for the people involved, in order of precedence. All of
                 // these are written in the SAME save as the change (transactional outbox).
                 var timeChanged = entity.StartDate != previousStartDate || entity.EndDate != previousEndDate;
                 var clientChanged = entity.ClientUserId != previousClientUserId;
 
+                // Re-arm the 24h reminder when the one that may already have gone out no longer
+                // describes reality: a different time needs a new one, and a different holder
+                // needs THEIR own - the job marks ReminderSentAt per appointment, so without this
+                // the incoming client silently inherits somebody else's "already reminded".
+                // Deliberately StartDate and not timeChanged: stretching the class without moving
+                // its start does not invalidate a reminder that already stated the right time.
+                if (entity.StartDate != previousStartDate || clientChanged)
+                    entity.ReminderSentAt = null;
+
                 if (becomesCancelled)
                 {
-                    // A cancelled appointment always yields its event.
+                    // A cancelled appointment always yields its event, and it goes to whoever
+                    // HELD it - the previous holder, not whatever clientUserId the request
+                    // happens to carry. They are the same value unless the request also
+                    // reassigns, and then the one who loses the class is the one who has to hear
+                    // it (docs/events-contract.md). Same reasoning as the handover branch below,
+                    // which already names the previous client on purpose.
                     await RaiseAppointmentEventAsync(entity, ctx => new AppointmentCancelled(
-                        ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId,
+                        ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, previousClientUserId,
                         ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, _clock.TimeZoneId, DateTime.UtcNow),
                         cancellationToken);
                 }
