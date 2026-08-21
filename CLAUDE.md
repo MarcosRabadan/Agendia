@@ -537,8 +537,47 @@ dotnet run --project src/MRC.Agendia.Api
 cd src/MRC.Agendia.Api && dotnet user-secrets set "Jwt:Key" "$(openssl rand -base64 64)"
 ```
 
+## Cómo se escribe una issue
+
+**El cuerpo lleva TODO el análisis, no un resumen del síntoma.** El usuario revisa y mergea
+él mismo, y quien la implemente puede ser otra sesión sin nada de este contexto: si la issue
+solo enuncia el síntoma, hay que re-derivar el análisis entero. Formato de referencia: #332.
+
+**Antes de escribir, terminar el análisis:** leer el código real (no de memoria), medir el
+alcance por rol y por operación, buscar el test que debería haberlo cazado y por qué no lo
+hizo, y validar que el fix propuesto no rompe a los **otros** llamantes del mismo método.
+Reproducir con una sonda temporal cuando se pueda — y borrarla después.
+
+Partes del cuerpo, en este orden:
+
+1. **Cabecera** en blockquote: de dónde sale, contra qué commit se verificó, y si está
+   **reproducido** o es supuesto.
+2. **TL;DR** de 3-5 líneas: qué falla, para quién, y cuál es la peor consecuencia.
+3. **Contexto**: qué hay hoy y cómo se llegó aquí. Si es pariente de otra issue, decir
+   explícitamente qué arregló aquélla y qué se quedó fuera.
+4. **El mecanismo, exacto**: `file:line` + el fragmento real + la cadena causal hasta el
+   síntoma observable (status HTTP, `code`, mensaje).
+5. **Reproducción**: la sonda o el test que lo demuestra, con su salida pegada.
+6. **Alcance exacto**: tablas de qué falla y qué **no**, por operación y por rol.
+7. **Consecuencias** numeradas, de peor a menor; el caso irrecuperable primero si lo hay, y a
+   qué datos o métricas contamina.
+8. **Por qué la suite no lo ve**: citar el test que debería haberlo cazado y qué se lo impide.
+9. **Propuesta de arreglo**: el código propuesto, **qué NO se toca y por qué**, por qué no
+   abre un agujero nuevo, y los matices honestos (cambios colaterales, dependencias
+   implícitas).
+10. **Alternativas descartadas**, con el motivo.
+11. **Criterios de aceptación** en checkboxes, incluyendo las **regresiones** que deben
+    seguir verdes.
+12. **Tests propuestos** en tabla (nombre + assert), con el nivel (unit / integración
+    InMemory / Postgres real) y **por qué ese nivel y no otro**.
+13. Pie: `_Hallazgo X de <la auditoría>. Emparentado con #N._`
+
+Un chore mecánico no necesita las 13 partes; la regla es que el cuerpo lleve **todo lo que se
+sepa**, proporcionado al hallazgo. Idioma: español sin tildes, igual que los commits.
+
 ## Workflow al implementar una issue
 
+0. Escribir la issue según la sección anterior.
 1. `git checkout master && git pull origin master`
 2. Rama `<num>-<slug-corto>` (ej. `248-fase7-docs-limpieza`). **Nunca** `claude/xxx`.
 3. Implementar según convenciones.
