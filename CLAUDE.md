@@ -259,7 +259,7 @@ Repository (EF Core / Npgsql) → PostgreSQL
 5. **Validar autorización en handlers**, no en controllers: inyecta `IResourceAuthorizationService`
    y llama al `EnsureCan*Async` correspondiente ANTES de delegar. Excepción: listados Admin-only.
 6. **Validar inputs con FluentValidation** (un Validator por Command/Query).
-7. **Comentarios en inglés; mensajes runtime (validación/excepciones/logs) en español.**
+7. **Comentarios, XML docs y mensajes de runtime (validación/excepciones/logs): todo en inglés** (ver «Idiomas»).
 8. **Combos de roles → `RolePolicies`** (`AdminOrOwner`, `Staff`, `AdminOrSelfClient`), no
    concatenar strings.
 9. **DTOs de `Update`:** NUNCA incluir `BusinessId`, `OwnerUserId` ni `UserId` de un recurso
@@ -453,7 +453,7 @@ Repository (EF Core / Npgsql) → PostgreSQL
 ### Errores
 - Jerarquía `DomainException` (400, con `Code`) / `NotFoundException` (404) + concretas.
   `ExceptionHandlingMiddleware` mapea por tipo. Respuesta `{ code, message, traceId, [errors] }`,
-  `traceId` == correlation id. **Mensajes en español; `code` estable.** Catálogo:
+  `traceId` == correlation id. **Mensajes en inglés; `code` estable.** Catálogo:
   [`docs/error-codes.md`](docs/error-codes.md) — mantenerlo al día.
 
 ### Otros transversales

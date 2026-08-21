@@ -254,7 +254,7 @@ namespace MRC.Agendia.Application.Schedules
                         BusinessId = dto.BusinessId,
                         Date = closed.Date,
                         OverrideType = ScheduleOverrideType.Closed,
-                        Reason = closed.Reason ?? "Cierre puntual",
+                        Reason = closed.Reason ?? "Closure",
                         CreatedAt = DateTime.UtcNow
                     });
                 }

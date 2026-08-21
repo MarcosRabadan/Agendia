@@ -7,7 +7,7 @@ Todas las respuestas de error siguen la forma:
 ```
 
 - `code`: identificador estable y legible por máquina. El frontend debe ramificar por `code`, no por `message`.
-- `message`: texto en español orientado al usuario/dev.
+- `message`: texto en inglés orientado al dev (barrido #274).
 - `traceId`: correlación de la petición (ver `X-Correlation-Id`).
 - `errors`: solo en validaciones (`VALIDATION_ERROR`), mapa `campo -> [mensajes]`.
 

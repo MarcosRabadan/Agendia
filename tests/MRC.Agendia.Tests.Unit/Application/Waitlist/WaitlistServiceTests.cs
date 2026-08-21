@@ -176,7 +176,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
 
             await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
 
-            // No false "hay hueco" notification, and the entry stays Waiting for a real opening.
+            // No false "there is a spot" notification, and the entry stays Waiting for a real opening.
             Assert.Empty(waiting.DomainEvents);
             Assert.Equal(WaitlistStatus.Waiting, waiting.Status);
         }
