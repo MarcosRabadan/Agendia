@@ -2,6 +2,7 @@ using AutoMapper;
 using Microsoft.Extensions.Logging;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Availability;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Application.Waitlist.DTO;
 using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
@@ -20,6 +21,7 @@ namespace MRC.Agendia.Application.Waitlist
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<WaitlistService> _logger;
         private readonly IMapper _mapper;
+        private readonly IClock _clock;
         private readonly WaitlistOptions _options;
 
         public WaitlistService(IWaitlistRepository repository,
@@ -29,8 +31,10 @@ namespace MRC.Agendia.Application.Waitlist
                                IUnitOfWork unitOfWork,
                                ILogger<WaitlistService> logger,
                                IMapper mapper,
+                               IClock clock,
                                WaitlistOptions options)
         {
+            _clock = clock;
             _options = options;
             _repository = repository;
             _availabilityService = availabilityService;
@@ -182,7 +186,7 @@ namespace MRC.Agendia.Application.Waitlist
                     entry.RaiseEvent(new WaitlistSlotAvailable(
                         entry.Id, entry.BusinessId, entry.EmployeeId, entry.ClientUserId,
                         entry.ServiceId, entry.Date, entry.StartTime, holdUntil,
-                        appointment.Employee.Business.DefaultLanguage, DateTime.UtcNow));
+                        appointment.Employee.Business.DefaultLanguage, _clock.TimeZoneId, DateTime.UtcNow));
 
                     entry.Status = WaitlistStatus.Notified;
                     entry.HoldUntil = holdUntil;

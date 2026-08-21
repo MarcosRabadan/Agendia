@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Availability;
+using MRC.Agendia.Application.Common;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Events;
 using MRC.Agendia.Domain.Interfaces;
@@ -28,6 +29,7 @@ namespace MRC.Agendia.Application.Waitlist
         private readonly IBusinessRepository _businessRepository;
         private readonly IBookingConcurrencyGuard _bookingGuard;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IClock _clock;
         private readonly WaitlistOptions _options;
         private readonly ILogger<WaitlistHoldProcessor> _logger;
 
@@ -36,6 +38,7 @@ namespace MRC.Agendia.Application.Waitlist
                                      IBusinessRepository businessRepository,
                                      IBookingConcurrencyGuard bookingGuard,
                                      IUnitOfWork unitOfWork,
+                                     IClock clock,
                                      WaitlistOptions options,
                                      ILogger<WaitlistHoldProcessor> logger)
         {
@@ -44,6 +47,7 @@ namespace MRC.Agendia.Application.Waitlist
             _businessRepository = businessRepository;
             _bookingGuard = bookingGuard;
             _unitOfWork = unitOfWork;
+            _clock = clock;
             _options = options;
             _logger = logger;
         }
@@ -109,7 +113,7 @@ namespace MRC.Agendia.Application.Waitlist
             next.RaiseEvent(new WaitlistSlotAvailable(
                 next.Id, next.BusinessId, next.EmployeeId, next.ClientUserId,
                 next.ServiceId, next.Date, next.StartTime, holdUntil,
-                business?.DefaultLanguage ?? "es", DateTime.UtcNow));
+                business?.DefaultLanguage ?? "es", _clock.TimeZoneId, DateTime.UtcNow));
 
             next.Status = WaitlistStatus.Notified;
             next.HoldUntil = holdUntil;

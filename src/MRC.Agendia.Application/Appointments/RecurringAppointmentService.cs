@@ -297,7 +297,7 @@ namespace MRC.Agendia.Application.Appointments
 
             appointment.RaiseEvent(new AppointmentConfirmed(
                 context.AppointmentId, context.BusinessId, context.EmployeeId, context.ClientUserId,
-                context.ServiceId, context.StartDate, context.EndDate, context.Language, DateTime.UtcNow));
+                context.ServiceId, context.StartDate, context.EndDate, context.Language, _clock.TimeZoneId, DateTime.UtcNow));
             await _unitOfWork.Save(cancellationToken);
         }
 
@@ -311,7 +311,7 @@ namespace MRC.Agendia.Application.Appointments
 
             appointment.RaiseEvent(new AppointmentCancelled(
                 context.AppointmentId, context.BusinessId, context.EmployeeId, context.ClientUserId,
-                context.ServiceId, context.StartDate, context.EndDate, context.Language, DateTime.UtcNow));
+                context.ServiceId, context.StartDate, context.EndDate, context.Language, _clock.TimeZoneId, DateTime.UtcNow));
         }
 
         // Rescheduled is raised on a moved occurrence (new dates already set in memory); no Save
@@ -324,7 +324,7 @@ namespace MRC.Agendia.Application.Appointments
 
             appointment.RaiseEvent(new AppointmentRescheduled(
                 context.AppointmentId, context.BusinessId, context.EmployeeId, context.ClientUserId, context.ServiceId,
-                previousStart, previousEnd, appointment.StartDate, appointment.EndDate, context.Language, DateTime.UtcNow));
+                previousStart, previousEnd, appointment.StartDate, appointment.EndDate, context.Language, _clock.TimeZoneId, DateTime.UtcNow));
         }
 
         // The event describes the occurrence as it stands IN MEMORY; only the owning business

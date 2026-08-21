@@ -122,7 +122,7 @@ namespace MRC.Agendia.Application.Appointments
                     // known after the first Save, hence the second one here.
                     await RaiseAppointmentEventAsync(created, ctx => new AppointmentConfirmed(
                         ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId,
-                        ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, DateTime.UtcNow),
+                        ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, _clock.TimeZoneId, DateTime.UtcNow),
                         cancellationToken);
                     await _unitOfWork.Save(cancellationToken);
                     return created;
@@ -209,7 +209,7 @@ namespace MRC.Agendia.Application.Appointments
                     // A cancelled appointment always yields its event.
                     await RaiseAppointmentEventAsync(entity, ctx => new AppointmentCancelled(
                         ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId,
-                        ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, DateTime.UtcNow),
+                        ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, _clock.TimeZoneId, DateTime.UtcNow),
                         cancellationToken);
                 }
                 else if (clientChanged)
@@ -222,12 +222,12 @@ namespace MRC.Agendia.Application.Appointments
                     // one, so it is the only field not taken from it.
                     await RaiseAppointmentEventAsync(entity, ctx => new AppointmentCancelled(
                         ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, previousClientUserId,
-                        ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, DateTime.UtcNow),
+                        ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, _clock.TimeZoneId, DateTime.UtcNow),
                         cancellationToken);
 
                     await RaiseAppointmentEventAsync(entity, ctx => new AppointmentConfirmed(
                         ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId,
-                        ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, DateTime.UtcNow),
+                        ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, _clock.TimeZoneId, DateTime.UtcNow),
                         cancellationToken);
                 }
                 else if (timeChanged)
@@ -235,7 +235,7 @@ namespace MRC.Agendia.Application.Appointments
                     // A plain move: the consumer tells the client it changed (previous -> new).
                     await RaiseAppointmentEventAsync(entity, ctx => new AppointmentRescheduled(
                         ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId, ctx.ServiceId,
-                        previousStartDate, previousEndDate, entity.StartDate, entity.EndDate, ctx.Language, DateTime.UtcNow),
+                        previousStartDate, previousEndDate, entity.StartDate, entity.EndDate, ctx.Language, _clock.TimeZoneId, DateTime.UtcNow),
                         cancellationToken);
                 }
 
@@ -338,7 +338,7 @@ namespace MRC.Agendia.Application.Appointments
             {
                 await RaiseAppointmentEventAsync(entity, ctx => new AppointmentCancelled(
                     ctx.AppointmentId, ctx.BusinessId, ctx.EmployeeId, ctx.ClientUserId,
-                    ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, DateTime.UtcNow),
+                    ctx.ServiceId, ctx.StartDate, ctx.EndDate, ctx.Language, _clock.TimeZoneId, DateTime.UtcNow),
                     cancellationToken);
             }
 

@@ -34,5 +34,22 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Time
         {
             Assert.Throws<InvalidOperationException>(() => new BusinessClock(ConfigWith("Zona/Inexistente")));
         }
+
+        // #321: the id travels in every event payload, so it must be the CONFIGURED (IANA) one.
+        // TimeZoneInfo.Id would report the Windows id ("Romance Standard Time") on Windows and
+        // the IANA one on Linux, putting a different value in the payload per host.
+        [Fact]
+        public void TimeZoneId_ReportsTheConfiguredIanaId_NotTheHostSpecificOne()
+        {
+            var clock = new BusinessClock(ConfigWith("Europe/Madrid"));
+
+            Assert.Equal("Europe/Madrid", clock.TimeZoneId);
+        }
+
+        [Fact]
+        public void TimeZoneId_SinConfigurar_CaeAlPorDefecto()
+        {
+            Assert.Equal("Europe/Madrid", new BusinessClock(ConfigWith(null)).TimeZoneId);
+        }
     }
 }
