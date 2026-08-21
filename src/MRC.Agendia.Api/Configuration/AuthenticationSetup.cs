@@ -106,7 +106,8 @@ namespace MRC.Agendia.Api.Configuration
             if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
             {
                 throw new InvalidOperationException(
-                    "Jwt:Key es demasiado corta (minimo 32 bytes para HS256).");
+                    "Jwt:Key is too short: HS256 needs at least 32 bytes. " +
+                    "It is the symmetric key shared with Harmony, so lengthen it on both sides.");
             }
             return jwtKey;
         }
