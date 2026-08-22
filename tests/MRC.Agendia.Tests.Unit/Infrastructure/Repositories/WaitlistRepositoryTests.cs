@@ -167,6 +167,41 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Repositories
             Assert.Equal(new[] { "first", "second" }, capped.Select(c => c.ClientUserId).ToArray());
         }
 
+        /// <summary>
+        /// The expiry sweep reads <c>Service.DurationMinutes</c> off the hold it is expiring, to
+        /// work out which queued slots overlap the one it frees (#350). Nothing else loads it, so
+        /// without the Include that is a NullReferenceException on every cycle - caught and
+        /// retried by the hosted service, which turns it into the queue silently never advancing
+        /// and one log line a minute.
+        ///
+        /// <para>Queried from a SEPARATE context on purpose: with the seeding one, EF would fix
+        /// the navigation up from the change tracker and the test would pass without the Include.
+        /// </para>
+        /// </summary>
+        [Fact]
+        public async Task HoldsVencidos_TraenSuServicioCargado()
+        {
+            var dbName = $"wl-repo-{Guid.NewGuid()}";
+            var expiredAt = new DateTime(2035, 6, 4, 9, 0, 0, DateTimeKind.Utc);
+
+            using (var seed = NewContext(dbName))
+            {
+                await SeedAsync(seed);
+                Add(seed, "expired-hold", new TimeOnly(10, 0), status: WaitlistStatus.Notified);
+                var entry = seed.WaitlistEntries.Local.First();
+                entry.HoldUntil = expiredAt;
+                await seed.SaveChangesAsync();
+            }
+
+            using var ctx = NewContext(dbName);
+            var expired = await new WaitlistRepository(ctx).GetExpiredHoldsAsync(
+                expiredAt.AddMinutes(1), batchSize: 10);
+
+            var hold = Assert.Single(expired);
+            Assert.NotNull(hold.Service);
+            Assert.Equal(60, hold.Service.DurationMinutes);
+        }
+
         // ----- Helpers -----
 
         /// <param name="unbounded">

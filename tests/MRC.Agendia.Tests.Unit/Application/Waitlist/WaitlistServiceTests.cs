@@ -282,6 +282,25 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
                 Arg.Any<TimeOnly?>(), Arg.Any<Guid>(), 2, Arg.Any<CancellationToken>());
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public async Task NotifyForFreedAppointment_TopeAbsurdoEnConfig_SigueMirandoAlMenosAUno(int configured)
+        {
+            // A zero in the config would become Take(0) and kill the whole feature in silence:
+            // no notification, no error, nothing in the log. The clamp is what stops that, so it
+            // gets a test of its own.
+            var sut = NewService(new WaitlistOptions { NotifyCandidateLimit = configured });
+            FreedAppointment();
+            Candidates();
+
+            await sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
+
+            await _repository.Received(1).GetWaitingCandidatesForSlotAsync(
+                Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<TimeOnly?>(),
+                Arg.Any<TimeOnly?>(), Arg.Any<Guid>(), 1, Arg.Any<CancellationToken>());
+        }
+
         [Fact]
         public async Task NotifyForFreedAppointment_EsBestEffort_NoPropaga()
         {
