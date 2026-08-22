@@ -152,6 +152,108 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
                 _client, HttpMethod.Get, $"/api/Appointment/{appointment.Id}", token);
 
             Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+
+            // #332: the acceptance criteria of #292 said "readable AND cancellable", but only the
+            // GET became an assert. The PUT authorizes twice - the appointment and the
+            // destination - and the second lookup kept its filters, so cancelling by PUT was a
+            // 404 while cancelling by DELETE worked. Same act, different verb, different answer.
+            var put = await BookableBusinessFactory.SendAsync(
+                _client, HttpMethod.Put, $"/api/Appointment/{appointment.Id}", token,
+                new UpdateAppointmentDto(
+                    Id: appointment.Id,
+                    ClientUserId: appointment.ClientUserId,
+                    EmployeeId: appointment.EmployeeId,
+                    ServiceId: appointment.ServiceId,
+                    StartDate: appointment.StartDate,
+                    EndDate: appointment.EndDate,
+                    Status: AppointmentStatus.Cancelled,
+                    Notes: null));
+
+            Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+            Assert.Equal(AppointmentStatus.Cancelled, await ReadStatusAsync(appointment.Id));
+        }
+
+        /// <summary>
+        /// The consequence that could not be undone: a class that already happened, whose teacher
+        /// then left the academy, could never be closed as Completed or NoShow. Those bookings
+        /// stayed Pending/Confirmed for good and kept polluting the business statistics and every
+        /// student's reliability index, with no way out short of an UPDATE by hand (#332).
+        /// </summary>
+        [Theory]
+        [InlineData(AppointmentStatus.Completed)]
+        [InlineData(AppointmentStatus.NoShow)]
+        public async Task AppointmentPasada_ConEmpleadoBorrado_SePuedeCerrar(AppointmentStatus status)
+        {
+            var (setup, _, appointment) = await BookWithClientAsync($"sd-past-{status}");
+            await DeleteEmployeeAsync(setup);
+            var (start, end) = await MoveToThePastAsync(appointment.Id);
+
+            var put = await BookableBusinessFactory.SendAsync(
+                _client, HttpMethod.Put, $"/api/Appointment/{appointment.Id}", setup.OwnerToken,
+                new UpdateAppointmentDto(
+                    Id: appointment.Id,
+                    ClientUserId: appointment.ClientUserId,
+                    EmployeeId: appointment.EmployeeId,
+                    ServiceId: appointment.ServiceId,
+                    StartDate: start,
+                    EndDate: end,
+                    Status: status,
+                    Notes: null));
+
+            Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+            Assert.Equal(status, await ReadStatusAsync(appointment.Id));
+        }
+
+        /// <summary>
+        /// Regression, and the reason the fix is safe: authorization no longer rejects a
+        /// soft-deleted employee, but BOOKING one still fails with the very same 404 - the
+        /// scheduling validator reads the employee through the filtered repository. Only the
+        /// layer that answers changes; from outside it is indistinguishable.
+        /// </summary>
+        [Fact]
+        public async Task CrearCita_SobreEmpleadoBorrado_Sigue404()
+        {
+            var setup = await BookableBusinessFactory.CreateAsync(_client, _factory.Services, "sd-book-gone", SeriesYear);
+            await DeleteEmployeeAsync(setup);
+
+            var start = SeriesDay.ToDateTime(new TimeOnly(12, 0));
+            var response = await BookableBusinessFactory.PostAppointmentAsync(_client, setup.OwnerToken,
+                new CreateAppointmentDto(setup.ClientUserId, setup.EmployeeId, setup.Service.Id,
+                    start, start.AddMinutes(30), null));
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            var error = await response.Content.ReadFromJsonAsync<ApiError>();
+            Assert.Equal("EMPLOYEE_NOT_FOUND", error!.Code);
+        }
+
+        /// <summary>
+        /// And the series takes the whole request down with it, rather than reporting one skip per
+        /// occurrence: a missing employee is a request-level failure (`IsRequestLevel`).
+        /// </summary>
+        [Fact]
+        public async Task CrearSerie_SobreEmpleadoBorrado_Sigue404()
+        {
+            var setup = await BookableBusinessFactory.CreateAsync(_client, _factory.Services, "sd-series-gone", SeriesYear);
+            await DeleteEmployeeAsync(setup);
+
+            var response = await BookableBusinessFactory.SendAsync(_client, HttpMethod.Post,
+                "/api/Appointment/series", setup.OwnerToken,
+                new CreateAppointmentSeriesDto(
+                    ClientUserId: setup.ClientUserId,
+                    EmployeeId: setup.EmployeeId,
+                    ServiceId: setup.Service.Id,
+                    StartTime: new TimeOnly(13, 0),
+                    Frequency: RecurrenceFrequency.Weekly,
+                    Interval: 1,
+                    DaysOfWeek: new[] { SeriesDay.DayOfWeek },
+                    DayOfMonth: null,
+                    StartDate: SeriesDay,
+                    UntilDate: SeriesDay.AddDays(7),
+                    Notes: null));
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            var error = await response.Content.ReadFromJsonAsync<ApiError>();
+            Assert.Equal("EMPLOYEE_NOT_FOUND", error!.Code);
         }
 
         /// <summary>
@@ -291,6 +393,33 @@ namespace MRC.Agendia.Tests.Integration.SoftDelete
             response.EnsureSuccessStatusCode();
 
             return (setup, clientToken, (await response.Content.ReadFromJsonAsync<AppointmentDto>())!);
+        }
+
+        /// <summary>
+        /// Drags the appointment into the past, as time passing would, and returns its new wall
+        /// clock so the caller can send it back unchanged: a PUT that also moved the dates would
+        /// be re-validated and rejected for being in the past.
+        /// </summary>
+        private async Task<(DateTime Start, DateTime End)> MoveToThePastAsync(Guid appointmentId)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
+            // IgnoreQueryFilters: with the employee soft-deleted the required navigation would
+            // drop the row here too - the very defect under test, one layer down.
+            var appointment = await db.Appointments.IgnoreQueryFilters().FirstAsync(a => a.Id == appointmentId);
+            appointment.StartDate = new DateTime(2020, 3, 2, 10, 0, 0);
+            appointment.EndDate = appointment.StartDate.AddMinutes(30);
+            await db.SaveChangesAsync();
+            return (appointment.StartDate, appointment.EndDate);
+        }
+
+        private async Task<AppointmentStatus> ReadStatusAsync(Guid appointmentId)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AgendiaDbContext>();
+            var stored = await db.Appointments.AsNoTracking().IgnoreQueryFilters()
+                .FirstAsync(a => a.Id == appointmentId);
+            return stored.Status;
         }
 
         private async Task DeleteEmployeeAsync(BookableBusiness setup)

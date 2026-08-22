@@ -462,6 +462,85 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
             Assert.Equal("You do not have permission to create this appointment.", ex.Message);
         }
 
+        // #332: the same defect #292 fixed for the appointment read, in the employee read it did
+        // not reach. The PUT of an appointment authorizes TWICE on purpose - the appointment
+        // itself and the destination - so once its employee was soft-deleted every update turned
+        // into a 404, and past classes could no longer be marked Completed or NoShow.
+
+        [Fact]
+        public async Task CreateAppointment_ClientOfAppointment_WithDeletedEmployee_Passes()
+        {
+            var (sut, db) = await BuildAsync(AsUser(ClientUserId).WithRole(Roles.Client));
+            await SoftDeleteAppointmentEmployeeAsync(db);
+
+            await sut.EnsureCanCreateAppointmentAsync(ClientUserId, EmployeeActiveId);
+        }
+
+        [Fact]
+        public async Task CreateAppointment_OwnerOfBusiness_WithDeletedEmployee_Passes()
+        {
+            var (sut, db) = await BuildAsync(AsUser(OwnerUserId));
+            await SoftDeleteAppointmentEmployeeAsync(db);
+
+            await sut.EnsureCanCreateAppointmentAsync(ClientUserId, EmployeeActiveId);
+        }
+
+        [Fact]
+        public async Task CreateAppointment_OtherActiveEmployeeOfBusiness_WithDeletedEmployee_Passes()
+        {
+            // A colleague who is still on staff closing the class of the teacher who left.
+            const string colleagueUserId = "employee-2";
+            var (sut, db) = await BuildAsync(AsUser(colleagueUserId));
+            db.Employees.Add(new Employee
+            {
+                Id = TestIds.Of(12),
+                BusinessId = Business1Id,
+                UserId = colleagueUserId,
+                IsActive = true,
+                MaxConcurrentAppointments = 1,
+            });
+            await db.SaveChangesAsync();
+            await SoftDeleteAppointmentEmployeeAsync(db);
+
+            await sut.EnsureCanCreateAppointmentAsync(ClientUserId, EmployeeActiveId);
+        }
+
+        [Fact]
+        public async Task CreateAppointment_WithDeletedBusiness_Passes()
+        {
+            // The employee is alive; it is the BUSINESS that is soft-deleted, and the owner is
+            // reached through the required navigation, so the INNER JOIN dropped the row anyway.
+            var (sut, db) = await BuildAsync(AsUser(OwnerUserId));
+            await SoftDeleteAppointmentBusinessAsync(db);
+
+            await sut.EnsureCanCreateAppointmentAsync(ClientUserId, EmployeeActiveId);
+        }
+
+        [Fact]
+        public async Task CreateAppointment_SoftDeletedEmployeeCaller_StillDenied()
+        {
+            // Control: dropping the filters must not hand access back to the member of staff who
+            // was dropped. They are found as a TARGET, never as a caller - the "employee of this
+            // business" check keeps its filters on purpose.
+            var (sut, db) = await BuildAsync(AsUser(EmployeeUserId));
+            await SoftDeleteAppointmentEmployeeAsync(db);
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(
+                () => sut.EnsureCanCreateAppointmentAsync(ClientUserId, EmployeeActiveId));
+        }
+
+        [Fact]
+        public async Task CreateAppointment_EmployeeOfAnotherBusiness_WithRestrictedScope_ThrowsNotFound()
+        {
+            // Control for the other half of dropping the filters (R7): another tenant's employee
+            // stays a 404, never a 403 that would confirm they exist. This is what the re-stated
+            // scope condition of EmployeesForAuthorization buys.
+            var (sut, _) = await BuildAsync(AsUser(OwnerUserId), new RestrictedBusinessScope(Business1Id));
+
+            await Assert.ThrowsAnyAsync<NotFoundException>(
+                () => sut.EnsureCanCreateAppointmentAsync(ClientUserId, EmployeeOtherBusinessId));
+        }
+
         #endregion
 
         // ===================================================================
@@ -549,13 +628,21 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         //  Helpers
         // ===================================================================
 
-        private static async Task<(ResourceAuthorizationService sut, AgendiaDbContext db)> BuildAsync(FakeCurrentUserContext currentUser)
+        // Unrestricted by default: the cross-tenant 404 that a restricted scope produces is
+        // covered end-to-end in SoftDeleteIntegrationTests, with the real CurrentBusinessScope
+        // resolving from a token.
+        private static Task<(ResourceAuthorizationService sut, AgendiaDbContext db)> BuildAsync(FakeCurrentUserContext currentUser)
+            => BuildAsync(currentUser, new UnrestrictedBusinessScope());
+
+        /// <summary>
+        /// Builds the service over a seeded in-memory graph. The scope instance is the same one
+        /// the context filters with, so both agree on what the caller may see - pass a
+        /// <see cref="RestrictedBusinessScope"/> to exercise the cross-tenant condition that the
+        /// filter-dropping queries re-state by hand (#332).
+        /// </summary>
+        private static async Task<(ResourceAuthorizationService sut, AgendiaDbContext db)> BuildAsync(
+            FakeCurrentUserContext currentUser, ICurrentBusinessScope businessScope)
         {
-            // The same scope instance the context filters with, so both agree on what the
-            // caller may see. Unrestricted here: the cross-tenant 404 that a restricted scope
-            // produces is covered end-to-end in SoftDeleteIntegrationTests, with the real
-            // CurrentBusinessScope resolving from a token.
-            var businessScope = new UnrestrictedBusinessScope();
             var db = CreateDb(businessScope);
             await SeedDefaultGraphAsync(db);
             var sut = new ResourceAuthorizationService(db, currentUser, businessScope);
@@ -576,6 +663,18 @@ namespace MRC.Agendia.Tests.Unit.Infrastructure.Authorization
         {
             var employee = await db.Employees.FirstAsync(e => e.Id == EmployeeActiveId);
             employee.IsDeleted = true;
+            await db.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Soft-deletes the business itself, leaving its employees alive. Reaching the owner
+        /// through the required Employee -&gt; Business navigation drops the row just the same,
+        /// so this is the second half of the same defect (#332).
+        /// </summary>
+        private static async Task SoftDeleteAppointmentBusinessAsync(AgendiaDbContext db)
+        {
+            var business = await db.Businesses.FirstAsync(b => b.Id == Business1Id);
+            business.IsDeleted = true;
             await db.SaveChangesAsync();
         }
 
