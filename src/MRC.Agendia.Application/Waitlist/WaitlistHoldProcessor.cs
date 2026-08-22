@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using MRC.Agendia.Application.Appointments;
 using MRC.Agendia.Application.Availability;
 using MRC.Agendia.Application.Common;
+using MRC.Agendia.Domain.Entities;
 using MRC.Agendia.Domain.Enums;
 using MRC.Agendia.Domain.Events;
 using MRC.Agendia.Domain.Interfaces;
@@ -73,8 +74,7 @@ namespace MRC.Agendia.Application.Waitlist
                     _repository.Update(entry);
                     await _unitOfWork.Save(cancellationToken);
 
-                    await NotifyNextAsync(entry.BusinessId, entry.ServiceId, entry.Date, entry.StartTime,
-                        entry.EmployeeId, cancellationToken);
+                    await NotifyNextAsync(entry, cancellationToken);
                 }, cancellationToken);
             }
 
@@ -82,43 +82,53 @@ namespace MRC.Agendia.Application.Waitlist
             return expired.Count;
         }
 
-        // Same shape as the notification on a freed appointment: re-check the slot really
-        // has room, then hand it to the next waiting client with a fresh hold.
-        private async Task NotifyNextAsync(Guid businessId,
-                                           Guid serviceId,
-                                           DateOnly date,
-                                           TimeOnly startTime,
-                                           Guid? employeeId,
-                                           CancellationToken cancellationToken)
+        // Same shape as the notification on a freed appointment: take everybody whose slot
+        // overlaps the one this hold was keeping, re-check the room is really there, and hand
+        // it to the first who fits with a fresh hold.
+        private async Task NotifyNextAsync(WaitlistEntry expired, CancellationToken cancellationToken)
         {
-            // GetNextWaitingForSlotAsync matches "any employee" entries too, so an entry
+            // GetWaitingCandidatesForSlotAsync matches "any employee" entries too, so an entry
             // without an employee needs one to query with; there is none, and the capacity
             // check below is what decides anyway.
-            if (employeeId is not Guid employee)
+            if (expired.EmployeeId is not Guid employee)
                 return;
 
-            var next = await _repository.GetNextWaitingForSlotAsync(
-                businessId, serviceId, date, startTime, employee, cancellationToken);
-            if (next is null)
-                return;
+            // The window this hold was keeping, and everybody whose own slot overlaps it (#350).
+            // Service comes loaded with the expired hold precisely for this.
+            var freedStart = expired.Date.ToDateTime(expired.StartTime);
+            var duration = expired.Service.DurationMinutes;
+            var (windowEnd, earliestStart) = WaitlistSlotWindow.OverlapBounds(
+                freedStart, freedStart.AddMinutes(duration), duration);
 
-            var capacity = await _availabilityService.GetSlotCapacityAsync(
-                next.BusinessId, next.Date, next.StartTime, next.ServiceId, next.EmployeeId, cancellationToken);
-            if (capacity is null or <= 0)
-                return;
+            var candidates = await _repository.GetWaitingCandidatesForSlotAsync(
+                expired.BusinessId, expired.ServiceId, expired.Date, windowEnd, earliestStart,
+                employee, Math.Max(1, _options.NotifyCandidateLimit), cancellationToken);
 
-            var business = await _businessRepository.GetActiveByIdAsync(next.BusinessId, cancellationToken);
-            var holdUntil = DateTime.UtcNow.AddMinutes(Math.Max(1, _options.HoldMinutes));
+            // First one that FITS, not simply the first: a candidate whose own slot is still
+            // blocked must not starve the ones behind it.
+            foreach (var next in candidates)
+            {
+                var capacity = await _availabilityService.GetSlotCapacityAsync(
+                    next.BusinessId, next.Date, next.StartTime, next.ServiceId, next.EmployeeId, cancellationToken);
+                if (capacity is null or <= 0)
+                    continue;
 
-            next.RaiseEvent(new WaitlistSlotAvailable(
-                next.Id, next.BusinessId, next.EmployeeId, next.ClientUserId,
-                next.ServiceId, next.Date, next.StartTime, holdUntil,
-                business?.DefaultLanguage ?? "es", _clock.TimeZoneId, DateTime.UtcNow));
+                var business = await _businessRepository.GetActiveByIdAsync(next.BusinessId, cancellationToken);
+                var holdUntil = DateTime.UtcNow.AddMinutes(Math.Max(1, _options.HoldMinutes));
 
-            next.Status = WaitlistStatus.Notified;
-            next.HoldUntil = holdUntil;
-            _repository.Update(next);
-            await _unitOfWork.Save(cancellationToken);
+                next.RaiseEvent(new WaitlistSlotAvailable(
+                    next.Id, next.BusinessId, next.EmployeeId, next.ClientUserId,
+                    next.ServiceId, next.Date, next.StartTime, holdUntil,
+                    business?.DefaultLanguage ?? "es", _clock.TimeZoneId, DateTime.UtcNow));
+
+                next.Status = WaitlistStatus.Notified;
+                next.HoldUntil = holdUntil;
+                _repository.Update(next);
+                await _unitOfWork.Save(cancellationToken);
+
+                // One freed seat, one notification.
+                break;
+            }
         }
     }
 }

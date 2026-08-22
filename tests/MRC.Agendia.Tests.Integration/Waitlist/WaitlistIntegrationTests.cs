@@ -61,6 +61,92 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
             Assert.Equal(WaitlistStatus.Notified, entry.Status);
         }
 
+        /// <summary>
+        /// The one that reproduces #350. Joining is allowed whenever the slot is FULL, and
+        /// fullness is measured by overlap: a 10:00-11:00 class fills 10:30 too, so the API lets
+        /// you queue there. The notification then matched candidates by exact start time, so that
+        /// entry sat in a queue it could never be called from - not even, as here, when the
+        /// teacher ends up with the whole day free.
+        /// </summary>
+        [Fact]
+        public async Task EsperarAUnaHoraQueSolapa_RecibeElAvisoAlLiberarse()
+        {
+            var owner = await RegisterOwnerAsync("wl-overlap");
+            await GenerateScheduleAsync(owner);
+            var service = await CreateServiceAsAsync(owner, durationMinutes: 60);
+            var clientToken = TestProvisioning.ProvisionClient("wl-overlap-b").Token;
+
+            // 10:00-11:00 fills the employee (MaxConcurrent = 1) for the whole hour.
+            var appointment = await BookAppointmentAsync(owner, ClientAUserId(), owner.EmployeeId, service.Id, durationMinutes: 60);
+
+            // ...so 10:30 is full as well, and queueing there is accepted.
+            var join = await JoinAsync(clientToken,
+                new JoinWaitlistDto(owner.Business.Id, service.Id, SlotDate, new TimeOnly(10, 30), owner.EmployeeId));
+            Assert.Equal(HttpStatusCode.OK, join.StatusCode);
+
+            await CancelAsync(owner, appointment.Id);
+
+            var entry = Assert.Single(await GetMyWaitlistAsync(clientToken));
+            Assert.Equal(WaitlistStatus.Notified, entry.Status);
+            Assert.NotNull(entry.HoldUntil);
+        }
+
+        /// <summary>
+        /// Control: overlapping the freed window makes you a candidate, not a winner. Capacity is
+        /// still the authority, and here the next class keeps 10:30 blocked.
+        /// </summary>
+        [Fact]
+        public async Task EsperarAUnaHoraQueSolapa_PeroSigueLlena_NoRecibeAviso()
+        {
+            var owner = await RegisterOwnerAsync("wl-overlap-full");
+            await GenerateScheduleAsync(owner);
+            var service = await CreateServiceAsAsync(owner, durationMinutes: 60);
+            var clientToken = TestProvisioning.ProvisionClient("wl-overlap-full-b").Token;
+
+            var first = await BookAppointmentAsync(owner, ClientAUserId(), owner.EmployeeId, service.Id, durationMinutes: 60);
+            await BookAppointmentAsync(owner, ClientAUserId(), owner.EmployeeId, service.Id,
+                durationMinutes: 60, at: new TimeOnly(11, 0));
+
+            var join = await JoinAsync(clientToken,
+                new JoinWaitlistDto(owner.Business.Id, service.Id, SlotDate, new TimeOnly(10, 30), owner.EmployeeId));
+            Assert.Equal(HttpStatusCode.OK, join.StatusCode);
+
+            await CancelAsync(owner, first.Id);
+
+            // 10:30-11:30 still runs into the 11:00 class: no false "there is a spot".
+            var entry = Assert.Single(await GetMyWaitlistAsync(clientToken));
+            Assert.Equal(WaitlistStatus.Waiting, entry.Status);
+        }
+
+        /// <summary>
+        /// One freed seat is one notification, and it goes by queue order - which now spans
+        /// different start times. Whoever queued first wins even though the other one asked for
+        /// exactly the hour that was freed.
+        /// </summary>
+        [Fact]
+        public async Task ConVariosEnEspera_AvisaSoloAlPrimeroDeLaCola()
+        {
+            var owner = await RegisterOwnerAsync("wl-overlap-fifo");
+            await GenerateScheduleAsync(owner);
+            var service = await CreateServiceAsAsync(owner, durationMinutes: 60);
+            var firstInQueue = TestProvisioning.ProvisionClient("wl-fifo-1").Token;
+            var secondInQueue = TestProvisioning.ProvisionClient("wl-fifo-2").Token;
+
+            var appointment = await BookAppointmentAsync(owner, ClientAUserId(), owner.EmployeeId, service.Id, durationMinutes: 60);
+
+            var joinFirst = await JoinAsync(firstInQueue,
+                new JoinWaitlistDto(owner.Business.Id, service.Id, SlotDate, new TimeOnly(10, 30), owner.EmployeeId));
+            Assert.Equal(HttpStatusCode.OK, joinFirst.StatusCode);
+            var joinSecond = await JoinAsync(secondInQueue,
+                new JoinWaitlistDto(owner.Business.Id, service.Id, SlotDate, SlotTime, owner.EmployeeId));
+            Assert.Equal(HttpStatusCode.OK, joinSecond.StatusCode);
+
+            await CancelAsync(owner, appointment.Id);
+
+            Assert.Equal(WaitlistStatus.Notified, Assert.Single(await GetMyWaitlistAsync(firstInQueue)).Status);
+            Assert.Equal(WaitlistStatus.Waiting, Assert.Single(await GetMyWaitlistAsync(secondInQueue)).Status);
+        }
+
         [Fact]
         public async Task Apuntarse_AFranjaConHueco_DevuelveBadRequest()
         {
@@ -107,10 +193,23 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
             return list!;
         }
 
-        private async Task<AppointmentDto> BookAppointmentAsync(ProvisionedOwner owner, string clientUserId, Guid employeeId, Guid serviceId)
+        /// <summary>Cancels a booking through the API, which is what frees the slot.</summary>
+        private async Task CancelAsync(ProvisionedOwner owner, Guid appointmentId)
         {
-            var start = SlotDate.ToDateTime(SlotTime);
-            var dto = new CreateAppointmentDto(clientUserId, employeeId, serviceId, start, start.AddMinutes(30), Notes: null);
+            using var del = new HttpRequestMessage(HttpMethod.Delete, $"/api/Appointment/{appointmentId}");
+            del.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
+            (await _client.SendAsync(del)).EnsureSuccessStatusCode();
+        }
+
+        private async Task<AppointmentDto> BookAppointmentAsync(ProvisionedOwner owner,
+                                                                string clientUserId,
+                                                                Guid employeeId,
+                                                                Guid serviceId,
+                                                                int durationMinutes = 30,
+                                                                TimeOnly? at = null)
+        {
+            var start = SlotDate.ToDateTime(at ?? SlotTime);
+            var dto = new CreateAppointmentDto(clientUserId, employeeId, serviceId, start, start.AddMinutes(durationMinutes), Notes: null);
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Appointment") { Content = JsonContent.Create(dto) };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
             var response = await _client.SendAsync(request);
@@ -155,9 +254,9 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
             (await _client.SendAsync(gen)).EnsureSuccessStatusCode();
         }
 
-        private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner)
+        private async Task<ServiceDto> CreateServiceAsAsync(ProvisionedOwner owner, int durationMinutes = 30)
         {
-            var dto = new CreateServiceDto(owner.Business.Id, 30);
+            var dto = new CreateServiceDto(owner.Business.Id, durationMinutes);
             using var request = new HttpRequestMessage(HttpMethod.Post, "/api/Service") { Content = JsonContent.Create(dto) };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", owner.Token);
             var response = await _client.SendAsync(request);

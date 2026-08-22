@@ -145,10 +145,16 @@ namespace MRC.Agendia.Application.Waitlist
                     return;
 
                 var date = DateOnly.FromDateTime(appointment.StartDate);
-                var startTime = TimeOnly.FromDateTime(appointment.StartDate);
                 var businessId = appointment.Employee.BusinessId;
                 var serviceId = appointment.ServiceId;
                 var employeeId = appointment.EmployeeId;
+
+                // Who this freed window could serve: everybody whose own slot overlaps it, not
+                // only whoever asked for the very same start time (#350). Joining the queue is
+                // allowed whenever the slot is full, and fullness is measured by overlap, so a
+                // 10:00-11:00 class leaves people legitimately waiting at 10:15 and 10:30.
+                var (windowEnd, earliestStart) = WaitlistSlotWindow.OverlapBounds(
+                    appointment.StartDate, appointment.EndDate, appointment.Service.DurationMinutes);
 
                 // Serialize select-recheck-notify-mark per employee+day (the same key
                 // booking uses) so two concurrent cancellations of the same slot cannot
@@ -157,41 +163,53 @@ namespace MRC.Agendia.Application.Waitlist
                 // the action (no shared DB to race against).
                 await _bookingGuard.ExecuteSerializedAsync(employeeId, date, async () =>
                 {
-                    var entry = await _repository.GetNextWaitingForSlotAsync(
-                        businessId, serviceId, date, startTime, employeeId, cancellationToken);
-                    if (entry is null)
-                        return;
+                    var candidates = await _repository.GetWaitingCandidatesForSlotAsync(
+                        businessId, serviceId, date, windowEnd, earliestStart, employeeId,
+                        Math.Max(1, _options.NotifyCandidateLimit), cancellationToken);
 
-                    // Re-check the slot actually has room now before notifying. The freed
-                    // appointment may not have opened a seat (employee MaxConcurrentAppointments
-                    // > 1), and an "any-employee" entry (EmployeeId null) only wants a slot that
-                    // is genuinely free across the business. Skip if it is still full (0) or no
-                    // longer schedulable (null) so we do not raise a false "there is a spot" alert.
-                    var capacity = await _availabilityService.GetSlotCapacityAsync(
-                        entry.BusinessId, entry.Date, entry.StartTime, entry.ServiceId, entry.EmployeeId, cancellationToken);
-                    if (capacity is null or <= 0)
-                        return;
+                    // Walk them FIFO and notify the FIRST ONE THAT FITS, not simply the first.
+                    // Overlapping candidates do not all want the same slot: the freed seat may
+                    // leave the 10:30 window still blocked by the 11:00 class while 10:00 is now
+                    // free. Stopping at the head would starve everyone behind a candidate whose
+                    // own slot is still full.
+                    foreach (var candidate in candidates)
+                    {
+                        // Capacity is the authority; the overlap filter above only proposes.
+                        // The freed appointment may not have opened a seat at all (employee
+                        // MaxConcurrentAppointments > 1), and an "any-employee" entry
+                        // (EmployeeId null) only wants a slot genuinely free across the business.
+                        // Skip when it is still full (0) or no longer schedulable (null) so we do
+                        // not raise a false "there is a spot" alert.
+                        var capacity = await _availabilityService.GetSlotCapacityAsync(
+                            candidate.BusinessId, candidate.Date, candidate.StartTime,
+                            candidate.ServiceId, candidate.EmployeeId, cancellationToken);
+                        if (capacity is null or <= 0)
+                            continue;
 
-                    // Raise the availability event on the entry and mark it Notified: the
-                    // DbContext SaveChanges override enlists the event into the outbox in the
-                    // SAME save as the Notified mark, so the slot is never both "notified" with
-                    // no event nor announced twice. The consumer resolves the client's contact
-                    // from ClientUserId and delivers in the business language.
-                    // Priority hold (#268): the slot is theirs until holdUntil, so the
-                    // notification is worth something even if they take a few minutes to
-                    // react. The availability read and the booking validator both honour
-                    // it, and the expiry job moves the queue on if they do not book.
-                    var holdUntil = DateTime.UtcNow.AddMinutes(Math.Max(1, _options.HoldMinutes));
+                        // Raise the availability event on the entry and mark it Notified: the
+                        // DbContext SaveChanges override enlists the event into the outbox in the
+                        // SAME save as the Notified mark, so the slot is never both "notified" with
+                        // no event nor announced twice. The consumer resolves the client's contact
+                        // from ClientUserId and delivers in the business language.
+                        // Priority hold (#268): the slot is theirs until holdUntil, so the
+                        // notification is worth something even if they take a few minutes to
+                        // react. The availability read and the booking validator both honour
+                        // it, and the expiry job moves the queue on if they do not book.
+                        var holdUntil = DateTime.UtcNow.AddMinutes(Math.Max(1, _options.HoldMinutes));
 
-                    entry.RaiseEvent(new WaitlistSlotAvailable(
-                        entry.Id, entry.BusinessId, entry.EmployeeId, entry.ClientUserId,
-                        entry.ServiceId, entry.Date, entry.StartTime, holdUntil,
-                        appointment.Employee.Business.DefaultLanguage, _clock.TimeZoneId, DateTime.UtcNow));
+                        candidate.RaiseEvent(new WaitlistSlotAvailable(
+                            candidate.Id, candidate.BusinessId, candidate.EmployeeId, candidate.ClientUserId,
+                            candidate.ServiceId, candidate.Date, candidate.StartTime, holdUntil,
+                            appointment.Employee.Business.DefaultLanguage, _clock.TimeZoneId, DateTime.UtcNow));
 
-                    entry.Status = WaitlistStatus.Notified;
-                    entry.HoldUntil = holdUntil;
-                    _repository.Update(entry);
-                    await _unitOfWork.Save(cancellationToken);
+                        candidate.Status = WaitlistStatus.Notified;
+                        candidate.HoldUntil = holdUntil;
+                        _repository.Update(candidate);
+                        await _unitOfWork.Save(cancellationToken);
+
+                        // One freed seat, one notification: whoever is next stays queued.
+                        break;
+                    }
                 }, cancellationToken);
             }
             catch (Exception ex)

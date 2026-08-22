@@ -27,23 +27,32 @@ namespace MRC.Agendia.Infrastructure.Repositories
                 cancellationToken);
 
         /// <inheritdoc />
-        public Task<WaitlistEntry?> GetNextWaitingForSlotAsync(
-            Guid businessId, Guid serviceId, DateOnly date, TimeOnly startTime, Guid employeeId,
+        public async Task<IReadOnlyList<WaitlistEntry>> GetWaitingCandidatesForSlotAsync(
+            Guid businessId,
+            Guid serviceId,
+            DateOnly date,
+            TimeOnly? windowEnd,
+            TimeOnly? earliestStart,
+            Guid employeeId,
+            int maxCandidates,
             CancellationToken cancellationToken = default)
             // IgnoreQueryFilters + explicit liveness: never notify for a service that
-            // was soft-deleted (BIZ-03). Tracked so the caller marks it Notified.
-            => Set
+            // was soft-deleted (BIZ-03). Tracked so the caller marks one Notified.
+            => await Set
                 .IgnoreQueryFilters()
                 .Where(w =>
                     w.Status == WaitlistStatus.Waiting
                     && w.BusinessId == businessId
                     && w.ServiceId == serviceId
                     && w.Date == date
-                    && w.StartTime == startTime
+                    // Overlap with the freed window, as two bounds on StartTime (#350).
+                    && (windowEnd == null || w.StartTime < windowEnd)
+                    && (earliestStart == null || w.StartTime > earliestStart)
                     && (w.EmployeeId == null || w.EmployeeId == employeeId)
                     && !w.Service.IsDeleted)
                 .OrderBy(w => w.CreatedAt)
-                .FirstOrDefaultAsync(cancellationToken);
+                .Take(maxCandidates)
+                .ToListAsync(cancellationToken);
 
         /// <inheritdoc />
         public async Task<IReadOnlyList<SlotHold>> GetActiveHoldsAsync(Guid businessId,
@@ -52,7 +61,7 @@ namespace MRC.Agendia.Infrastructure.Repositories
                                                                        CancellationToken cancellationToken = default)
         {
             // Read-only: the callers only subtract these seats. IgnoreQueryFilters plus an
-            // explicit liveness check, like GetNextWaitingForSlotAsync: a hold on a
+            // explicit liveness check, like GetWaitingCandidatesForSlotAsync: a hold on a
             // soft-deleted service holds nothing (BIZ-03). WaitlistEntry carries no soft
             // delete of its own, so there is nothing else to re-declare here.
             var rows = await Set
@@ -89,9 +98,12 @@ namespace MRC.Agendia.Infrastructure.Repositories
         public async Task<IReadOnlyList<WaitlistEntry>> GetExpiredHoldsAsync(DateTime nowUtc,
                                                                              int batchSize,
                                                                              CancellationToken cancellationToken = default)
-            // Tracked: the expiry job marks these Expired before moving the queue on.
+            // Tracked: the expiry job marks these Expired before moving the queue on. Service
+            // comes along because the job needs its duration to work out which other entries
+            // overlap the slot it is freeing (#350).
             => await Set
                 .IgnoreQueryFilters()
+                .Include(w => w.Service)
                 .Where(w => w.Status == WaitlistStatus.Notified
                     && w.HoldUntil != null
                     && w.HoldUntil <= nowUtc)

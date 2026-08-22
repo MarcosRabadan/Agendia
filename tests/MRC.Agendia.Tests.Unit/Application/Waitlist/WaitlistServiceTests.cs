@@ -22,6 +22,8 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
     public class WaitlistServiceTests
     {
         private const string UserId = "user-1";
+        private static readonly DateOnly Day = new(2030, 6, 7);
+        private static readonly TimeOnly SlotTime = new(16, 0);
 
         private readonly IWaitlistRepository _repository = Substitute.For<IWaitlistRepository>();
         private readonly IAvailabilityService _availability = Substitute.For<IAvailabilityService>();
@@ -39,10 +41,12 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
             // The guard just runs the critical section directly in unit tests.
             _bookingGuard.ExecuteSerializedAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>())
                 .Returns(ci => ci.Arg<Func<Task>>()());
-            _sut = new WaitlistService(
-                _repository, _availability, _appointmentRepository, _bookingGuard, _unitOfWork,
-                NullLogger<WaitlistService>.Instance, _mapper, _clock, new WaitlistOptions());
+            _sut = NewService(new WaitlistOptions());
         }
+
+        private WaitlistService NewService(WaitlistOptions options) => new(
+            _repository, _availability, _appointmentRepository, _bookingGuard, _unitOfWork,
+            NullLogger<WaitlistService>.Instance, _mapper, _clock, options);
 
         private JoinWaitlistDto Dto() => new(BusinessId: TestIds.Of(10), ServiceId: TestIds.Of(3), Date: new DateOnly(2030, 6, 7), StartTime: new TimeOnly(16, 0), EmployeeId: TestIds.Of(2));
 
@@ -119,18 +123,9 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         [Fact]
         public async Task NotifyForFreedAppointment_AvisaAlPrimeroYLoMarcaNotified()
         {
-            _appointmentRepository.GetByIdWithDetailsAsync(TestIds.Of(50), Arg.Any<CancellationToken>())
-                .Returns(new Appointment
-                {
-                    Id = TestIds.Of(50),
-                    EmployeeId = TestIds.Of(2),
-                    ServiceId = TestIds.Of(3),
-                    StartDate = new DateTime(2030, 6, 7, 16, 0, 0),
-                    Employee = new Employee { Id = TestIds.Of(2), BusinessId = TestIds.Of(10), Business = new Business { Id = TestIds.Of(10), DefaultLanguage = "es" } }
-                });
-            var waiting = new WaitlistEntry { Id = TestIds.Of(7), ClientUserId = UserId, Status = WaitlistStatus.Waiting };
-            _repository.GetNextWaitingForSlotAsync(TestIds.Of(10), TestIds.Of(3), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), TestIds.Of(2), Arg.Any<CancellationToken>())
-                .Returns(waiting);
+            FreedAppointment();
+            var waiting = Waiting(TestIds.Of(7), SlotTime);
+            Candidates(waiting);
             SlotCapacity(1); // the freed slot now has room
 
             await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
@@ -144,34 +139,23 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         [Fact]
         public async Task NotifyForFreedAppointment_SerializaElTriggerPorEmpleadoYDia()
         {
-            _appointmentRepository.GetByIdWithDetailsAsync(TestIds.Of(50), Arg.Any<CancellationToken>())
-                .Returns(new Appointment
-                {
-                    Id = TestIds.Of(50),
-                    EmployeeId = TestIds.Of(2),
-                    ServiceId = TestIds.Of(3),
-                    StartDate = new DateTime(2030, 6, 7, 16, 0, 0),
-                    Employee = new Employee { Id = TestIds.Of(2), BusinessId = TestIds.Of(10), Business = new Business { Id = TestIds.Of(10), DefaultLanguage = "es" } }
-                });
-            _repository.GetNextWaitingForSlotAsync(TestIds.Of(10), TestIds.Of(3), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), TestIds.Of(2), Arg.Any<CancellationToken>())
-                .Returns(new WaitlistEntry { Id = TestIds.Of(7), ClientUserId = UserId, Status = WaitlistStatus.Waiting });
+            FreedAppointment();
+            Candidates(Waiting(TestIds.Of(7), SlotTime));
             SlotCapacity(1);
 
             await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
 
             // The select-recheck-notify-mark section ran inside the per-employee/day lock.
             await _bookingGuard.Received(1).ExecuteSerializedAsync(
-                TestIds.Of(2), new DateOnly(2030, 6, 7), Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>());
+                TestIds.Of(2), Day, Arg.Any<Func<Task>>(), Arg.Any<CancellationToken>());
         }
 
         [Fact]
         public async Task NotifyForFreedAppointment_FranjaSigueLlena_NoAvisa()
         {
-            _appointmentRepository.GetByIdWithDetailsAsync(TestIds.Of(50), Arg.Any<CancellationToken>())
-                .Returns(new Appointment { Id = TestIds.Of(50), EmployeeId = TestIds.Of(2), ServiceId = TestIds.Of(3), StartDate = new DateTime(2030, 6, 7, 16, 0, 0), Employee = new Employee { Id = TestIds.Of(2), BusinessId = TestIds.Of(10), Business = new Business { Id = TestIds.Of(10), DefaultLanguage = "es" } } });
-            var waiting = new WaitlistEntry { Id = TestIds.Of(7), ClientUserId = UserId, Status = WaitlistStatus.Waiting };
-            _repository.GetNextWaitingForSlotAsync(TestIds.Of(10), TestIds.Of(3), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), TestIds.Of(2), Arg.Any<CancellationToken>())
-                .Returns(waiting);
+            FreedAppointment();
+            var waiting = Waiting(TestIds.Of(7), SlotTime);
+            Candidates(waiting);
             SlotCapacity(0); // the freed appointment did not actually open a seat (still full)
 
             await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
@@ -184,14 +168,98 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         [Fact]
         public async Task NotifyForFreedAppointment_SinEsperando_NoNotifica()
         {
-            _appointmentRepository.GetByIdWithDetailsAsync(TestIds.Of(50), Arg.Any<CancellationToken>())
-                .Returns(new Appointment { Id = TestIds.Of(50), EmployeeId = TestIds.Of(2), ServiceId = TestIds.Of(3), StartDate = new DateTime(2030, 6, 7, 16, 0, 0), Employee = new Employee { Id = TestIds.Of(2), BusinessId = TestIds.Of(10), Business = new Business { Id = TestIds.Of(10), DefaultLanguage = "es" } } });
-            _repository.GetNextWaitingForSlotAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-                .Returns((WaitlistEntry?)null);
+            FreedAppointment();
+            Candidates();
 
             await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
 
             await _unitOfWork.DidNotReceive().Save(Arg.Any<CancellationToken>());
+        }
+
+        // #350: joining the queue is allowed whenever the slot is full, and fullness is measured
+        // by OVERLAP - so a 16:00-17:00 class leaves people legitimately waiting at 16:30. The
+        // notification matched by exact start time, so those entries sat in a queue they could
+        // never be called from. Note the times below are deliberately NOT the class's own: the
+        // old tests all shared one constant, which is why none of them could see this.
+
+        [Fact]
+        public async Task NotifyForFreedAppointment_BuscaCandidatosPorSolape()
+        {
+            FreedAppointment();
+            Candidates();
+
+            await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
+
+            // 16:00-17:00 with a 60 minute service: anybody starting after 15:00 and before
+            // 17:00 is still running when the seat frees up.
+            await _repository.Received(1).GetWaitingCandidatesForSlotAsync(
+                TestIds.Of(10), TestIds.Of(3), Day, new TimeOnly(17, 0), new TimeOnly(15, 0),
+                TestIds.Of(2), Arg.Any<int>(), Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task NotifyForFreedAppointment_AvisaAlQueEsperaEnUnaHoraQueSolapa()
+        {
+            FreedAppointment();
+            var overlapping = Waiting(TestIds.Of(7), new TimeOnly(16, 30));
+            Candidates(overlapping);
+            SlotCapacity(1);
+
+            await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
+
+            Assert.Equal(WaitlistStatus.Notified, overlapping.Status);
+            Assert.Single(overlapping.DomainEvents.OfType<WaitlistSlotAvailable>());
+        }
+
+        [Fact]
+        public async Task NotifyForFreedAppointment_SaltaAlCandidatoCuyaFranjaSigueLlena()
+        {
+            // The 16:30 window is still blocked by the next class; 16:00 is now free. Stopping at
+            // the head of the queue would leave both of them without a notification.
+            FreedAppointment();
+            var blocked = Waiting(TestIds.Of(7), new TimeOnly(16, 30));
+            var fits = Waiting(TestIds.Of(8), SlotTime);
+            Candidates(blocked, fits);
+            SlotCapacity(0);
+            SlotCapacity(SlotTime, 1);
+
+            await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
+
+            Assert.Equal(WaitlistStatus.Waiting, blocked.Status);
+            Assert.Equal(WaitlistStatus.Notified, fits.Status);
+        }
+
+        [Fact]
+        public async Task NotifyForFreedAppointment_AvisaAUnoSolo()
+        {
+            // One freed seat is one seat: the rest of the queue keeps waiting.
+            FreedAppointment();
+            var first = Waiting(TestIds.Of(7), new TimeOnly(16, 30));
+            var second = Waiting(TestIds.Of(8), SlotTime);
+            Candidates(first, second);
+            SlotCapacity(1);
+
+            await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
+
+            Assert.Equal(WaitlistStatus.Notified, first.Status);
+            Assert.Equal(WaitlistStatus.Waiting, second.Status);
+            await _unitOfWork.Received(1).Save(Arg.Any<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task NotifyForFreedAppointment_AcotaLosCandidatosExaminados()
+        {
+            // Each candidate costs a capacity read INSIDE the booking lock, so the walk is capped
+            // by configuration rather than by however long the queue happens to be.
+            var sut = NewService(new WaitlistOptions { NotifyCandidateLimit = 2 });
+            FreedAppointment();
+            Candidates();
+
+            await sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
+
+            await _repository.Received(1).GetWaitingCandidatesForSlotAsync(
+                Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<TimeOnly?>(),
+                Arg.Any<TimeOnly?>(), Arg.Any<Guid>(), 2, Arg.Any<CancellationToken>());
         }
 
         [Fact]
@@ -207,6 +275,50 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         private void SlotCapacity(int? capacity)
             => _availability.GetSlotCapacityAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<TimeOnly>(), Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
                 .Returns(capacity);
+
+        /// <summary>Capacity for ONE start time, on top of the blanket stub above.</summary>
+        private void SlotCapacity(TimeOnly startTime, int? capacity)
+            => _availability.GetSlotCapacityAsync(Arg.Any<Guid>(), Arg.Any<DateOnly>(), startTime, Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+                .Returns(capacity);
+
+        /// <summary>
+        /// The freed class, as <c>GetByIdWithDetailsAsync</c> really returns it: with its end
+        /// time and its Service, because working out which queued slots overlap needs both.
+        /// </summary>
+        private void FreedAppointment(int durationMinutes = 60)
+        {
+            var start = Day.ToDateTime(SlotTime);
+            _appointmentRepository.GetByIdWithDetailsAsync(TestIds.Of(50), Arg.Any<CancellationToken>())
+                .Returns(new Appointment
+                {
+                    Id = TestIds.Of(50),
+                    EmployeeId = TestIds.Of(2),
+                    ServiceId = TestIds.Of(3),
+                    StartDate = start,
+                    EndDate = start.AddMinutes(durationMinutes),
+                    Service = new Service { Id = TestIds.Of(3), DurationMinutes = durationMinutes },
+                    Employee = new Employee { Id = TestIds.Of(2), BusinessId = TestIds.Of(10), Business = new Business { Id = TestIds.Of(10), DefaultLanguage = "es" } }
+                });
+        }
+
+        private void Candidates(params WaitlistEntry[] entries)
+            => _repository.GetWaitingCandidatesForSlotAsync(
+                    Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<TimeOnly?>(),
+                    Arg.Any<TimeOnly?>(), Arg.Any<Guid>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(entries);
+
+        private static WaitlistEntry Waiting(Guid id, TimeOnly startTime) => new()
+        {
+            Id = id,
+            BusinessId = TestIds.Of(10),
+            ServiceId = TestIds.Of(3),
+            EmployeeId = TestIds.Of(2),
+            ClientUserId = UserId,
+            Date = Day,
+            StartTime = startTime,
+            Status = WaitlistStatus.Waiting,
+            CreatedAt = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+        };
 
         private static WaitlistEntryDto ToDto(WaitlistEntry w)
             => new(w.Id, w.BusinessId, w.ServiceId, w.ClientUserId, w.EmployeeId, w.Date, w.StartTime, w.Status, w.CreatedAt);

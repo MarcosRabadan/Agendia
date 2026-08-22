@@ -419,6 +419,14 @@ Repository (EF Core / Npgsql) → PostgreSQL
 - **Lista de espera:** apuntarse a una franja completa; al liberarse un hueco, aviso FIFO
   (evento `WaitlistSlotAvailable`) tras re-chequear capacidad, serializado por el guard. Índice
   único filtrado `IX_WaitlistEntry_UniqueWaiting` con `NULLS NOT DISTINCT`.
+  **Los candidatos se buscan por SOLAPE, no por hora exacta (#350)**: apuntarse se permite
+  cuando la franja está llena, y la llenura se mide por solape, así que una clase de 10:00 a
+  11:00 deja gente esperando legítimamente a las 10:30. Las cotas las calcula
+  `WaitlistSlotWindow.OverlapBounds` (una sola vez, porque todos los candidatos comparten
+  servicio y por tanto duración). Y **se recorre la cola hasta el primero que quepa**, no se
+  coge el primero: pararse en la cabeza mataría de hambre a quien viene detrás cuando la franja
+  del primero sigue bloqueada. El recorrido va dentro del guard, así que lo acota
+  `Waitlist:NotifyCandidateLimit` (default 10).
 
 ### Horarios
 - **One Business → many ScheduleTemplates** sin solape en fechas; el efectivo es por fecha.
