@@ -197,6 +197,26 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
                 TestIds.Of(2), Arg.Any<int>(), Arg.Any<CancellationToken>());
         }
 
+        /// <summary>
+        /// The window that frees is the APPOINTMENT's, the duration that shifts the lower bound is
+        /// the SERVICE's, and they are not the same number when the booking carries extra services
+        /// (#170). With a 60 minute class of a 60 minute service - which is what every other test
+        /// here uses - passing the wrong one of the two would look identical.
+        /// </summary>
+        [Fact]
+        public async Task NotifyForFreedAppointment_ClaseMasLargaQueElServicio_UsaLaVentanaEntera()
+        {
+            FreedAppointment(durationMinutes: 90, serviceDurationMinutes: 30);
+            Candidates();
+
+            await _sut.NotifyForFreedAppointmentAsync(TestIds.Of(50));
+
+            // 16:00 + 90 minutes of booking, minus 30 minutes of service on the lower bound.
+            await _repository.Received(1).GetWaitingCandidatesForSlotAsync(
+                TestIds.Of(10), TestIds.Of(3), Day, new TimeOnly(17, 30), new TimeOnly(15, 30),
+                TestIds.Of(2), Arg.Any<int>(), Arg.Any<CancellationToken>());
+        }
+
         [Fact]
         public async Task NotifyForFreedAppointment_AvisaAlQueEsperaEnUnaHoraQueSolapa()
         {
@@ -285,7 +305,12 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
         /// The freed class, as <c>GetByIdWithDetailsAsync</c> really returns it: with its end
         /// time and its Service, because working out which queued slots overlap needs both.
         /// </summary>
-        private void FreedAppointment(int durationMinutes = 60)
+        /// <param name="durationMinutes">How long the BOOKING lasts (extras included).</param>
+        /// <param name="serviceDurationMinutes">
+        /// How long the SERVICE lasts, which is what every queued candidate's slot lasts. Defaults
+        /// to the booking's length; pass a different one for the multiservice case.
+        /// </param>
+        private void FreedAppointment(int durationMinutes = 60, int? serviceDurationMinutes = null)
         {
             var start = Day.ToDateTime(SlotTime);
             _appointmentRepository.GetByIdWithDetailsAsync(TestIds.Of(50), Arg.Any<CancellationToken>())
@@ -296,7 +321,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
                     ServiceId = TestIds.Of(3),
                     StartDate = start,
                     EndDate = start.AddMinutes(durationMinutes),
-                    Service = new Service { Id = TestIds.Of(3), DurationMinutes = durationMinutes },
+                    Service = new Service { Id = TestIds.Of(3), DurationMinutes = serviceDurationMinutes ?? durationMinutes },
                     Employee = new Employee { Id = TestIds.Of(2), BusinessId = TestIds.Of(10), Business = new Business { Id = TestIds.Of(10), DefaultLanguage = "es" } }
                 });
         }

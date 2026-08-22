@@ -147,6 +147,42 @@ namespace MRC.Agendia.Tests.Integration.Waitlist
             Assert.Equal(WaitlistStatus.Waiting, Assert.Single(await GetMyWaitlistAsync(secondInQueue)).Status);
         }
 
+        /// <summary>
+        /// The trap of widening the search, end to end. Overlapping candidates do NOT all want
+        /// the same slot: with classes at 10:00 and 11:00, cancelling the first leaves 10:30 still
+        /// colliding with the second while 10:00 is genuinely free. Stopping at the head of the
+        /// queue would notify nobody at all - a starvation the exact-time matching could not
+        /// produce, and the reason the walk exists.
+        /// </summary>
+        [Fact]
+        public async Task ElPrimeroDeLaColaQueNoCabe_NoTapaAlSiguiente()
+        {
+            var owner = await RegisterOwnerAsync("wl-starve");
+            await GenerateScheduleAsync(owner);
+            var service = await CreateServiceAsAsync(owner, durationMinutes: 60);
+            var blocked = TestProvisioning.ProvisionClient("wl-starve-1").Token;
+            var fits = TestProvisioning.ProvisionClient("wl-starve-2").Token;
+
+            var first = await BookAppointmentAsync(owner, ClientAUserId(), owner.EmployeeId, service.Id, durationMinutes: 60);
+            await BookAppointmentAsync(owner, ClientAUserId(), owner.EmployeeId, service.Id,
+                durationMinutes: 60, at: new TimeOnly(11, 0));
+
+            // Queued FIRST, but 10:30-11:30 runs into the 11:00 class whatever happens here.
+            var joinBlocked = await JoinAsync(blocked,
+                new JoinWaitlistDto(owner.Business.Id, service.Id, SlotDate, new TimeOnly(10, 30), owner.EmployeeId));
+            Assert.Equal(HttpStatusCode.OK, joinBlocked.StatusCode);
+
+            // Queued second, wants exactly the hour that is about to free up.
+            var joinFits = await JoinAsync(fits,
+                new JoinWaitlistDto(owner.Business.Id, service.Id, SlotDate, SlotTime, owner.EmployeeId));
+            Assert.Equal(HttpStatusCode.OK, joinFits.StatusCode);
+
+            await CancelAsync(owner, first.Id);
+
+            Assert.Equal(WaitlistStatus.Waiting, Assert.Single(await GetMyWaitlistAsync(blocked)).Status);
+            Assert.Equal(WaitlistStatus.Notified, Assert.Single(await GetMyWaitlistAsync(fits)).Status);
+        }
+
         [Fact]
         public async Task Apuntarse_AFranjaConHueco_DevuelveBadRequest()
         {
