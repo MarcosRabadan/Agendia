@@ -34,19 +34,38 @@ namespace MRC.Agendia.Domain.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// The first (FIFO by CreatedAt) Waiting entry that matches a freed slot:
-        /// same business/service/date/time and either "any employee" or that employee.
-        /// Tracked so the caller can mark it Notified.
+        /// The Waiting entries that a freed slot could serve, FIFO by CreatedAt: same
+        /// business/service/date, either "any employee" or that employee, and a slot that
+        /// OVERLAPS the freed window. Tracked so the caller can mark one Notified.
+        ///
+        /// <para>Overlap, not an exact start time (#350): joining the queue is allowed when the
+        /// slot is full, and fullness is measured by overlap, so somebody can wait at 10:30 for
+        /// a class that runs 10:00-11:00. Matching the notification by exact start left those
+        /// entries in a queue they would never be called from.</para>
+        ///
+        /// <para>The window is expressed as two bounds on StartTime rather than a join with
+        /// Service: every candidate shares <paramref name="serviceId"/>, so they all have the
+        /// same duration and the overlap collapses to constants the caller computes once. Either
+        /// bound may be null, meaning "unbounded on that side" - which is what a freed window
+        /// reaching past midnight, or starting less than one duration after it, really means.</para>
         /// </summary>
         /// <param name="businessId">Business id.</param>
         /// <param name="serviceId">Service id.</param>
         /// <param name="date">Freed slot date.</param>
-        /// <param name="startTime">Freed slot start time.</param>
+        /// <param name="windowEnd">Exclusive upper bound for StartTime (the end of the freed window), or null for none.</param>
+        /// <param name="earliestStart">Exclusive lower bound for StartTime (freed start minus the service duration), or null for none.</param>
         /// <param name="employeeId">Id of the employee whose slot was freed.</param>
+        /// <param name="maxCandidates">Hard cap on rows returned: the caller re-checks capacity per candidate inside the booking lock.</param>
         /// <param name="cancellationToken">Token to cancel the operation.</param>
-        /// <returns>The next matching Waiting entry (excluding soft-deleted participants), or null when none.</returns>
-        Task<WaitlistEntry?> GetNextWaitingForSlotAsync(
-            Guid businessId, Guid serviceId, DateOnly date, TimeOnly startTime, Guid employeeId,
+        /// <returns>The matching Waiting entries (excluding soft-deleted participants), oldest first.</returns>
+        Task<IReadOnlyList<WaitlistEntry>> GetWaitingCandidatesForSlotAsync(
+            Guid businessId,
+            Guid serviceId,
+            DateOnly date,
+            TimeOnly? windowEnd,
+            TimeOnly? earliestStart,
+            Guid employeeId,
+            int maxCandidates,
             CancellationToken cancellationToken = default);
 
         /// <summary>

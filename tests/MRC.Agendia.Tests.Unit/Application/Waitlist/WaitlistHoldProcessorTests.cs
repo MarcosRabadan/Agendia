@@ -53,8 +53,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
             var next = Entry("client-2", WaitlistStatus.Waiting);
             _repository.GetExpiredHoldsAsync(Arg.Any<DateTime>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
                 .Returns(new List<WaitlistEntry> { expired });
-            _repository.GetNextWaitingForSlotAsync(BusinessId, ServiceId, Date, StartTime, EmployeeId, Arg.Any<CancellationToken>())
-                .Returns(next);
+            Candidates(next);
             _availability.GetSlotCapacityAsync(BusinessId, Date, StartTime, ServiceId, EmployeeId, Arg.Any<CancellationToken>())
                 .Returns(1);
 
@@ -77,8 +76,7 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
             var next = Entry("client-2", WaitlistStatus.Waiting);
             _repository.GetExpiredHoldsAsync(Arg.Any<DateTime>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
                 .Returns(new List<WaitlistEntry> { expired });
-            _repository.GetNextWaitingForSlotAsync(BusinessId, ServiceId, Date, StartTime, EmployeeId, Arg.Any<CancellationToken>())
-                .Returns(next);
+            Candidates(next);
             // Someone booked it in the meantime.
             _availability.GetSlotCapacityAsync(BusinessId, Date, StartTime, ServiceId, EmployeeId, Arg.Any<CancellationToken>())
                 .Returns(0);
@@ -100,18 +98,74 @@ namespace MRC.Agendia.Tests.Unit.Application.Waitlist
             await _unitOfWork.DidNotReceiveWithAnyArgs().Save();
         }
 
-        private static WaitlistEntry Entry(string clientUserId, WaitlistStatus status, DateTime? holdUntil = null) => new()
+        /// <summary>
+        /// The expiring hold frees ITS window, so the queue it moves on to is everybody whose
+        /// slot overlaps it, not only whoever asked for the same start time (#350).
+        /// </summary>
+        [Fact]
+        public async Task The_freed_window_is_searched_by_overlap()
         {
-            Id = Guid.NewGuid(),
-            BusinessId = BusinessId,
-            ServiceId = ServiceId,
-            EmployeeId = EmployeeId,
-            ClientUserId = clientUserId,
-            Date = Date,
-            StartTime = StartTime,
-            Status = status,
-            HoldUntil = holdUntil,
-            CreatedAt = DateTime.UtcNow
-        };
+            var expired = Entry("client-1", WaitlistStatus.Notified, DateTime.UtcNow.AddMinutes(-1));
+            _repository.GetExpiredHoldsAsync(Arg.Any<DateTime>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(new List<WaitlistEntry> { expired });
+            Candidates();
+
+            await _sut.ExpireDueHoldsAsync();
+
+            // 10:00 + 60 min of service: anybody starting after 09:00 and before 11:00 overlaps.
+            await _repository.Received(1).GetWaitingCandidatesForSlotAsync(
+                BusinessId, ServiceId, Date, new TimeOnly(11, 0), new TimeOnly(9, 0), EmployeeId,
+                Arg.Any<int>(), Arg.Any<CancellationToken>());
+        }
+
+        /// <summary>
+        /// And a candidate whose own slot is still blocked must not starve the ones behind it:
+        /// the sweep walks the queue and hands the slot to the first that actually fits.
+        /// </summary>
+        [Fact]
+        public async Task A_candidate_that_still_does_not_fit_does_not_block_the_next_one()
+        {
+            var expired = Entry("client-1", WaitlistStatus.Notified, DateTime.UtcNow.AddMinutes(-1));
+            var blocked = Entry("client-2", WaitlistStatus.Waiting, startTime: new TimeOnly(10, 30));
+            var fits = Entry("client-3", WaitlistStatus.Waiting);
+            _repository.GetExpiredHoldsAsync(Arg.Any<DateTime>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(new List<WaitlistEntry> { expired });
+            Candidates(blocked, fits);
+            _availability.GetSlotCapacityAsync(BusinessId, Date, new TimeOnly(10, 30), ServiceId, EmployeeId, Arg.Any<CancellationToken>())
+                .Returns(0);
+            _availability.GetSlotCapacityAsync(BusinessId, Date, StartTime, ServiceId, EmployeeId, Arg.Any<CancellationToken>())
+                .Returns(1);
+
+            await _sut.ExpireDueHoldsAsync();
+
+            Assert.Equal(WaitlistStatus.Waiting, blocked.Status);
+            Assert.Equal(WaitlistStatus.Notified, fits.Status);
+        }
+
+        private void Candidates(params WaitlistEntry[] entries)
+            => _repository.GetWaitingCandidatesForSlotAsync(
+                    Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateOnly>(), Arg.Any<TimeOnly?>(),
+                    Arg.Any<TimeOnly?>(), Arg.Any<Guid>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+                .Returns(entries);
+
+        private static WaitlistEntry Entry(string clientUserId,
+                                           WaitlistStatus status,
+                                           DateTime? holdUntil = null,
+                                           TimeOnly? startTime = null) => new()
+                                           {
+                                               Id = Guid.NewGuid(),
+                                               BusinessId = BusinessId,
+                                               ServiceId = ServiceId,
+                                               EmployeeId = EmployeeId,
+                                               ClientUserId = clientUserId,
+                                               Date = Date,
+                                               StartTime = startTime ?? StartTime,
+                                               Status = status,
+                                               HoldUntil = holdUntil,
+                                               CreatedAt = DateTime.UtcNow,
+                                               // The repository loads it with the expired hold: the sweep needs the
+                                               // duration to work out which queued slots overlap the one it frees.
+                                               Service = new Service { Id = ServiceId, DurationMinutes = 60 },
+                                           };
     }
 }

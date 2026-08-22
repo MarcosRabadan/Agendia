@@ -23,5 +23,13 @@ namespace MRC.Agendia.Application.Waitlist
 
         /// <summary>Maximum expired holds processed per sweep. Default 50.</summary>
         public int ExpiryBatchSize { get; set; } = 50;
+
+        /// <summary>
+        /// How many queued clients a freed slot may be checked against before giving up (#350).
+        /// Candidates are walked FIFO and each one costs a capacity read, all inside the booking
+        /// lock, so this caps the critical section. The common case - the first candidate fits -
+        /// costs the same as one. Default 10.
+        /// </summary>
+        public int NotifyCandidateLimit { get; set; } = 10;
     }
 }
